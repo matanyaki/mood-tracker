@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, StatusBar, ViewStyle } from 'react-native';
-import { AppBackground, BackgroundVariant } from './AppBackground';
+import AppBackground, { BackgroundVariant } from './AppBackground';
 
 interface ScreenContainerProps {
   children: React.ReactNode;

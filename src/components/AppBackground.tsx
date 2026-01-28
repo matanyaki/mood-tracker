@@ -14,13 +14,13 @@ interface AppBackgroundProps {
  * Premium Background System for Emotion Tracker
  * Uses a global background image for a consistent, premium look.
  */
-export const AppBackground: React.FC<AppBackgroundProps> = ({
+export default function AppBackground({
     children,
     style,
-}) => {
+}: AppBackgroundProps) {
     return (
         <ImageBackground
-            source={require('../assets/images/app-background.png')}
+            source={require('../../assets/images/background.png')}
             style={[styles.container, style]}
             resizeMode="cover"
         >

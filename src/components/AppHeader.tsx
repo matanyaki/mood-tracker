@@ -92,12 +92,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A202C',
+    color: '#1A1A2E',
     marginBottom: 2,
   },
   subtitle: {
-    fontSize: 12,
-    color: '#718096',
+    fontSize: 14,
+    color: '#4A4A4A',
     fontWeight: '500',
   },
   rightAction: {
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   rightActionText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: '#4F46E5',
   },

@@ -81,7 +81,7 @@ export default function ProfileScreen() {
     }
 
     // -- RENDER PROFILE IF AUTHENTICATED --
-    const MenuRow = ({ icon: Icon, label, color = '#1F2937', onPress }: any) => (
+    const MenuRow = ({ icon: Icon, label, color = '#4A4A4A', onPress }: any) => (
         <TouchableOpacity style={styles.menuRow} onPress={onPress}>
             <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
                 <Icon size={20} color={color} />
@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
     authContainer: { flex: 1 },
     authScroll: { padding: 20, alignItems: 'center', justifyContent: 'center', minHeight: '80%' },
     authCard: { width: '100%', backgroundColor: '#fff', padding: 24, borderRadius: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-    authTitle: { fontSize: 28, fontWeight: '700', color: '#1F2937', marginBottom: 8, textAlign: 'center' },
-    authSubtitle: { fontSize: 15, color: '#6B7280', marginBottom: 32, textAlign: 'center' },
+    authTitle: { fontSize: 28, fontWeight: '700', color: '#1A1A2E', marginBottom: 8, textAlign: 'center' },
+    authSubtitle: { fontSize: 16, color: '#4A4A4A', marginBottom: 32, textAlign: 'center' },
     input: { backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, marginBottom: 16, fontSize: 16, borderWidth: 1, borderColor: '#E5E7EB', color: '#1F2937' },
     authButton: { backgroundColor: '#4F46E5', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
     authButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
@@ -166,12 +166,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#E0E7FF', alignItems: 'center', justifyContent: 'center'
     },
     avatarText: { fontSize: 24, fontWeight: '700', color: '#4F46E5' },
-    userName: { fontSize: 20, fontWeight: '700', color: '#1F2937' },
-    userEmail: { fontSize: 14, color: '#6B7280' },
+    userName: { fontSize: 20, fontWeight: '700', color: '#1A1A2E' },
+    userEmail: { fontSize: 16, color: '#4A4A4A' },
 
     // Sections
     sectionTitle: {
-        fontSize: 14, fontWeight: '600', color: '#6B7280',
+        fontSize: 20, fontWeight: '700', color: '#1A1A2E',
         marginBottom: 10, marginLeft: 5, textTransform: 'uppercase'
     },
     menuCard: { overflow: 'hidden', marginBottom: 25 },

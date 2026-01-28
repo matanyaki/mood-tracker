@@ -25,7 +25,7 @@ export default function InsightsScreen({ navigation }: any) {
         >
 
           {/* Summary Row (Total + Weekly Avg) */}
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', gap: 20, marginBottom: 24 }}>
             <Card padding={16} style={{ flex: 1, alignItems: 'center' }}>
               {/* Added Icon for visual polish */}
               <View style={[styles.iconBox, { backgroundColor: '#E0E7FF' }]}>
@@ -53,23 +53,25 @@ export default function InsightsScreen({ navigation }: any) {
             <Text style={styles.sectionTitle}>Emotion Breakdown</Text>
           </View>
 
-          {stats.map((item) => (
-            <Card key={item.label} style={styles.statRow}>
-              <View style={styles.labelContainer}>
-                <Text style={styles.statLabel}>{item.label}</Text>
-                <Text style={styles.statCount}>{item.count} times</Text>
-              </View>
+          <Card padding={20} borderRadius={24}>
+            {stats.map((item, index) => (
+              <View key={item.label} style={[styles.statRow, index === stats.length - 1 && styles.lastStatRow]}>
+                <View style={styles.labelContainer}>
+                  <Text style={styles.statLabel}>{item.label}</Text>
+                  <Text style={styles.statCount}>{item.count} times</Text>
+                </View>
 
-              <View style={styles.barBackground}>
-                <View
-                  style={[
-                    styles.barFill,
-                    { width: `${item.percentage}%`, backgroundColor: item.color }
-                  ]}
-                />
+                <View style={styles.barBackground}>
+                  <View
+                    style={[
+                      styles.barFill,
+                      { width: `${item.percentage}%`, backgroundColor: item.color }
+                    ]}
+                  />
+                </View>
               </View>
-            </Card>
-          ))}
+            ))}
+          </Card>
 
           {stats.length === 0 && (
             <EmptyState
@@ -99,11 +101,11 @@ const styles = StyleSheet.create({
   summaryNumber: {
     fontSize: 28, // Adjusted size to fit side-by-side
     fontWeight: '800',
-    color: '#1A202C',
+    color: '#1A1A2E',
   },
   summaryLabel: {
-    fontSize: 13,
-    color: '#718096',
+    fontSize: 16,
+    color: '#4A4A4A',
     marginTop: 2,
     fontWeight: '600',
   },
@@ -111,12 +113,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#1A202C',
+    color: '#1A1A2E',
   },
   statRow: {
-    marginBottom: 16, // Reduced slightly
+    marginBottom: 20,
+  },
+  lastStatRow: {
+    marginBottom: 0,
   },
   labelContainer: {
     flexDirection: 'row',
@@ -126,11 +131,11 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A202C',
+    color: '#1A1A2E',
   },
   statCount: {
-    fontSize: 14,
-    color: '#718096',
+    fontSize: 16,
+    color: '#4A4A4A',
     fontWeight: '600',
   },
   barBackground: {

@@ -12,13 +12,13 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const MOOD_IMAGES: { [key: string]: any } = {
-  happy: require('../assets/images/emojis/happy.png'),
-  sad: require('../assets/images/emojis/sad.png'),
-  angry: require('../assets/images/emojis/angry.png'),
-  disgusted: require('../assets/images/emojis/disgusted.png'),
-  fearful: require('../assets/images/emojis/fearful.png'),
-  bad: require('../assets/images/emojis/bad.png'),
-  surprised: require('../assets/images/emojis/surprised.png'),
+  happy: require('../../assets/images/emojis/happy.png'),
+  sad: require('../../assets/images/emojis/sad.png'),
+  angry: require('../../assets/images/emojis/angry.png'),
+  disgusted: require('../../assets/images/emojis/disgusted.png'),
+  fearful: require('../../assets/images/emojis/fearful.png'),
+  bad: require('../../assets/images/emojis/bad.png'),
+  surprised: require('../../assets/images/emojis/surprised.png'),
 };
 
 export default function CheckInScreen({ navigation }: any) {
@@ -381,254 +381,254 @@ export default function CheckInScreen({ navigation }: any) {
               </View>
             );
           })}
+        </Card>
       </View>
-      </View >
-    );
-};
-
-// Render Ring 3: Grandchildren emotions
-const renderGrandchildrenRing = () => {
-  if (!selectedRootForExpansion || !selectedChildForExpansion) return null;
-
-  return (
-    <View style={styles.wheelContainer}>
-      {/* Back button */}
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => {
-          LayoutAnimation.configureNext(
-            LayoutAnimation.create(
-              300,
-              LayoutAnimation.Types.easeInEaseOut,
-              LayoutAnimation.Properties.opacity
-            )
-          );
-          setCurrentRing('children');
-          setSelectedChildForExpansion(null);
-          setCurrentEmotionInFocus(null);
-        }}
-        activeOpacity={0.7}
-      >
-        <ChevronLeft size={20} color={selectedRootForExpansion.color} strokeWidth={2.5} />
-        <Text style={[styles.backText, { color: selectedRootForExpansion.color }]}>
-          Back to {selectedRootForExpansion.label}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Breadcrumb */}
-      <View style={styles.breadcrumb}>
-        <View style={[
-          styles.breadcrumbBadge,
-          { backgroundColor: selectedRootForExpansion.color + '15' }
-        ]}>
-          <Text style={[styles.breadcrumbText, { color: selectedRootForExpansion.color }]}>
-            {selectedRootForExpansion.label}
-          </Text>
-        </View>
-        <ChevronRight size={14} color="#94A3B8" strokeWidth={2} />
-        <View style={[
-          styles.breadcrumbBadge,
-          { backgroundColor: selectedRootForExpansion.color + '25' }
-        ]}>
-          <Text style={[styles.breadcrumbText, { color: selectedRootForExpansion.color }]}>
-            {selectedChildForExpansion.label}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.ringTitle}>Refine your feeling</Text>
-
-      <Card style={styles.emotionGrid} padding={16} borderRadius={24}>
-        {selectedChildForExpansion.children?.map((grandchildEmotion: any) => {
-          const isEmotionSelected = isSelected(grandchildEmotion.id);
-          const isEmotionInFocus = isInFocus(grandchildEmotion.id);
-
-          return (
-            <View key={grandchildEmotion.id}>
-              <TouchableOpacity
-                style={[
-                  styles.emotionSegment,
-                  styles.grandchildEmotionSegment,
-                  isEmotionSelected && styles.emotionSegmentSelected,
-                  isEmotionInFocus && styles.emotionSegmentInFocus,
-                  {
-                    borderColor: isEmotionSelected || isEmotionInFocus ? selectedRootForExpansion.color : '#E2E8F0',
-                    backgroundColor: isEmotionSelected ? selectedRootForExpansion.color + '08' : '#fff',
-                  }
-                ]}
-                onPress={() => handleEmotionCardTap(grandchildEmotion)}
-                activeOpacity={0.7}
-              >
-                <Text style={[
-                  styles.emotionLabel,
-                  styles.grandchildEmotionLabel,
-                  isEmotionSelected && styles.emotionLabelSelected
-                ]}>
-                  {grandchildEmotion.label}
-                </Text>
-
-                {isEmotionSelected && (
-                  <View style={[
-                    styles.checkCircle,
-                    styles.checkCircleSmall,
-                    { backgroundColor: selectedRootForExpansion.color }
-                  ]}>
-                    <Check size={12} color="#fff" strokeWidth={3} />
-                  </View>
-                )}
-              </TouchableOpacity>
-
-              {/* Action Button - Only Select (no deeper levels) */}
-              {isEmotionInFocus && (
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      styles.selectButton,
-                      styles.actionButtonFull,
-                      { backgroundColor: selectedRootForExpansion.color }
-                    ]}
-                    onPress={handleSelectCurrentEmotion}
-                    activeOpacity={0.8}
-                  >
-                    <Check size={18} color="#fff" strokeWidth={2.5} />
-                    <Text style={styles.actionButtonText}>Select This Emotion</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          );
-        })}
-    </View>
-      </View >
     );
   };
 
-return (
-  <ScreenContainer variant="focus">
-    <StatusBar barStyle="dark-content" />
+  // Render Ring 3: Grandchildren emotions
+  const renderGrandchildrenRing = () => {
+    if (!selectedRootForExpansion || !selectedChildForExpansion) return null;
 
-    {/* Header */}
-    <AppHeader
-      emoji="💭"
-      title="How are you feeling?"
-      subtitle="Take a moment to check in with yourself"
-      style={styles.header}
-      titleStyle={styles.title}
-      subtitleStyle={styles.subtitle}
-    />
-
-    {/* Floating Selected Pills */}
-    {finalSelections.length > 0 && (
-      <View style={styles.floatingSelected}>
-        <View style={styles.selectedPillsContainer}>
-          {finalSelections.map((selection) => {
-            const rootEmotion = getRootEmotion(selection);
-            const color = rootEmotion?.color || '#6B7280';
-            const animValue = pillAnimations[selection.id] || new Animated.Value(1);
-
-            return (
-              <Animated.View
-                key={selection.id}
-                style={[
-                  styles.selectedPill,
-                  {
-                    backgroundColor: color + '15',
-                    borderColor: color,
-                    opacity: animValue,
-                    transform: [
-                      {
-                        scale: animValue.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.5, 1],
-                        }),
-                      },
-                    ],
-                  }
-                ]}
-              >
-                <Text style={[styles.selectedPillText, { color }]}>
-                  {selection.label}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => removeSelectionWithAnimation(selection.id)}
-                  style={styles.pillRemove}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={[styles.pillRemoveText, { color }]}>×</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            );
-          })}
-
-          {/* Empty slots */}
-          {[...Array(3 - finalSelections.length)].map((_, i) => (
-            <View key={`empty-${i}`} style={styles.emptySlot}>
-              <Text style={styles.emptySlotText}>+</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    )}
-
-    <ScrollView
-      style={styles.scrollView}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Conditionally render current ring */}
-      {currentRing === 'root' && renderRootRing()}
-      {currentRing === 'children' && renderChildrenRing()}
-      {currentRing === 'grandchildren' && renderGrandchildrenRing()}
-
-      <View style={styles.bottomSpacer} />
-    </ScrollView>
-
-    {/* Animated CTA Button */}
-    {finalSelections.length > 0 && (
-      <Animated.View
-        style={[
-          styles.ctaContainer,
-          {
-            opacity: ctaAnimation,
-            transform: [
-              {
-                translateY: ctaAnimation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [100, 0],
-                }),
-              },
-              {
-                scale: ctaAnimation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.9, 1],
-                }),
-              },
-            ],
-          }
-        ]}
-      >
+    return (
+      <View style={styles.wheelContainer}>
+        {/* Back button */}
         <TouchableOpacity
-          style={[
-            styles.ctaButton,
-            finalSelections.length === 3 && styles.ctaButtonComplete
-          ]}
-          onPress={() => navigation?.navigate('Reflection', { selections: finalSelections })}
-          activeOpacity={0.9}
+          style={styles.backButton}
+          onPress={() => {
+            LayoutAnimation.configureNext(
+              LayoutAnimation.create(
+                300,
+                LayoutAnimation.Types.easeInEaseOut,
+                LayoutAnimation.Properties.opacity
+              )
+            );
+            setCurrentRing('children');
+            setSelectedChildForExpansion(null);
+            setCurrentEmotionInFocus(null);
+          }}
+          activeOpacity={0.7}
         >
-          <View style={styles.ctaContent}>
-            <Sparkles size={20} color="#fff" strokeWidth={2} />
-            <Text style={styles.ctaText}>
-              {finalSelections.length === 3
-                ? "Continue to Reflection"
-                : `Continue (${finalSelections.length}/3)`}
+          <ChevronLeft size={20} color={selectedRootForExpansion.color} strokeWidth={2.5} />
+          <Text style={[styles.backText, { color: selectedRootForExpansion.color }]}>
+            Back to {selectedRootForExpansion.label}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Breadcrumb */}
+        <View style={styles.breadcrumb}>
+          <View style={[
+            styles.breadcrumbBadge,
+            { backgroundColor: selectedRootForExpansion.color + '15' }
+          ]}>
+            <Text style={[styles.breadcrumbText, { color: selectedRootForExpansion.color }]}>
+              {selectedRootForExpansion.label}
             </Text>
           </View>
-        </TouchableOpacity>
-      </Animated.View>
-    )}
-  </ScreenContainer>
-);
+          <ChevronRight size={14} color="#94A3B8" strokeWidth={2} />
+          <View style={[
+            styles.breadcrumbBadge,
+            { backgroundColor: selectedRootForExpansion.color + '25' }
+          ]}>
+            <Text style={[styles.breadcrumbText, { color: selectedRootForExpansion.color }]}>
+              {selectedChildForExpansion.label}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.ringTitle}>Refine your feeling</Text>
+
+        <Card style={styles.emotionGrid} padding={16} borderRadius={24}>
+          {selectedChildForExpansion.children?.map((grandchildEmotion: any) => {
+            const isEmotionSelected = isSelected(grandchildEmotion.id);
+            const isEmotionInFocus = isInFocus(grandchildEmotion.id);
+
+            return (
+              <View key={grandchildEmotion.id}>
+                <TouchableOpacity
+                  style={[
+                    styles.emotionSegment,
+                    styles.grandchildEmotionSegment,
+                    isEmotionSelected && styles.emotionSegmentSelected,
+                    isEmotionInFocus && styles.emotionSegmentInFocus,
+                    {
+                      borderColor: isEmotionSelected || isEmotionInFocus ? selectedRootForExpansion.color : '#E2E8F0',
+                      backgroundColor: isEmotionSelected ? selectedRootForExpansion.color + '08' : '#fff',
+                    }
+                  ]}
+                  onPress={() => handleEmotionCardTap(grandchildEmotion)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.emotionLabel,
+                    styles.grandchildEmotionLabel,
+                    isEmotionSelected && styles.emotionLabelSelected
+                  ]}>
+                    {grandchildEmotion.label}
+                  </Text>
+
+                  {isEmotionSelected && (
+                    <View style={[
+                      styles.checkCircle,
+                      styles.checkCircleSmall,
+                      { backgroundColor: selectedRootForExpansion.color }
+                    ]}>
+                      <Check size={12} color="#fff" strokeWidth={3} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* Action Button - Only Select (no deeper levels) */}
+                {isEmotionInFocus && (
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={[
+                        styles.actionButton,
+                        styles.selectButton,
+                        styles.actionButtonFull,
+                        { backgroundColor: selectedRootForExpansion.color }
+                      ]}
+                      onPress={handleSelectCurrentEmotion}
+                      activeOpacity={0.8}
+                    >
+                      <Check size={18} color="#fff" strokeWidth={2.5} />
+                      <Text style={styles.actionButtonText}>Select This Emotion</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </Card>
+      </View>
+    );
+  };
+
+  return (
+    <ScreenContainer variant="focus">
+      <StatusBar barStyle="dark-content" />
+
+      {/* Header */}
+      <AppHeader
+        emoji="💭"
+        title="How are you feeling?"
+        subtitle="Take a moment to check in with yourself"
+        style={styles.header}
+        titleStyle={styles.title}
+        subtitleStyle={styles.subtitle}
+      />
+
+      {/* Floating Selected Pills */}
+      {finalSelections.length > 0 && (
+        <View style={styles.floatingSelected}>
+          <View style={styles.selectedPillsContainer}>
+            {finalSelections.map((selection) => {
+              const rootEmotion = getRootEmotion(selection);
+              const color = rootEmotion?.color || '#6B7280';
+              const animValue = pillAnimations[selection.id] || new Animated.Value(1);
+
+              return (
+                <Animated.View
+                  key={selection.id}
+                  style={[
+                    styles.selectedPill,
+                    {
+                      backgroundColor: color + '15',
+                      borderColor: color,
+                      opacity: animValue,
+                      transform: [
+                        {
+                          scale: animValue.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.5, 1],
+                          }),
+                        },
+                      ],
+                    }
+                  ]}
+                >
+                  <Text style={[styles.selectedPillText, { color }]}>
+                    {selection.label}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => removeSelectionWithAnimation(selection.id)}
+                    style={styles.pillRemove}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={[styles.pillRemoveText, { color }]}>×</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
+
+            {/* Empty slots */}
+            {[...Array(3 - finalSelections.length)].map((_, i) => (
+              <View key={`empty-${i}`} style={styles.emptySlot}>
+                <Text style={styles.emptySlotText}>+</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Conditionally render current ring */}
+        {currentRing === 'root' && renderRootRing()}
+        {currentRing === 'children' && renderChildrenRing()}
+        {currentRing === 'grandchildren' && renderGrandchildrenRing()}
+
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+
+      {/* Animated CTA Button */}
+      {finalSelections.length > 0 && (
+        <Animated.View
+          style={[
+            styles.ctaContainer,
+            {
+              opacity: ctaAnimation,
+              transform: [
+                {
+                  translateY: ctaAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [100, 0],
+                  }),
+                },
+                {
+                  scale: ctaAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.9, 1],
+                  }),
+                },
+              ],
+            }
+          ]}
+        >
+          <TouchableOpacity
+            style={[
+              styles.ctaButton,
+              finalSelections.length === 3 && styles.ctaButtonComplete
+            ]}
+            onPress={() => navigation?.navigate('Reflection', { selections: finalSelections })}
+            activeOpacity={0.9}
+          >
+            <View style={styles.ctaContent}>
+              <Sparkles size={20} color="#fff" strokeWidth={2} />
+              <Text style={styles.ctaText}>
+                {finalSelections.length === 3
+                  ? "Continue to Reflection"
+                  : `Continue (${finalSelections.length}/3)`}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+    </ScreenContainer>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -642,15 +642,15 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#1A1A2E',
     marginBottom: 2,
     letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 16,
+    color: '#4A4A4A',
     fontWeight: '500',
   },
 
@@ -722,16 +722,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   ringTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#1A1A2E',
     textAlign: 'center',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   ringSubtitle: {
-    fontSize: 15,
-    color: '#64748B',
+    fontSize: 16,
+    color: '#4A4A4A',
     textAlign: 'center',
     marginBottom: 28,
     fontWeight: '500',
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
 
   // Emotion Grid
   emotionGrid: {
-    gap: 12,
+    gap: 20,
   },
   emotionEmoji: {
     width: 32,
@@ -812,189 +812,178 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 60,
   },
-  ...Platform.select({
-    ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.04,
-      shadowRadius: 8,
-    },
-    android: {
-      elevation: 2,
-    },
-  }),
-},
+
   emotionSegmentSelected: {
-  ...Platform.select({
-    ios: {
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-    },
-    android: {
-      elevation: 4,
-    },
-  }),
-},
+    ...Platform.select({
+      ios: {
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
   emotionSegmentInFocus: {
-  borderWidth: 2.5,
-  ...Platform.select({
-    ios: {
-      shadowOpacity: 0.12,
-      shadowRadius: 16,
-    },
-    android: {
-      elevation: 6,
-    },
-  }),
-},
+    borderWidth: 2.5,
+    ...Platform.select({
+      ios: {
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
   childEmotionSegment: {
-  minHeight: 60,
-  paddingVertical: 16,
-},
+    minHeight: 60,
+    paddingVertical: 16,
+  },
   grandchildEmotionSegment: {
-  minHeight: 56,
-  paddingVertical: 14,
-  paddingHorizontal: 16,
-},
+    minHeight: 56,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
   emotionLeft: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  flex: 1,
-  gap: 14,
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 14,
+  },
   emotionRight: {
-  marginLeft: 12,
-},
+    marginLeft: 12,
+  },
   emotionDot: {
-  width: 14,
-  height: 14,
-  borderRadius: 7,
-},
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
   emotionLabel: {
-  fontSize: 17,
-  fontWeight: '600',
-  color: '#334155',
-  flex: 1,
-},
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4A4A4A',
+    flex: 1,
+  },
   childEmotionLabel: {
-  fontSize: 16,
-},
+    fontSize: 16,
+  },
   grandchildEmotionLabel: {
-  fontSize: 15,
-},
+    fontSize: 15,
+  },
   emotionLabelSelected: {
-  fontWeight: '700',
-  color: '#0F172A',
-},
+    fontWeight: '700',
+    color: '#0F172A',
+  },
   checkCircle: {
-  width: 24,
-  height: 24,
-  borderRadius: 12,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   checkCircleSmall: {
-  width: 20,
-  height: 20,
-  borderRadius: 10,
-},
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
 
   // Action Buttons
   actionButtons: {
-  flexDirection: 'row',
-  gap: 10,
-  marginTop: 12,
-  paddingHorizontal: 4,
-},
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+    paddingHorizontal: 4,
+  },
   actionButton: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingVertical: 12,
-  paddingHorizontal: 18,
-  borderRadius: 12,
-  gap: 6,
-  flex: 1,
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    gap: 6,
+    flex: 1,
+  },
   actionButtonFull: {
-  flex: 1,
-},
+    flex: 1,
+  },
   selectButton: {
-  ...Platform.select({
-    ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-    },
-    android: {
-      elevation: 4,
-    },
-  }),
-},
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
   deeperButton: {
-  backgroundColor: '#fff',
-  borderWidth: 2,
-},
+    backgroundColor: '#fff',
+    borderWidth: 2,
+  },
   actionButtonText: {
-  color: '#fff',
-  fontSize: 15,
-  fontWeight: '700',
-  letterSpacing: 0.2,
-},
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
   actionButtonTextOutline: {
-  fontSize: 15,
-  fontWeight: '700',
-  letterSpacing: 0.2,
-},
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
 
   bottomSpacer: {
-  height: 20,
-},
+    height: 20,
+  },
 
   // CTA Button
   ctaContainer: {
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  padding: 16,
-  paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-},
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+  },
   ctaButton: {
-  backgroundColor: '#6366F1',
-  borderRadius: 16,
-  paddingVertical: 18,
-  ...Platform.select({
-    ios: {
-      shadowColor: '#6366F1',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.3,
-      shadowRadius: 16,
-    },
-    android: {
-      elevation: 8,
-    },
-  }),
-},
+    backgroundColor: '#6366F1',
+    borderRadius: 16,
+    paddingVertical: 18,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#6366F1',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
   ctaButtonComplete: {
-  backgroundColor: '#10B981',
-  ...Platform.select({
-    ios: {
-      shadowColor: '#10B981',
-    },
-  }),
-},
+    backgroundColor: '#10B981',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#10B981',
+      },
+    }),
+  },
   ctaContent: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 10,
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
   ctaText: {
-  color: '#fff',
-  fontSize: 17,
-  fontWeight: '700',
-  letterSpacing: 0.2,
-},
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
 });
