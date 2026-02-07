@@ -6,4 +6,5 @@ export { default as EmptyState } from './EmptyState';
 export { default as AppBackground } from './AppBackground';
 export { default as DayEntryModal } from './DayEntryModal';
 export { default as EntryEmotionsList } from './EntryEmotionsList';
+export { default as ReflectionCard } from './ReflectionCard';
 export type { BackgroundVariant } from './AppBackground';

@@ -1,9 +1,9 @@
 // src/screens/DiaryScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
 import { Calendar } from 'react-native-calendars';
-import { ChevronLeft, ChevronRight, X, Edit } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, Card, LoadingState, EmptyState, DayEntryModal } from '../components';
 import { useDiaryController } from '../controllers/useDiaryController';
 
@@ -17,13 +17,10 @@ export default function DiaryScreen({ navigation }: any) {
     setModalVisible,
     markedDates,
     selectedDateEntries,
-    getEmotionColor,
     handleDayPress,
     handleMonthChange,
     goToToday,
   } = useDiaryController();
-
-
 
   if (loading) {
     return (
@@ -36,38 +33,76 @@ export default function DiaryScreen({ navigation }: any) {
   return (
     <ScreenContainer variant="calm">
       <AppHeader
-        title="Your Journal"
-        subtitle={`${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} total`}
+        title="Calendar"
         rightAction={{ label: 'Today', onPress: goToToday }}
       />
 
-      <Card style={styles.calendarContainer} padding={16} elevation={4}>
+      <Card style={styles.calendarContainer} padding={16} elevation={4} borderRadius={24}>
         <Calendar
           current={currentMonth}
           onDayPress={handleDayPress}
           onMonthChange={handleMonthChange}
           markingType="custom"
           markedDates={markedDates}
+          renderHeader={(date: any) => {
+            const headerDate = new Date(date);
+            return (
+              <View style={styles.customHeaderContainer}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.monthTitle}>
+                    {format(headerDate, 'MMMM yyyy')}
+                  </Text>
+                </View>
+              </View>
+            );
+          }}
           theme={{
             calendarBackground: '#fff',
-            textSectionTitleColor: '#6B7280',
-            selectedDayBackgroundColor: '#4F46E5',
+            textSectionTitleColor: '#9CA3AF',
+            selectedDayBackgroundColor: '#1A1A2E',
             selectedDayTextColor: '#ffffff',
             todayTextColor: '#4F46E5',
-            dayTextColor: '#4A4A4A',
-            textDisabledColor: '#D1D5DB',
-            monthTextColor: '#1A1A2E',
-            textMonthFontWeight: '700',
-            textMonthFontSize: 20,
+            dayTextColor: '#1F2937',
+            textDisabledColor: '#E5E7EB',
+            arrowColor: '#1A1A2E',
             textDayFontSize: 16,
-            textDayHeaderFontSize: 14,
+            textDayHeaderFontSize: 13,
             textDayHeaderFontWeight: '600',
-            arrowColor: '#4F46E5',
-          }}
+            'stylesheet.calendar.header': {
+              header: {
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                paddingLeft: 10,
+                paddingRight: 10,
+                marginTop: 6,
+                alignItems: 'center',
+                marginBottom: 10,
+              },
+              week: {
+                marginTop: 5,
+                flexDirection: 'row',
+                justifyContent: 'space-around',
+                paddingBottom: 5,
+                borderBottomWidth: 0,
+              }
+            },
+            'stylesheet.dot': {
+              dot: {
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                marginTop: 2
+              }
+            }
+          } as any}
           renderArrow={(direction) => (
             direction === 'left' ?
-              <ChevronLeft size={24} color="#4F46E5" strokeWidth={2.5} /> :
-              <ChevronRight size={24} color="#4F46E5" strokeWidth={2.5} />
+              <View style={styles.arrowContainer}>
+                <ChevronLeft size={20} color="#1A1A2E" strokeWidth={2.5} />
+              </View> :
+              <View style={styles.arrowContainer}>
+                <ChevronRight size={20} color="#1A1A2E" strokeWidth={2.5} />
+              </View>
           )}
           enableSwipeMonths={true}
           hideExtraDays={false}
@@ -75,16 +110,17 @@ export default function DiaryScreen({ navigation }: any) {
         />
 
         <View style={styles.legend}>
-          <Text style={styles.legendTitle}>Legend:</Text>
-          <View style={styles.legendItems}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#4F46E5' }]} />
-              <Text style={styles.legendText}>Has entry</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSquare, { borderColor: '#4F46E5' }]} />
-              <Text style={styles.legendText}>Today</Text>
-            </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#FCD34D' }]} />
+            <Text style={styles.legendText}>Single Mood</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#A78BFA' }]} />
+            <Text style={styles.legendText}>Mixed Mood</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendSquare, { backgroundColor: '#1A1A2E' }]} />
+            <Text style={styles.legendText}>Selected</Text>
           </View>
         </View>
       </Card>
@@ -99,14 +135,17 @@ export default function DiaryScreen({ navigation }: any) {
         />
       )}
 
+      {/* 
+        Ensure DayEntryModal is updated to use new image constants if it displays images. 
+        I will assume it uses EntryEmotionsList.
+      */}
       <DayEntryModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         selectedDate={selectedDate}
         entries={selectedDateEntries}
-        onEditEntry={(entry) => {
+        onEditEntry={() => {
           setModalVisible(false);
-          // navigation.navigate('EditEntry', { entryId: entry.id });
         }}
       />
     </ScreenContainer>
@@ -114,13 +153,55 @@ export default function DiaryScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  // ... existing styles ...
-  calendarContainer: { margin: 20 },
-  legend: { marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E8ECEF' },
-  legendTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A2E', marginBottom: 8 },
-  legendItems: { flexDirection: 'row', gap: 20 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendSquare: { width: 10, height: 10, borderWidth: 2, borderRadius: 2 },
-  legendText: { fontSize: 16, color: '#4A4A4A', fontWeight: '500' },
+  calendarContainer: {
+    margin: 20,
+    backgroundColor: '#fff',
+  },
+  customHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  monthTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1A1A2E',
+  },
+  arrowContainer: {
+    padding: 4,
+  },
+  legend: {
+    marginTop: 24,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 16,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendSquare: {
+    width: 10,
+    height: 10,
+    borderRadius: 3
+  },
+  legendText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
 });

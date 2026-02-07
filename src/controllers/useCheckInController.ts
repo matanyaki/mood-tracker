@@ -1,56 +1,54 @@
 import { useState } from 'react';
-import { Alert, Dimensions } from 'react-native';
+import { Alert } from 'react-native';
 
-const { width } = Dimensions.get('window');
+export type EmotionId = 'happy' | 'sad' | 'worry' | 'fear' | 'angry';
+
+export interface EmotionSelection {
+    id: EmotionId;
+    label: string;
+    scale: number; // 1-5
+}
 
 export const useCheckInController = () => {
-    const [finalSelections, setFinalSelections] = useState<any[]>([]);
+    const [selections, setSelections] = useState<EmotionSelection[]>([]);
 
-    // Slightly Adjust size to fit 3 rings
-    const WHEEL_SIZE = width * 0.96;
+    const updateScale = (id: string, label: string, newScale: number) => {
+        const emotionId = id as EmotionId;
 
-    // Logic: Handle Selection & Constraints
-    // Added 'grandparent' argument
-    const toggleSelection = (item: any, parent: any = null, grandparent: any = null) => {
-        const isSelected = finalSelections.find(e => e.id === item.id);
-
-        if (isSelected) {
-            setFinalSelections(prev => prev.filter(e => e.id !== item.id));
-        } else {
-            if (finalSelections.length >= 3) {
-                Alert.alert("Limit Reached", "You can only select up to 3 emotions.");
-                return;
+        setSelections(prev => {
+            if (newScale === 0) {
+                // Remove if scale is 0
+                return prev.filter(e => e.id !== emotionId);
             }
 
-            // --- PATH BUILDING LOGIC ---
-            const path = [];
-
-            // 1. Grandparent (e.g., "Happy")
-            if (grandparent) path.push(grandparent.label);
-
-            // 2. Parent (e.g., "Playful")
-            if (parent) path.push(parent.label);
-
-            // 3. Item itself (e.g., "Cheeky") is NOT added to path (it's the main label)
-            // ---------------------------
-
-            const selectionWithContext = {
-                ...item,
-                path: path
-            };
-
-            console.log(`Selected: ${item.label}, Path: ${path.join(' -> ')}`);
-
-            setFinalSelections(prev => [...prev, selectionWithContext]);
-        }
+            const exists = prev.find(e => e.id === emotionId);
+            if (exists) {
+                // Update existing
+                return prev.map(e => e.id === emotionId ? { ...e, scale: newScale } : e);
+            } else {
+                // Add new
+                return [...prev, { id: emotionId, label, scale: newScale }];
+            }
+        });
     };
 
-    const isSelected = (id: string) => finalSelections.some(e => e.id === id);
+    const getScale = (id: string) => selections.find(e => e.id === id)?.scale || 0;
+
+    const validate = () => selections.length > 0;
+
+    const submitCheckIn = () => {
+        if (!validate()) {
+            Alert.alert("Selection Required", "Please select at least one emotion to check in.");
+            return null;
+        }
+        return selections;
+    };
 
     return {
-        finalSelections,
-        toggleSelection,
-        isSelected,
-        WHEEL_SIZE
+        selections,
+        updateScale,
+        getScale,
+        canSubmit: validate(),
+        submitCheckIn
     };
 };

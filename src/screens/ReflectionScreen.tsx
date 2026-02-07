@@ -1,11 +1,10 @@
-// src/screens/ReflectionScreen.tsx
 import React from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, Modal
 } from 'react-native';
-import { Save, ArrowLeft, Sparkles, Check } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, Card, LoadingState } from '../components';
+import { ArrowLeft, Sparkles, Check } from 'lucide-react-native';
+import { ScreenContainer, AppHeader, ReflectionCard } from '../components';
 import { useReflectionController } from '../controllers/useReflectionController';
 
 export default function ReflectionScreen({ route, navigation }: any) {
@@ -15,7 +14,7 @@ export default function ReflectionScreen({ route, navigation }: any) {
     loading,
     handleTextChange,
     handleSave,
-    // New Props
+    // AI Props
     aiFeedback,
     showAiModal,
     closeAiModal
@@ -27,7 +26,7 @@ export default function ReflectionScreen({ route, navigation }: any) {
         title="Reflect"
         leftAction={
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }}>
-            <ArrowLeft color="#1A202C" size={24} />
+            <ArrowLeft color="#1A1A2E" size={24} />
           </TouchableOpacity>
         }
       />
@@ -36,50 +35,54 @@ export default function ReflectionScreen({ route, navigation }: any) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.instruction}>Why do you feel this way?</Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.subtitle}>
+            Take a moment to write about your feelings.
+          </Text>
 
-          {selections.map((item: any) => (
-            <Card key={item.id} style={styles.cardSpacing} padding={20}>
-              <View style={styles.cardHeader}>
-                <View style={styles.pathContainer}>
-                  {item.path && item.path.map((p: string) => (
-                    <Text key={p} style={styles.pathText}>{p}  →</Text>
-                  ))}
-                  <Text style={styles.finalEmotionText}>{item.label}</Text>
-                </View>
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder={`I feel ${item.label} because...`}
-                placeholderTextColor="#9CA3AF"
-                multiline
-                value={notes[item.id] || ''}
+          {/* Loop through selections */}
+          {selections.map((item: any, index: number) => {
+            const isLast = index === selections.length - 1;
+            // Simplified: use item.id directly as root, or map if needed. 
+            // In new scale logic, item.id is 'happy', 'sad', etc.
+
+            return (
+              <ReflectionCard
+                key={item.id}
+                label={item.label}
+                rootEmotionId={item.id}
+                note={notes[item.id] || ''}
                 onChangeText={(text) => handleTextChange(item.id, text)}
+                isLast={isLast}
+              // We no longer pass onSave to individual cards
               />
-            </Card>
-          ))}
-          <View style={{ height: 20 }} />
+            );
+          })}
+
+          {/* Main Save Button */}
+          <View style={styles.footerContainer}>
+            <TouchableOpacity
+              style={[styles.saveButton, loading && { opacity: 0.7 }]}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              {loading ? (
+                <Text style={styles.saveText}>Saving...</Text>
+              ) : (
+                <>
+                  <Text style={styles.saveText}>Save Entry</Text>
+                  <Check size={20} color="#fff" strokeWidth={2.5} />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.saveButton, loading && { opacity: 0.7 }]}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {/* Show Loading Text if waiting for AI */}
-          {loading ? (
-            <Text style={styles.saveText}>Generating Insight...</Text>
-          ) : (
-            <>
-              <Save color="#fff" size={20} style={{ marginRight: 10 }} />
-              <Text style={styles.saveText}>Save Entry</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
 
       {/* --- AI FEEDBACK MODAL --- */}
       <Modal
@@ -115,20 +118,42 @@ export default function ReflectionScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  // ... Keep existing styles ...
-  scrollContent: { padding: 20, paddingBottom: 0 },
-  instruction: { fontSize: 18, color: '#6B7280', marginBottom: 20, fontWeight: '500' },
-  cardSpacing: { marginBottom: 16 },
-  cardHeader: { marginBottom: 12, borderBottomWidth: 1, borderColor: '#F3F4F6', paddingBottom: 12 },
-  pathContainer: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
-  pathText: { fontSize: 13, color: '#9CA3AF', fontWeight: '500', marginRight: 4 },
-  finalEmotionText: { fontSize: 16, color: '#1F2937', fontWeight: '700' },
-  input: { fontSize: 16, color: '#1F2937', minHeight: 80, textAlignVertical: 'top' },
-  footer: { padding: 20, backgroundColor: '#fff', borderTopWidth: 1, borderColor: '#E5E7EB' },
-  saveButton: { backgroundColor: '#1F2937', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 16, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  saveText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  scrollContent: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginBottom: 20,
+    fontWeight: '500',
+  },
+  footerContainer: {
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  saveButton: {
+    backgroundColor: '#1A1A2E',
+    width: '100%',
+    height: 56,
+    borderRadius: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  saveText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
 
-  // --- NEW MODAL STYLES ---
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',

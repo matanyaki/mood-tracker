@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { auth } from '../config/firebase';
 import { JournalService } from '../services/journalService';
-import { findEmotion, getEmotionColor } from '../utils/emotionUtils';
+
+import { getEmotionColor } from '../constants/colors';
 
 export const useInsightsController = () => {
     const [loading, setLoading] = useState(true);
@@ -19,8 +20,12 @@ export const useInsightsController = () => {
             // UI Logic: Transform Data for Chart
             const statsArray = Object.keys(counts).map(key => {
                 const color = getEmotionColor(key);
+                // Ensure key is capitalized for label if needed, or rely on UI to transform
+                const label = key.charAt(0).toUpperCase() + key.slice(1);
+
                 return {
-                    label: key,
+                    id: key,
+                    label: label,
                     count: counts[key],
                     color: color,
                     percentage: total > 0 ? (counts[key] / total) * 100 : 0
