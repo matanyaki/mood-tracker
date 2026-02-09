@@ -28,27 +28,45 @@ export const useReflectionController = (route: any, navigation: any) => {
             if (!user) return;
 
             // 1. Prepare Data
+            // Simplified logic: We now only have one selection that matters (or the primary one)
+            // But since the UI allows multiple scales, we need to decide.
+            // USER REQUESTED: "user will put an emotion :string, scale: number" 
+            // This implies a SINGLE emotion entry per "Check In".
+
+            // However, the UI (CheckInScreen) allows multiple sliders.
+            // To fit the new schema, we should probably pick the DOMINANT one (highest scale).
+
+            const primarySelection = selections.reduce((prev: any, current: any) =>
+                (prev.scale > current.scale) ? prev : current
+                , selections[0]);
+
+            if (!primarySelection) return;
+
             const entryData = {
                 userId: user.uid,
                 date: new Date().toISOString().split('T')[0],
                 timestamp: Date.now(),
-                emotions: selections.map((s: any) => ({
-                    name: s.label,
-                    path: s.path ? s.path.join(' > ') : "", // Fix path string
-                    note: notes[s.id] || "",
-                })),
-                primaryEmotion: selections[0].path && selections[0].path.length > 0
-                    ? selections[0].path[0]
-                    : selections[0].label,
+
+                // NEW SCHEMA MAPPING
+                emotion: primarySelection.label, // "Happy"
+                scale: primarySelection.scale,   // 5
+                note: notes[primarySelection.id] || "",
+
                 aiFeedback: ""
             };
 
             // 2. Save to Firebase
+            // @ts-ignore
             const entryId = await JournalService.addEntry(entryData);
 
-            // 3. Generate AI Feedback (Await here so we can show it!)
+            // 3. Generate AI Feedback
             try {
-                const feedback = await AIService.generateInstantFeedback(entryData);
+                // Pass simplified context
+                const aiContext = {
+                    ...entryData
+                };
+
+                const feedback = await AIService.generateInstantFeedback(aiContext);
 
                 // Update Firebase with the result
                 if (entryId && feedback) {

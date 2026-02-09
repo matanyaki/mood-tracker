@@ -1,15 +1,20 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { admin, db } from './config/firebase';
+import { db } from './config/firebase';
+import journalRoutes from './routes/journalRoutes';
+import aiRoutes from './routes/aiRoutes';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// API Routes
+app.use('/api/entries', journalRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health Check Route
 app.get('/health', async (req: Request, res: Response) => {
