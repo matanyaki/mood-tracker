@@ -15,7 +15,12 @@ export const useInsightsController = () => {
             const user = auth.currentUser;
             if (!user) return;
 
-            const { counts, total } = await JournalService.getStats(user.uid);
+            // 'total' is now totalEmotionCount (for percentages)
+            // 'totalEntries' is the count of distinct journal entries (for summary card)
+            // We need to cast the result because we added a new property 'totalEntries' 
+            const data = await JournalService.getStats(user.uid);
+            const { counts, total } = data;
+            const totalCheckins = (data as any).totalEntries || total; // Fallback
 
             // UI Logic: Transform Data for Chart
             const statsArray = Object.keys(counts).map(key => {
@@ -33,7 +38,7 @@ export const useInsightsController = () => {
             }).sort((a, b) => b.count - a.count);
 
             setStats(statsArray);
-            setTotalEntries(total);
+            setTotalEntries(totalCheckins);
 
         } catch (error) {
             console.log("Error fetching stats:", error);

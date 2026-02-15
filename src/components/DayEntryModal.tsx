@@ -45,7 +45,14 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                             </View>
                         ) : (
                             entries.map((entry) => {
-                                const emotions = entry.emotions || [];
+                                const emotions = entry.emotions && entry.emotions.length > 0
+                                    ? entry.emotions
+                                    : (entry.emotion ? [{
+                                        id: entry.emotion.toLowerCase(),
+                                        label: entry.emotion,
+                                        scale: entry.scale,
+                                        note: entry.note
+                                    }] : []);
 
                                 return (
                                     <View key={entry.id} style={styles.entryCard}>

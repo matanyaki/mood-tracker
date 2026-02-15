@@ -19,9 +19,12 @@ export const AIService = {
                     'x-mock-user-id': entry.userId || 'test-user-id'
                 },
                 body: JSON.stringify({
-                    emotion: entry.emotion,
-                    scale: entry.scale,
-                    note: entry.note
+                    emotions: entry.emotions,
+                    // If backend expects flattened structure, we might need to adjust.
+                    // But typically we should send the full object now.
+                    userId: entry.userId,
+                    date: entry.date,
+                    timestamp: entry.timestamp
                 })
             });
 

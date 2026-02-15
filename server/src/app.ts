@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { db } from './config/firebase';
+import { db, admin } from './config/firebase';
 import journalRoutes from './routes/journalRoutes';
 import aiRoutes from './routes/aiRoutes';
 
@@ -16,16 +16,18 @@ app.use(express.json());
 app.use('/api/entries', journalRoutes);
 app.use('/api/ai', aiRoutes);
 
+
 // Health Check Route
 app.get('/health', async (req: Request, res: Response) => {
-    // If db is undefined, firebase init failed
-    if (!db) {
+    // Phase 2: Ensure admin.apps.length > 0 to confirm initialization
+    // Also checking `db` is already defined in config/firebase.ts if init succeeds
+    if (!admin.apps.length || !db) {
         return res.status(503).json({
             status: 'ERROR',
             timestamp: new Date().toISOString(),
             firebase: {
                 status: 'disconnected',
-                error: 'Firebase service account file not found or invalid'
+                error: 'Firebase Admin SDK not initialized (service account missing?)'
             },
             message: 'Service Unavailable'
         });

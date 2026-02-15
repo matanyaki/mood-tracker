@@ -24,9 +24,9 @@ export const useDiaryController = () => {
     const loadData = useCallback(async () => {
         try {
             const user = auth.currentUser;
-            if (!user) return;
+            const userId = user ? user.uid : JournalService.GUEST_ID;
 
-            const data = await JournalService.getUserEntries(user.uid);
+            const data = await JournalService.getUserEntries(userId);
             setEntries(data || []);
         } catch (error) {
             console.log("Error fetching entries:", error);
@@ -52,16 +52,21 @@ export const useDiaryController = () => {
                 const emotions = entry.emotions || [];
 
                 // Dot Logic:
-                // 1. No emotions -> Gray
+                // 1. No emotions -> Gray (Default)
                 // 2. Single emotion -> Emotion color
                 // 3. Multiple emotions -> Mixed Mood Color (Lavender/Purple)
                 let dotColor = '#D1D5DB';
-                if (emotions.length === 1) {
-                    // Handle legacy 'name' or new 'id'
-                    const emotionId = emotions[0].id || emotions[0].name || 'neutral';
-                    dotColor = getEmotionColor(emotionId);
-                } else if (emotions.length > 1) {
-                    dotColor = '#A78BFA';
+
+                if (emotions.length > 0) {
+                    if (emotions.length === 1) {
+                        const emotionId = emotions[0].id || emotions[0].name || 'neutral';
+                        dotColor = getEmotionColor(emotionId);
+                    } else {
+                        dotColor = '#A78BFA';
+                    }
+                } else if (entry.emotion) {
+                    // New Schema Support
+                    dotColor = getEmotionColor(entry.emotion.toLowerCase());
                 }
 
                 // If this date is ALREADY processed, we might want to merge or skip?

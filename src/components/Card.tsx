@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
+import { View, StyleSheet, Platform, StyleProp, ViewStyle } from 'react-native';
 
 interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   padding?: number;
   borderRadius?: number;
   elevation?: number;

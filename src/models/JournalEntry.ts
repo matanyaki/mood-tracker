@@ -9,10 +9,15 @@ export const JournalEntrySchema = z.object({
     date: z.string(), // YYYY-MM-DD
     timestamp: z.number(),
 
-    // NEW SIMPLIFIED SCHEMA: Single Emotion & Scale
-    emotion: z.string(), // e.g., "Happy", "Anxious" (The ID or Label)
-    scale: z.number().min(1).max(5), // 1 to 5
-    note: z.string().optional(), // Optional context note
+    // --- EMOTIONS ARRAY (Required) ---
+    // Array of all selected emotions for this entry. 
+    // This is now the ONLY way emotions are stored.
+    emotions: z.array(z.object({
+        id: z.string(),
+        label: z.string(),
+        scale: z.number().min(1).max(5),
+        note: z.string().optional()
+    })).min(1),
 
     // --- NEW FIELD FOR AI ---
     // Stores the immediate advice/analysis given by AI for this specific entry

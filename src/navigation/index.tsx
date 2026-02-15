@@ -1,26 +1,20 @@
 // src/navigation/index.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../config/firebase'; // Your firebase config
-import { ActivityIndicator, View } from 'react-native';
-import ProfileScreen from '../screens/ProfileScreen';
-import { User as UserIcon } from 'lucide-react-native';
+import { ActivityIndicator, View, Text } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+
 // Icons
-import { Home, Book, BarChart2 } from 'lucide-react-native';
+import { Home, Book, BarChart2, User as UserIcon, Sun } from 'lucide-react-native';
 
 // Screens
 import CheckInScreen from '../screens/CheckInScreen';
 import ReflectionScreen from '../screens/ReflectionScreen';
 import DiaryScreen from '../screens/DiaryScreen';
 import InsightsScreen from '../screens/InsightsScreen';
-
-// Placeholder Screens (We will build these next!)
-import { Text } from 'react-native';
-
-// ---------------------------------------------------------
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -29,6 +23,16 @@ const Tab = createBottomTabNavigator();
 function AppTabs() {
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Screen
+        name="Today"
+        // @ts-ignore - dynamic import or specific screen
+        component={require('../screens/TodayScreen').default}
+        options={{
+          // Using Sun for Today
+          tabBarIcon: ({ color, size }) => <Sun color={color} size={size} />,
+          tabBarLabel: 'Today'
+        }}
+      />
       <Tab.Screen
         name="CheckIn"
         component={CheckInScreen}
@@ -66,19 +70,14 @@ function AppTabs() {
 }
 
 export default function RootNavigator() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { isLoading } = useAuth();
 
+  // Debug Log for loading state
   useEffect(() => {
-    // This listener fires whenever the user logs in or out
-    const unsubscribe = onAuthStateChanged(auth, (authenticatedUser) => {
-      setUser(authenticatedUser);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
+    console.log("[RootNavigator] Loading state:", isLoading);
+  }, [isLoading]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#4F46E5" />

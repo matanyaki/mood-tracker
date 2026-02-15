@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, Modal
 } from 'react-native';
 import { ArrowLeft, Sparkles, Check } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, ReflectionCard } from '../components';
+import { ScreenContainer, AppHeader, ReflectionCard, PrimaryButton } from '../components';
 import { useReflectionController } from '../controllers/useReflectionController';
 
 export default function ReflectionScreen({ route, navigation }: any) {
@@ -14,6 +14,7 @@ export default function ReflectionScreen({ route, navigation }: any) {
     loading,
     handleTextChange,
     handleSave,
+    handleSave: duplicateHandleSave, // Was duplicate in original, ignoring
     // AI Props
     aiFeedback,
     showAiModal,
@@ -46,8 +47,6 @@ export default function ReflectionScreen({ route, navigation }: any) {
           {/* Loop through selections */}
           {selections.map((item: any, index: number) => {
             const isLast = index === selections.length - 1;
-            // Simplified: use item.id directly as root, or map if needed. 
-            // In new scale logic, item.id is 'happy', 'sad', etc.
 
             return (
               <ReflectionCard
@@ -57,34 +56,27 @@ export default function ReflectionScreen({ route, navigation }: any) {
                 note={notes[item.id] || ''}
                 onChangeText={(text) => handleTextChange(item.id, text)}
                 isLast={isLast}
-              // We no longer pass onSave to individual cards
               />
             );
           })}
 
           {/* Main Save Button */}
           <View style={styles.footerContainer}>
-            <TouchableOpacity
-              style={[styles.saveButton, loading && { opacity: 0.7 }]}
+            <PrimaryButton
+              label={loading ? "Saving..." : "Save Entry"}
               onPress={handleSave}
+              loading={loading}
               disabled={loading}
-            >
-              {loading ? (
-                <Text style={styles.saveText}>Saving...</Text>
-              ) : (
-                <>
-                  <Text style={styles.saveText}>Save Entry</Text>
-                  <Check size={20} color="#fff" strokeWidth={2.5} />
-                </>
-              )}
-            </TouchableOpacity>
+              icon={!loading ? <Check size={20} color="#fff" strokeWidth={2.5} /> : undefined}
+              style={{ backgroundColor: '#1A1A2E', shadowColor: '#1A1A2E' }}
+            />
           </View>
 
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* --- AI FEEDBACK MODAL --- */}
+      {/* --- AI FEEDBACK MODAL (Hidden/Unused Logic for now) --- */}
       <Modal
         visible={showAiModal}
         transparent={true}
@@ -132,27 +124,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 20,
   },
-  saveButton: {
-    backgroundColor: '#1A1A2E',
-    width: '100%',
-    height: 56,
-    borderRadius: 16,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: '#1A1A2E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  saveText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-
   // Modal Styles
   modalOverlay: {
     flex: 1,

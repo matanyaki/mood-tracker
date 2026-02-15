@@ -28,14 +28,15 @@ export const useReflectionController = (route: any, navigation: any) => {
             if (!user) return;
 
             // 1. Prepare Data
-            // Simplified logic: We now only have one selection that matters (or the primary one)
-            // But since the UI allows multiple scales, we need to decide.
-            // USER REQUESTED: "user will put an emotion :string, scale: number" 
-            // This implies a SINGLE emotion entry per "Check In".
+            // Collect ALL emotions into an array
+            const emotionEntries = selections.map((sel: any) => ({
+                id: sel.id,
+                label: sel.label,
+                scale: sel.scale,
+                note: notes[sel.id] || ""
+            }));
 
-            // However, the UI (CheckInScreen) allows multiple sliders.
-            // To fit the new schema, we should probably pick the DOMINANT one (highest scale).
-
+            // Identification of "Primary" emotion (e.g. highest intensity) for quick reference
             const primarySelection = selections.reduce((prev: any, current: any) =>
                 (prev.scale > current.scale) ? prev : current
                 , selections[0]);
@@ -47,59 +48,35 @@ export const useReflectionController = (route: any, navigation: any) => {
                 date: new Date().toISOString().split('T')[0],
                 timestamp: Date.now(),
 
-                // NEW SCHEMA MAPPING
-                emotion: primarySelection.label, // "Happy"
-                scale: primarySelection.scale,   // 5
-                note: notes[primarySelection.id] || "",
-
+                // NEW SCHEMA COMPLETE
+                emotions: emotionEntries,
                 aiFeedback: ""
             };
 
-            // 2. Save to Firebase
+            // 2. Save to Firebase/Local (via JournalService)
+            console.log("[Reflection] Saving entry for User UID:", user.uid);
+            console.log("[Reflection] Data payload:", JSON.stringify(entryData));
+
             // @ts-ignore
             const entryId = await JournalService.addEntry(entryData);
+            console.log("[Reflection] Entry saved successfully. ID:", entryId);
 
-            // 3. Generate AI Feedback
-            try {
-                // Pass simplified context
-                const aiContext = {
-                    ...entryData
-                };
-
-                const feedback = await AIService.generateInstantFeedback(aiContext);
-
-                // Update Firebase with the result
-                if (entryId && feedback) {
-                    const entryRef = doc(db, 'entries', entryId);
-                    await updateDoc(entryRef, { aiFeedback: feedback });
-                }
-
-                // Show Modal
-                setAiFeedback(feedback);
-                setShowAiModal(true);
-
-            } catch (aiError) {
-                console.log("AI Failed, but entry saved:", aiError);
-                // If AI fails, just go back
-                navigation.goBack();
-            }
+            // 3. Navigate Home immediately (AI Removed as requested)
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'App' }],
+            });
 
         } catch (error) {
-            console.error("Save Error:", error);
+            console.error("[Reflection] Save Error:", error);
             Alert.alert("Error", "Could not save entry. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
-    const closeAiModal = () => {
-        setShowAiModal(false);
-        // Navigate Home only after closing modal
-        navigation.reset({
-            index: 0,
-            routes: [{ name: 'App' }],
-        });
-    };
+    // Removed AI Modal handlers since logic is stripped
+    const closeAiModal = () => { };
 
     return {
         selections,
@@ -107,8 +84,8 @@ export const useReflectionController = (route: any, navigation: any) => {
         loading,
         handleTextChange,
         handleSave,
-        aiFeedback,
-        showAiModal,
+        aiFeedback: null,
+        showAiModal: false,
         closeAiModal
     };
 };
