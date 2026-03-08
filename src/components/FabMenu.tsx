@@ -43,7 +43,7 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
     const getStyleForIndex = (index: number) => {
         const translateY = animation.interpolate({
             inputRange: [0, 1],
-            outputRange: [0, -60 * (index + 1)],
+            outputRange: [0, -58 * (index + 1)],
         });
 
         const opacity = animation.interpolate({
@@ -110,8 +110,8 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        bottom: 30,
-        right: 30,
+        bottom: 20,
+        right: 20,
         alignItems: 'center',
         zIndex: 999, // Ensure it sits on top
     },
@@ -124,9 +124,9 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.7)', // Semi-transparent overlay standard for premium feel
     },
     fab: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        width: 68,
+        height: 68,
+        borderRadius: 34,
         backgroundColor: '#1A1A2E', // App theme primary
         alignItems: 'center',
         justifyContent: 'center',
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     },
     actionsContainer: {
         position: 'absolute',
-        bottom: 10,
+        bottom: 0,
         right: 0, // Align with center of main FAB
         alignItems: 'flex-end', // Items align to the right
         marginBottom: 60, // Space for the main FAB
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
         marginBottom: 16, // Spacing between items
         position: 'absolute',
-        right: 5, // Center align relative to FAB width (60) -> center is 30. Mini FAB is 48 -> center is 24. Offset ~6px.
+        right: 6, // Center align relative to FAB width (68) -> center is 34. Mini FAB is 56 -> center is 28. Offset ~6px.
         bottom: 0,
     },
     labelContainer: {
@@ -169,9 +169,9 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     miniFab: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: '#000',

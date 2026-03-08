@@ -2,6 +2,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { JournalService } from '../services/journalService';
+import { GreetingService, Greeting } from '../services/greetingService';
 import { auth } from '../config/firebase'; // Ensure auth is available or handle user check
 import { format } from 'date-fns';
 import { DateData } from 'react-native-calendars';
@@ -11,6 +12,7 @@ import { getEmotionColor } from '../constants/colors';
 export const useDiaryController = () => {
     // --- State ---
     const [entries, setEntries] = useState<any[]>([]);
+    const [greetings, setGreetings] = useState<Greeting[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState('');
     const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -26,10 +28,15 @@ export const useDiaryController = () => {
             const user = auth.currentUser;
             const userId = user ? user.uid : JournalService.GUEST_ID;
 
-            const data = await JournalService.getUserEntries(userId);
-            setEntries(data || []);
+            const [entriesData, greetingsData] = await Promise.all([
+                JournalService.getUserEntries(userId),
+                GreetingService.getUserGreetings(userId)
+            ]);
+
+            setEntries(entriesData || []);
+            setGreetings(greetingsData || []);
         } catch (error) {
-            console.log("Error fetching entries:", error);
+            console.log("Error fetching data:", error);
         } finally {
             setLoading(false);
         }
@@ -44,75 +51,65 @@ export const useDiaryController = () => {
     // --- Calendar Logic ---
     const markedDates = useMemo(() => {
         const marked: any = {};
-        const today = format(new Date(), 'yyyy-MM-dd');
 
+        // Group entries by date
         entries.forEach(entry => {
             if (entry.timestamp) {
                 const dateStr = format(new Date(entry.timestamp), 'yyyy-MM-dd');
                 const emotions = entry.emotions || [];
 
-                // Dot Logic:
-                // 1. No emotions -> Gray (Default)
-                // 2. Single emotion -> Emotion color
-                // 3. Multiple emotions -> Mixed Mood Color (Lavender/Purple)
-                let dotColor = '#D1D5DB';
-
+                let dotColor = '#A78BFA'; // fallback purple
                 if (emotions.length > 0) {
                     if (emotions.length === 1) {
                         const emotionId = emotions[0].id || emotions[0].name || 'neutral';
                         dotColor = getEmotionColor(emotionId);
                     } else {
-                        dotColor = '#A78BFA';
+                        dotColor = '#A78BFA'; // mixed mood
                     }
                 } else if (entry.emotion) {
-                    // New Schema Support
                     dotColor = getEmotionColor(entry.emotion.toLowerCase());
                 }
 
-                // If this date is ALREADY processed, we might want to merge or skip?
-                // Assuming one entry per day or taking the first one found.
-                // If multiple entries per day exist, we technically should merge or prioritize.
-                // For now, simpler overrides are fine.
+                if (!marked[dateStr]) {
+                    marked[dateStr] = { dots: [] };
+                }
 
-                marked[dateStr] = {
-                    marked: true,
-                    dotColor: dotColor,
-                    customStyles: {
-                        container: {
-                            backgroundColor: selectedDate === dateStr ? '#1A1A2E' : 'transparent',
-                            borderRadius: 12, // Always rounded if selected
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        },
-                        text: {
-                            color: selectedDate === dateStr ? '#FFFFFF' : '#1A1A2E',
-                            fontWeight: selectedDate === dateStr ? '700' : '500',
-                        }
-                    }
-                };
+                // Add mood dot
+                if (!marked[dateStr].dots.some((d: any) => d.key === 'mood')) {
+                    marked[dateStr].dots.push({ key: 'mood', color: dotColor });
+                }
             }
         });
 
-        // Ensure Selected Date style is applied even if no entry exists
-        if (selectedDate && !marked[selectedDate]) {
-            marked[selectedDate] = {
-                customStyles: {
-                    container: {
-                        backgroundColor: '#1A1A2E',
-                        borderRadius: 12,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    },
-                    text: {
-                        color: '#FFFFFF',
-                        fontWeight: '700',
-                    }
+        // Add greetings dots
+        greetings.forEach(greeting => {
+            if (greeting.createdAt) {
+                const dateStr = format(new Date(greeting.createdAt), 'yyyy-MM-dd');
+                if (!marked[dateStr]) {
+                    marked[dateStr] = { dots: [] };
                 }
-            };
+
+                // Add greeting dot
+                if (!marked[dateStr].dots.some((d: any) => d.key === 'greeting')) {
+                    marked[dateStr].dots.push({ key: 'greeting', color: '#0099ffff' });
+                }
+            }
+        });
+
+        // (Future) Add Goal dots here similarly, using blue/green color like '#10B981'
+
+        // Apply selected styling
+        if (selectedDate) {
+            if (!marked[selectedDate]) {
+                marked[selectedDate] = { dots: [] };
+            }
+            marked[selectedDate].selected = true;
+            marked[selectedDate].selectedColor = '#1A1A2E';
+            marked[selectedDate].selectedTextColor = '#FFFFFF';
         }
 
         return marked;
-    }, [entries, selectedDate]);
+    }, [entries, greetings, selectedDate]);
 
     const selectedDateEntries = useMemo(() => {
         if (!selectedDate) return [];
@@ -123,18 +120,32 @@ export const useDiaryController = () => {
         });
     }, [selectedDate, entries]);
 
+    const selectedDateGreetings = useMemo(() => {
+        if (!selectedDate) return [];
+        return greetings.filter(greeting => {
+            if (!greeting.createdAt) return false;
+            const greetingDate = format(new Date(greeting.createdAt), 'yyyy-MM-dd');
+            return greetingDate === selectedDate;
+        });
+    }, [selectedDate, greetings]);
+
     // --- Handlers ---
     const handleDayPress = (day: DateData) => {
         const dateStr = day.dateString;
         setSelectedDate(dateStr);
 
-        // Open modal if there are entries for this day
+        // Open modal if there are entries or greetings for this day
         const hasEntries = entries.some(entry => {
             if (!entry.timestamp) return false;
             return format(new Date(entry.timestamp), 'yyyy-MM-dd') === dateStr;
         });
 
-        if (hasEntries) {
+        const hasGreetings = greetings.some(greeting => {
+            if (!greeting.createdAt) return false;
+            return format(new Date(greeting.createdAt), 'yyyy-MM-dd') === dateStr;
+        });
+
+        if (hasEntries || hasGreetings) {
             setModalVisible(true);
         }
     };
@@ -156,6 +167,7 @@ export const useDiaryController = () => {
         setModalVisible,
         markedDates,
         selectedDateEntries,
+        selectedDateGreetings,
         handleDayPress,
         handleMonthChange,
         goToToday,

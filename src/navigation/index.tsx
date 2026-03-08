@@ -33,14 +33,14 @@ function AppTabs() {
           tabBarLabel: 'Today'
         }}
       />
-      <Tab.Screen
+      {/* <Tab.Screen
         name="CheckIn"
         component={CheckInScreen}
         options={{
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
           tabBarLabel: 'Check In'
         }}
-      />
+      /> */}
       <Tab.Screen
         name="Diary"
         component={DiaryScreen}
@@ -93,7 +93,9 @@ export default function RootNavigator() {
       >
         <Stack.Screen name="App" component={AppTabs} />
         <Stack.Screen name="Reflection" component={ReflectionScreen} />
+        <Stack.Screen name="CheckIn" component={CheckInScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+// Trigger reload for NavigationTree rebuild

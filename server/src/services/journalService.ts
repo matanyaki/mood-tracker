@@ -1,17 +1,18 @@
 import { db } from '../config/firebase';
 import { firestore } from 'firebase-admin';
 
-
 export interface JournalEntry {
     id?: string;
     userId: string;
     date: string;       // YYYY-MM-DD
     timestamp: number;  // Unix timestamp from client
 
-    // NEW SIMPLIFIED
-    emotion: string;    // "Happy", "Sad", etc.
-    scale: number;      // 1-5
-    note?: string;
+    emotions: Array<{
+        id: string;
+        label: string;
+        scale: number;
+        note?: string;
+    }>;
 
     aiFeedback?: string;
     createdAt?: Date | firestore.Timestamp; // Server side
@@ -20,8 +21,6 @@ export interface JournalEntry {
 }
 
 class JournalService {
-    private collectionName = 'journal_entries';
-
     /**
      * Create a new journal entry in Firestore.
      * Automatically adds a server-side timestamp.
@@ -39,15 +38,13 @@ class JournalService {
                 updatedAt: firestore.FieldValue.serverTimestamp()
             };
 
-            const docRef = await db.collection(this.collectionName).add(entryData);
+            const docRef = await db.collection('users').doc(userId).collection('entries').add(entryData);
             const docSnapshot = await docRef.get();
 
             if (!docSnapshot.exists) {
                 throw new Error('Failed to retrieve the created entry.');
             }
 
-            // Return the created entry with its ID and resolved timestamps (if needed, though serverTimestamp is special)
-            // For the client, we might want to return the client-friendly date or just the data as is.
             return {
                 id: docRef.id,
                 ...docSnapshot.data()
@@ -67,11 +64,8 @@ class JournalService {
         }
 
         try {
-            // Firestore requires an index for 'where' + 'orderBy' on different fields.
-            // Sorting in memory for now to avoid blocking dev.
-            const snapshot = await db.collection(this.collectionName)
-                .where('userId', '==', userId)
-                // .orderBy('createdAt', 'desc') 
+            const snapshot = await db.collection('users').doc(userId).collection('entries')
+                .orderBy('timestamp', 'desc')
                 .get();
 
             if (snapshot.empty) {
@@ -83,16 +77,7 @@ class JournalService {
                 ...doc.data()
             })) as JournalEntry[];
 
-            // Sort in memory (Newest first)
-            return entries.sort((a, b) => {
-                // Handle Firestore Timestamp or standard Date
-                const getMillis = (d: any) => {
-                    if (d && typeof d.toMillis === 'function') return d.toMillis();
-                    if (d instanceof Date) return d.getTime();
-                    return 0;
-                };
-                return getMillis(b.createdAt) - getMillis(a.createdAt);
-            });
+            return entries;
 
         } catch (error: any) {
             console.error('Error fetching journal entries:', error);
@@ -110,15 +95,11 @@ class JournalService {
         }
 
         try {
-            const docRef = db.collection(this.collectionName).doc(entryId);
+            const docRef = db.collection('users').doc(userId).collection('entries').doc(entryId);
             const doc = await docRef.get();
 
             if (!doc.exists) {
                 throw new Error('Entry not found.');
-            }
-
-            if (doc.data()?.userId !== userId) {
-                throw new Error('Unauthorized: You can only update your own entries.');
             }
 
             await docRef.update({
@@ -141,15 +122,11 @@ class JournalService {
         }
 
         try {
-            const docRef = db.collection(this.collectionName).doc(entryId);
+            const docRef = db.collection('users').doc(userId).collection('entries').doc(entryId);
             const doc = await docRef.get();
 
             if (!doc.exists) {
                 throw new Error('Entry not found.');
-            }
-
-            if (doc.data()?.userId !== userId) {
-                throw new Error('Unauthorized: You can only delete your own entries.');
             }
 
             await docRef.delete();

@@ -1,17 +1,35 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { AppHeader, ScreenContainer, FabMenu, QuoteCard } from '../components'; // FabMenu exported from index?
+import { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { AppHeader, ScreenContainer, FabMenu, QuoteCard, GratitudeNote } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
+import { useGreetingController } from '../controllers/GreetingController';
 
 export default function TodayScreen({ navigation }: any) {
+    const [isGratitudeVisible, setIsGratitudeVisible] = useState(false);
+    const { saveGreeting, isLoading } = useGreetingController();
+
     const handleFabAction = (action: string) => {
         console.log(`Fab Action: ${action}`);
         if (action === 'Emotions') {
             navigation.navigate('CheckIn');
         } else if (action === 'Goals') {
             // navigation.navigate('GoalSetting'); 
+        } else if (action === 'Greeting') {
+            setIsGratitudeVisible(true);
         }
     };
+
+    const handleSaveGratitude = async (text: string) => {
+        try {
+            await saveGreeting(text);
+            console.log('Saved gratitude:', text);
+            setIsGratitudeVisible(false); // Close strict after save success
+        } catch (error) {
+            Alert.alert("Error", "Failed to save your gratitude note. Please try again.");
+        }
+    };
+
+    // ... rest of component
 
     const fabActions = [
         {
@@ -57,9 +75,17 @@ export default function TodayScreen({ navigation }: any) {
             </ScrollView>
 
             <FabMenu actions={fabActions} />
+
+            {/* Gratitude Modal */}
+            <GratitudeNote
+                visible={isGratitudeVisible}
+                onClose={() => setIsGratitudeVisible(false)}
+                onSave={handleSaveGratitude}
+            />
         </ScreenContainer>
     );
 }
+
 
 const styles = StyleSheet.create({
     content: {

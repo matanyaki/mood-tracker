@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import { db, admin } from './config/firebase';
 import journalRoutes from './routes/journalRoutes';
 import aiRoutes from './routes/aiRoutes';
+import greetingRoutes from './routes/greetingRoutes';
+import userRoutes from './routes/userRoutes';
+import insightsRoutes from './routes/insightsRoutes';
 
 dotenv.config();
 
@@ -12,10 +15,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Request logging middleware
+app.use((req: Request, res: Response, next: import('express').NextFunction) => {
+    console.log(`[INCOMING] ${req.method} ${req.path}`, req.body);
+    next();
+});
+
 // API Routes
 app.use('/api/entries', journalRoutes);
 app.use('/api/ai', aiRoutes);
-
+app.use('/api/greetings', greetingRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/insights', insightsRoutes);
 
 // Health Check Route
 app.get('/health', async (req: Request, res: Response) => {

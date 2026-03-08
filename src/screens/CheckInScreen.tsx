@@ -3,15 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useCheckInController } from '../controllers/useCheckInController';
 import { ScreenContainer, AppHeader, EmotionRow, PrimaryButton } from '../components';
 
-// --- Constants ---
-const EMOTIONS_CONFIG = [
-  { id: 'happy', label: 'Happy', imageKey: 'happy' },
-  { id: 'sad', label: 'Sad', imageKey: 'sad' },
-  { id: 'worry', label: 'Worry', imageKey: 'bad' },
-  { id: 'fear', label: 'Fear', imageKey: 'fearful' },
-  { id: 'angry', label: 'Angry', imageKey: 'angry' },
-];
-
+import { EMOTIONS_CONFIG } from '../constants/emotions';
 export default function CheckInScreen({ navigation }: any) {
   const {
     updateScale,

@@ -1,18 +1,161 @@
-// src/screens/InsightsScreen.tsx
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { BarChart3, TrendingUp, Calendar } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, Card, LoadingState, EmptyState } from '../components';
+import React, { useState } from 'react';
+import { StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { ScreenContainer, AppHeader, LoadingState } from '../components';
 import { useInsightsController } from '../controllers/useInsightsController';
+import { EMOTIONS_CONFIG } from '../constants/emotions';
+import { getEmotionColor } from '../constants/colors';
+
+import FilterRow from '../components/Insights/FilterRow';
+import SummaryCards from '../components/Insights/SummaryCards';
+import EmotionBreakdown from '../components/Insights/EmotionBreakdown';
+import EmotionWavesChart from '../components/Insights/EmotionWavesChart';
+import ChartTooltipModal from '../components/Insights/ChartTooltipModal';
+
+const getDaysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate();
 
 export default function InsightsScreen({ navigation }: any) {
-  const { loading, stats, totalEntries, refreshStats } = useInsightsController();
+  const { loading, entries, refreshStats } = useInsightsController();
+
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState((currentDate.getMonth() + 1).toString());
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
+
+  // Tooltip Modal State
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipData, setTooltipData] = useState<{ day: number; emotions: { emotion: string; scale: number; note: string }[] } | null>(null);
+
+  // Parse entries to process chart data
+  const daysInMonth = getDaysInMonth(parseInt(selectedMonth), parseInt(selectedYear));
+
+  // Determine label step to prevent overlapping (e.g., skip every 5 days for clarity)
+  const labels = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    return day % 5 === 0 || day === 1 ? day.toString() : "";
+  });
+
+  const emotionDataMap: Record<string, { scale: number; note: string }[]> = {};
+
+  EMOTIONS_CONFIG.forEach(emotion => {
+    emotionDataMap[emotion.id] = Array(daysInMonth).fill({ scale: 0, note: '' });
+  });
+
+  // Filter for month and year
+  const filteredEntries = (entries || []).filter((entry: any) => {
+    if (!entry.date) return false;
+    const entryDate = new Date(entry.date);
+    return (entryDate.getMonth() + 1).toString() === selectedMonth &&
+      entryDate.getFullYear().toString() === selectedYear;
+  });
+
+  filteredEntries.forEach((entry: any) => {
+    const entryDate = new Date(entry.date);
+    const dayIndex = entryDate.getDate() - 1;
+
+    if (entry.emotions && dayIndex >= 0 && dayIndex < daysInMonth) {
+      entry.emotions.forEach((eItem: any) => {
+        const key = (eItem.id || eItem.label || 'unknown').toLowerCase();
+        if (emotionDataMap[key]) {
+          if (eItem.scale > emotionDataMap[key][dayIndex].scale) {
+            emotionDataMap[key][dayIndex] = {
+              scale: eItem.scale,
+              note: eItem.note || ''
+            };
+          }
+        }
+      });
+    }
+  });
+
+  // Calculate local Summary and Breakdown stats for the filtered month
+  const localCounts: Record<string, number> = {};
+  let totalLocalEmotions = 0;
+
+  filteredEntries.forEach((entry: any) => {
+    if (entry.emotions && entry.emotions.length > 0) {
+      entry.emotions.forEach((eItem: any) => {
+        const key = (eItem.id || eItem.label || 'unknown').toLowerCase();
+        localCounts[key] = (localCounts[key] || 0) + 1;
+        totalLocalEmotions++;
+      });
+    }
+  });
+
+  const filteredStats = EMOTIONS_CONFIG.map(emotion => {
+    const count = localCounts[emotion.id] || 0;
+    return {
+      label: emotion.label,
+      count: count,
+      color: getEmotionColor(emotion.id),
+      percentage: totalLocalEmotions > 0 ? (count / totalLocalEmotions) * 100 : 0
+    };
+  }).filter(item => item.count > 0).sort((a, b) => b.count - a.count);
+
+  const filteredTotalEntries = filteredEntries.length;
+
+  const datasets = EMOTIONS_CONFIG.map((emotion) => {
+    return {
+      data: emotionDataMap[emotion.id].map(item => item.scale),
+      color: () => getEmotionColor(emotion.id),
+      strokeWidth: 2,
+      emotionKey: emotion.id, // custom prop to identify which emotion was clicked
+      meta: emotionDataMap[emotion.id]
+    };
+  });
+
+  // Hidden dataset to force the Y-Axis to render up to 5 without decimal overlaps
+  datasets.unshift({
+    data: Array(daysInMonth).fill(5),
+    color: () => 'rgba(0,0,0,0)',
+    strokeWidth: 0,
+    emotionKey: 'hidden',
+    meta: Array(daysInMonth).fill({ scale: 0, note: '' }),
+    withDots: false
+  } as any);
+
+  const chartData = {
+    labels: labels,
+    datasets: datasets
+  };
+
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear.toString(), (currentYear - 1).toString(), (currentYear - 2).toString()];
+
+  const handleDataPointClick = (data: any) => {
+    // Fallback if data.dataset doesn't have our custom keys
+    let datasetMeta = data?.dataset?.meta;
+    let emotionKeyAttr = data?.dataset?.emotionKey;
+
+    if (!datasetMeta || !emotionKeyAttr) {
+      const datasetRef = chartData.datasets.find(ds => ds.data === data.dataset?.data);
+      if (datasetRef) {
+        datasetMeta = datasetRef.meta;
+        emotionKeyAttr = datasetRef.emotionKey;
+      }
+    }
+
+    if (!emotionKeyAttr || emotionKeyAttr === 'hidden') return;
+
+    if (data.value > 0) {
+      const day = data.index + 1;
+      const metaInfo = datasetMeta?.[data.index];
+
+      setTooltipData({
+        day: day,
+        emotions: [{
+          emotion: emotionKeyAttr.charAt(0).toUpperCase() + emotionKeyAttr.slice(1),
+          scale: data.value,
+          note: metaInfo?.note || "No note provided"
+        }]
+      });
+      setTooltipVisible(true);
+    }
+  };
 
   return (
     <ScreenContainer>
       <AppHeader
         title="Insights"
-        subtitle="Last 30 Days"
+        subtitle="Track Your Emotion Waves"
       />
 
       {loading ? (
@@ -22,69 +165,34 @@ export default function InsightsScreen({ navigation }: any) {
           contentContainerStyle={styles.content}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refreshStats} />}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
+          <FilterRow
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            years={years}
+          />
 
-          {/* Summary Row (Total + Weekly Avg) */}
-          <View style={{ flexDirection: 'row', gap: 20, marginBottom: 24 }}>
-            <Card padding={16} style={{ flex: 1, alignItems: 'center' }}>
-              {/* Added Icon for visual polish */}
-              <View style={[styles.iconBox, { backgroundColor: '#E0E7FF' }]}>
-                <TrendingUp size={20} color="#4F46E5" />
-              </View>
-              <Text style={styles.summaryNumber}>{totalEntries}</Text>
-              <Text style={styles.summaryLabel}>Total</Text>
-            </Card>
+          <EmotionWavesChart
+            chartData={chartData}
+            handleDataPointClick={handleDataPointClick}
+          />
 
-            <Card padding={16} style={{ flex: 1, alignItems: 'center' }}>
-              {/* Added Icon for visual polish */}
-              <View style={[styles.iconBox, { backgroundColor: '#DCFCE7' }]}>
-                <Calendar size={20} color="#166534" />
-              </View>
-              <Text style={styles.summaryNumber}>
-                {totalEntries > 0 ? Math.ceil(totalEntries / 4) : 0}
-              </Text>
-              <Text style={styles.summaryLabel}>Per Week</Text>
-            </Card>
-          </View>
+          <SummaryCards filteredTotalEntries={filteredTotalEntries} />
 
-          {/* Chart Section */}
-          <View style={styles.sectionHeader}>
-            <BarChart3 size={20} color="#1A202C" />
-            <Text style={styles.sectionTitle}>Emotion Breakdown</Text>
-          </View>
-
-          <Card padding={20} borderRadius={24}>
-            {stats.map((item, index) => (
-              <View key={item.label} style={[styles.statRow, index === stats.length - 1 && styles.lastStatRow]}>
-                <View style={styles.labelContainer}>
-                  <Text style={styles.statLabel}>{item.label}</Text>
-                  <Text style={styles.statCount}>{item.count} times</Text>
-                </View>
-
-                <View style={styles.barBackground}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      { width: `${item.percentage}%`, backgroundColor: item.color }
-                    ]}
-                  />
-                </View>
-              </View>
-            ))}
-          </Card>
-
-          {stats.length === 0 && (
-            <EmptyState
-              title="No data yet"
-              subtitle="Check in a few times to see your trends!"
-              emoji="📊"
-              buttonLabel="Check In Now"
-              onButtonPress={() => navigation.navigate('CheckIn')}
-            />
-          )}
+          <EmotionBreakdown stats={filteredStats} />
 
         </ScrollView>
       )}
+
+      <ChartTooltipModal
+        visible={tooltipVisible}
+        data={tooltipData}
+        onClose={() => setTooltipVisible(false)}
+      />
+
     </ScreenContainer>
   );
 }
@@ -92,60 +200,6 @@ export default function InsightsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   content: {
     padding: 20,
-  },
-  // Added styling for the Icon Box
-  iconBox: {
-    width: 36, height: 36, borderRadius: 18,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 8
-  },
-  summaryNumber: {
-    fontSize: 28, // Adjusted size to fit side-by-side
-    fontWeight: '800',
-    color: '#1A1A2E',
-  },
-  summaryLabel: {
-    fontSize: 16,
-    color: '#4A4A4A',
-    marginTop: 2,
-    fontWeight: '600',
-  },
-  sectionHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A2E',
-  },
-  statRow: {
-    marginBottom: 20,
-  },
-  lastStatRow: {
-    marginBottom: 0,
-  },
-  labelContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  statLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A2E',
-  },
-  statCount: {
-    fontSize: 16,
-    color: '#4A4A4A',
-    fontWeight: '600',
-  },
-  barBackground: {
-    height: 10,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: 5,
-  },
+    paddingBottom: 40,
+  }
 });

@@ -12,13 +12,13 @@ interface ApiResponse<T> {
 export const createEntry = async (req: Request, res: Response) => {
     try {
 
-        const { date, timestamp, emotion, scale, note } = req.body;
+        const { date, timestamp, emotions, aiFeedback } = req.body;
         // Basic validation
-        if (!date || !timestamp || !emotion || typeof scale !== 'number') {
+        if (!date || !timestamp || !emotions || !Array.isArray(emotions)) {
             return res.status(400).json({
                 success: false,
                 data: null,
-                error: 'Missing required fields: date, timestamp, emotion(string), scale(number from 1-5).'
+                error: 'Missing required fields: date, timestamp, emotions(array).'
             } as ApiResponse<null>);
         }
 
@@ -32,7 +32,7 @@ export const createEntry = async (req: Request, res: Response) => {
             } as ApiResponse<null>);
         }
 
-        const entry = await journalService.createEntry(userId, { date, timestamp, emotion, scale, note });
+        const entry = await journalService.createEntry(userId, { date, timestamp, emotions, aiFeedback });
 
         return res.status(201).json({
             success: true,
@@ -98,15 +98,6 @@ export const updateEntry = async (req: Request, res: Response) => {
                 success: false,
                 data: null,
                 error: 'Entry ID is required.'
-            } as ApiResponse<null>);
-        }
-
-        // Validate updates object if needed (for now, allow partials)
-        if (updates.emotion && typeof updates.emotion !== 'string') {
-            return res.status(400).json({
-                success: false,
-                data: null,
-                error: 'Emotion must be a string.'
             } as ApiResponse<null>);
         }
 

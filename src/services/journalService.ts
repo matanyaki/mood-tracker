@@ -1,8 +1,8 @@
 // src/services/journalService.ts
-import { db } from '../config/firebase'; // Ensure this exports your initialized Firestore instance
-import { collection, doc, addDoc, getDocs, deleteDoc, updateDoc, query, orderBy, where, getDoc } from 'firebase/firestore';
 import { JournalEntry } from '../models/JournalEntry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config/api';
+import { auth } from '../config/firebase';
 
 const GUEST_STORAGE_KEY = '@guest_journal_entries';
 const GUEST_ID = 'guest-user';
@@ -14,7 +14,7 @@ export const JournalService = {
 
   /**
    * Add a new journal entry.
-   * - Authenticated: Saves to Firestore at `users/{userId}/entries`
+   * - Authenticated: Saves via Custom Backend API
    * - Guest: Saves to AsyncStorage
    */
   addEntry: async (entryData: Omit<JournalEntry, 'id'>) => {
@@ -34,21 +34,34 @@ export const JournalService = {
         return newEntry.id;
 
       } else {
-        // --- FIRESTORE (Authenticated) ---
-        // Path: users/{uid}/entries
-        console.log(`[JournalService] Uploading entry for user: ${entryData.userId}`);
-        const userEntriesRef = collection(db, 'users', entryData.userId, 'entries');
+        // --- API (Authenticated) ---
+        console.log(`[JournalService] Uploading entry for user via API`);
+        const user = auth.currentUser;
+        if (!user) throw new Error("User not authenticated.");
 
-        // Add timestamp if missing
+        const token = await user.getIdToken();
+
         const finalData = {
           ...entryData,
           createdAt: new Date().toISOString()
         };
-        console.log(`[JournalService] Payload: ${JSON.stringify(finalData)}`);
 
-        const docRef = await addDoc(userEntriesRef, finalData);
-        console.log(`[JournalService] Upload successful. ID: ${docRef.id}`);
-        return docRef.id;
+        const response = await fetch(`${API_BASE_URL}/api/entries`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(finalData)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to create entry: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        return result.data.id;
       }
     } catch (error) {
       console.error("Error [addEntry]:", error);
@@ -58,7 +71,7 @@ export const JournalService = {
 
   /**
    * Get all entries for a user.
-   * - Authenticated: Fetches from `users/{userId}/entries`
+   * - Authenticated: Fetches via Custom Backend API
    * - Guest: Fetches from AsyncStorage
    */
   getUserEntries: async (userId: string): Promise<JournalEntry[]> => {
@@ -70,19 +83,31 @@ export const JournalService = {
         return entries.sort((a, b) => b.timestamp - a.timestamp);
 
       } else {
-        // --- FIRESTORE ---
-        const userEntriesRef = collection(db, 'users', userId, 'entries');
-        // Order by timestamp descending
-        const q = query(userEntriesRef, orderBy('timestamp', 'desc'));
+        // --- API (Authenticated) ---
+        const user = auth.currentUser;
+        if (!user) throw new Error("User not authenticated.");
 
-        const snapshot = await getDocs(q);
+        const token = await user.getIdToken();
 
-        const entries: JournalEntry[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as JournalEntry));
+        const url = `${API_BASE_URL}/api/entries`;
+        console.log(`[JournalService] Fetching GET ${url} for userId: ${userId}`);
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        console.log(`[JournalService] GET ${url} Response Status:`, response.status);
 
-        return entries;
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[JournalService] GET ${url} Error Text:`, errorText);
+          throw new Error(`Failed to get entries: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log(`[JournalService] GET ${url} Response JSON:`, result);
+        return result.data as JournalEntry[];
       }
     } catch (error) {
       console.error("Error [getUserEntries]:", error);
@@ -115,10 +140,6 @@ export const JournalService = {
       }
     });
 
-    // Return total entries for the summary card, but totalEmotionCount for chart calc if needed
-    // The Controller expects 'total' to use as denominator. 
-    // To fix >100% bars if multiple checked, we should return totalEmotionCount as 'totalForChart'
-    // But to minimize breaking changes, let's return { counts, total: totalEmotionCount, totalEntries: totalEntriesCount }
     return { counts, total: totalEmotionCount, totalEntries: totalEntriesCount };
   },
 
@@ -136,10 +157,23 @@ export const JournalService = {
         return true;
 
       } else {
-        // --- FIRESTORE ---
-        // We delete directly from the path: users/{userId}/entries/{entryId}
-        const entryRef = doc(db, 'users', userId, 'entries', entryId);
-        await deleteDoc(entryRef);
+        // --- API (Authenticated) ---
+        const user = auth.currentUser;
+        if (!user) throw new Error("User not authenticated.");
+
+        const token = await user.getIdToken();
+
+        const response = await fetch(`${API_BASE_URL}/api/entries/${entryId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete entry: ${response.status}`);
+        }
+
         return true;
       }
     } catch (error) {
@@ -150,10 +184,6 @@ export const JournalService = {
 
   updateEntry: async (entryId: string, updates: Partial<JournalEntry>) => {
     try {
-      // Determine User ID (Guest vs Auth)
-      // We prioritize checking the updates object for userId, or inferring from storage presence
-
-      // 1. Check Local first
       const localData = await AsyncStorage.getItem(GUEST_STORAGE_KEY);
       let isLocal = false;
       let localEntries: JournalEntry[] = [];
@@ -181,18 +211,27 @@ export const JournalService = {
         return updatedEntry;
 
       } else if (targetUserId) {
-        // --- FIRESTORE ---
-        // Update document at users/{userId}/entries/{entryId}
-        const entryRef = doc(db, 'users', targetUserId, 'entries', entryId);
+        // --- API (Authenticated) ---
+        const user = auth.currentUser;
+        if (!user) throw new Error("User not authenticated.");
 
-        // We only send the fields that are in 'updates'
-        // @ts-ignore - updates might have extra fields? strict typing is safer but for now:
-        await updateDoc(entryRef, updates);
+        const token = await user.getIdToken();
 
-        // Fetch updated doc to return consistent format
-        // (Optional, or just return merged data)
-        const snap = await getDoc(entryRef);
-        return { id: snap.id, ...snap.data() } as JournalEntry;
+        const response = await fetch(`${API_BASE_URL}/api/entries/${entryId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(updates)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to update entry: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return result.data as JournalEntry;
       } else {
         throw new Error("Cannot update entry: Missing userId to determine storage location.");
       }

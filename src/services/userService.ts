@@ -1,8 +1,8 @@
-import { doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config/api';
+import { auth } from '../config/firebase';
 import { UserProfile } from '../models/UserProfile';
 import { JournalEntry } from '../models/JournalEntry';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const UserService = {
     /**
@@ -11,22 +11,20 @@ export const UserService = {
     syncUser: async (user: any) => {
         try {
             if (!user || !user.uid) return;
-            const userRef = doc(db, 'users', user.uid);
-            const userSnap = await getDoc(userRef);
+            // The user must be authenticated, we'll wait for the token to be available
+            // Note: If calling this right upon signup, might take a second for token.
+            const token = await user.getIdToken();
 
-            if (!userSnap.exists()) {
-                // Create new profile
-                const newProfile: UserProfile = {
-                    uid: user.uid,
-                    email: user.email || '',
-                    createdAt: new Date().toISOString(),
-                    preferences: { theme: 'system', notificationsEnabled: false },
-                    stats: { totalEntries: 0, currentStreak: 0 }
-                };
-                await setDoc(userRef, newProfile);
-            }
+            await fetch(`${API_BASE_URL}/api/users/sync`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ user })
+            });
         } catch (error) {
-            console.error("Error syncing user profile (likely permissions):", error);
+            console.error("Error syncing user profile:", error);
             // We swallow the error so it doesn't block the app flow/migration
         }
     },
@@ -36,11 +34,16 @@ export const UserService = {
      */
     incrementEntryCount: async (userId: string) => {
         if (!userId) return;
-        const userRef = doc(db, 'users', userId);
         try {
-            await updateDoc(userRef, {
-                "stats.totalEntries": increment(1),
-                "stats.lastCheckInDate": new Date().toISOString().split('T')[0]
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const token = await user.getIdToken();
+            await fetch(`${API_BASE_URL}/api/users/increment-entry`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
         } catch (error) {
             console.error("Error incrementing entry count:", error);
@@ -52,10 +55,26 @@ export const UserService = {
      */
     getProfile: async (userId: string): Promise<UserProfile | null> => {
         if (!userId) return null;
-        const userRef = doc(db, 'users', userId);
         try {
-            const snap = await getDoc(userRef);
-            return snap.exists() ? (snap.data() as UserProfile) : null;
+            // API (Authenticated)
+            const user = auth.currentUser;
+            if (!user) throw new Error("User not authenticated.");
+
+            const token = await user.getIdToken();
+
+            const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to get profile: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result.data as UserProfile;
         } catch (error) {
             console.error("Error fetching profile:", error);
             return null;

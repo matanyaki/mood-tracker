@@ -13,4 +13,6 @@ export { PrimaryButton } from './PrimaryButton';
 export { FabMenu } from './FabMenu';
 export { default as QuoteCard } from './QuoteCard';
 // Temporarily exporting TodayScreen if still needed or used elsewhere
-export { default as TodayScreen } from '../screens/TodayScreen';
+// export { default as TodayScreen } from '../screens/TodayScreen';
+export { GratitudeNote } from './GratitudeNote';
+

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { format } from 'date-fns';
-import { X, Edit, Sparkles } from 'lucide-react-native';
+import { X, SmilePlus, Edit, Sparkles } from 'lucide-react-native';
 import EntryEmotionsList from './EntryEmotionsList';
 
 interface DayEntryModalProps {
@@ -9,10 +9,11 @@ interface DayEntryModalProps {
     onClose: () => void;
     selectedDate: string;
     entries: any[];
+    greetings?: any[];
     onEditEntry?: (entry: any) => void;
 }
 
-export default function DayEntryModal({ visible, onClose, selectedDate, entries, onEditEntry }: DayEntryModalProps) {
+export default function DayEntryModal({ visible, onClose, selectedDate, entries, greetings = [], onEditEntry }: DayEntryModalProps) {
     if (!visible) return null;
 
     return (
@@ -39,53 +40,98 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                     </View>
 
                     <ScrollView style={styles.modalScroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                        {entries.length === 0 ? (
+                        {entries.length === 0 && greetings.length === 0 ? (
                             <View style={styles.emptyContainer}>
                                 <Text style={styles.emptyText}>No entries for this day.</Text>
                             </View>
                         ) : (
-                            entries.map((entry) => {
-                                const emotions = entry.emotions && entry.emotions.length > 0
-                                    ? entry.emotions
-                                    : (entry.emotion ? [{
-                                        id: entry.emotion.toLowerCase(),
-                                        label: entry.emotion,
-                                        scale: entry.scale,
-                                        note: entry.note
-                                    }] : []);
+                            <View style={styles.entryCard}>
 
-                                return (
-                                    <View key={entry.id} style={styles.entryCard}>
-
-                                        {/* Card Header: Time & Edit */}
-                                        <View style={styles.cardHeader}>
-                                            <Text style={styles.entryTime}>
-                                                {format(new Date(entry.timestamp), 'h:mm a')}
-                                            </Text>
-                                            {onEditEntry && (
-                                                <TouchableOpacity onPress={() => onEditEntry(entry)}>
-                                                    <Edit size={16} color="#94A3B8" />
-                                                </TouchableOpacity>
-                                            )}
+                                {/* GREETINGS SECTION */}
+                                {greetings.length > 0 && (
+                                    <View style={styles.sectionContainer}>
+                                        <View style={styles.sectionHeader}>
+                                            <Sparkles size={18} color="#0099ffff" />
+                                            <Text style={[styles.sectionTitle, { color: '#0099ffff' }]}>GREETINGS</Text>
                                         </View>
-
-                                        {/* Emotions List (Modular Component) */}
-                                        <EntryEmotionsList emotions={emotions} />
-
-                                        {/* AI Insight Footer */}
-                                        {entry.aiFeedback && (
-                                            <View style={styles.aiContainer}>
-                                                <View style={styles.aiHeader}>
-                                                    <Sparkles size={14} color="#3B82F6" fill="#3B82F6" />
-                                                    <Text style={styles.aiTitle}>AI Insight</Text>
+                                        {greetings.map((greeting, index) => {
+                                            const isLast = index === greetings.length - 1;
+                                            return (
+                                                <View key={greeting.id} style={styles.timelineItem}>
+                                                    <View style={styles.timelineColumn}>
+                                                        <View style={[styles.iconWrapper, { backgroundColor: '#E0F2FE' }]}>
+                                                            <Sparkles size={20} color="#0099ffff" />
+                                                        </View>
+                                                        {!isLast && <View style={styles.timelineLine} />}
+                                                    </View>
+                                                    <View style={styles.contentColumn}>
+                                                        <Text style={styles.entryTime}>
+                                                            {format(new Date(greeting.createdAt), 'h:mm a')}
+                                                        </Text>
+                                                        <Text style={styles.greetingText}>"{greeting.text}"</Text>
+                                                    </View>
                                                 </View>
-                                                <Text style={styles.aiText}>{entry.aiFeedback}</Text>
-                                            </View>
-                                        )}
-
+                                            );
+                                        })}
                                     </View>
-                                );
-                            })
+                                )}
+
+                                {/* DIVIDER IF BOTH EXIST */}
+                                {greetings.length > 0 && entries.length > 0 && (
+                                    <View style={styles.divider} />
+                                )}
+
+                                {/* EMOTIONS SECTION */}
+                                {entries.length > 0 && (
+                                    <View style={styles.sectionContainer}>
+                                        <View style={styles.sectionHeader}>
+                                            <SmilePlus size={18} color="#A78BFA" />
+                                            <Text style={[styles.sectionTitle, { color: '#A78BFA' }]}>EMOTIONS</Text>
+                                        </View>
+                                        {entries.map((entry, index) => {
+                                            const emotions = entry.emotions && entry.emotions.length > 0
+                                                ? entry.emotions
+                                                : (entry.emotion ? [{
+                                                    id: entry.emotion.toLowerCase(),
+                                                    label: entry.emotion,
+                                                    scale: entry.scale,
+                                                    note: entry.note
+                                                }] : []);
+
+                                            return (
+                                                <View key={entry.id} style={styles.innerEntryContainer}>
+                                                    {/* Card Header: Time & Edit */}
+                                                    <View style={styles.cardHeader}>
+                                                        <Text style={styles.entryTime}>
+                                                            {format(new Date(entry.timestamp), 'h:mm a')}
+                                                        </Text>
+                                                        {/* {onEditEntry && (
+                                                            <TouchableOpacity onPress={() => onEditEntry(entry)}>
+                                                                <Edit size={16} color="#94A3B8" />
+                                                            </TouchableOpacity>
+                                                        )} */}
+                                                    </View>
+
+                                                    {/* Emotions List (Modular Component) */}
+                                                    <EntryEmotionsList emotions={emotions} />
+
+                                                    {/* AI Insight Footer */}
+                                                    {/* {entry.aiFeedback && (
+                                                        <View style={styles.aiContainer}>
+                                                            <View style={styles.aiHeader}>
+                                                                <Sparkles size={14} color="#3B82F6" fill="#3B82F6" />
+                                                                <Text style={styles.aiTitle}>AI Insight</Text>
+                                                            </View>
+                                                            <Text style={styles.aiText}>{entry.aiFeedback}</Text>
+                                                        </View>
+                                                    )} */}
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+                                )}
+
+                            </View>
                         )}
                         <View style={styles.bottomSpacer} />
                     </ScrollView>
@@ -174,11 +220,71 @@ const styles = StyleSheet.create({
             },
         }),
     },
+    innerEntryContainer: {
+        marginBottom: 24,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#F1F5F9',
+        marginVertical: 16,
+    },
+    sectionContainer: {
+        marginBottom: 8,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingBottom: 16,
+        marginBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F8FAFC',
+    },
+    sectionTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    timelineItem: {
+        flexDirection: 'row',
+        marginBottom: 4,
+    },
+    timelineColumn: {
+        width: 50,
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    iconWrapper: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2,
+    },
+    timelineLine: {
+        flex: 1,
+        width: 2,
+        backgroundColor: '#E2E8F0',
+        marginVertical: 4,
+    },
+    contentColumn: {
+        flex: 1,
+        paddingTop: 8,
+        paddingBottom: 24,
+    },
+    greetingText: {
+        fontSize: 15,
+        color: '#334155',
+        lineHeight: 22,
+        fontStyle: 'italic',
+        marginTop: 6,
+    },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 8,
     },
     entryTime: {
         fontSize: 13,

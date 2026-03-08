@@ -1,6 +1,6 @@
-// src/services/aiService.ts
 import { API_BASE_URL } from '../config/api';
 import { JournalEntry } from "../models/JournalEntry";
+import { auth } from '../config/firebase'; // Added auth import
 
 export const AIService = {
 
@@ -11,17 +11,23 @@ export const AIService = {
      */
     generateInstantFeedback: async (entry: Partial<JournalEntry>): Promise<string> => {
         try {
+            // Get current user's token
+            const user = auth.currentUser;
+            if (!user) {
+                console.warn("No authenticated user, skipping AI feedback generation");
+                return "I hear you. Take a moment to breathe deeply.";
+            }
+
+            const token = await user.getIdToken();
+
             const response = await fetch(`${API_BASE_URL}/api/ai/reflect`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 'Authorization': ...
-                    'x-mock-user-id': entry.userId || 'test-user-id'
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     emotions: entry.emotions,
-                    // If backend expects flattened structure, we might need to adjust.
-                    // But typically we should send the full object now.
                     userId: entry.userId,
                     date: entry.date,
                     timestamp: entry.timestamp

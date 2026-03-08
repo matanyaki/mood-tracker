@@ -1,22 +1,25 @@
-// src/config/api.ts
+
 import Constants from 'expo-constants';
 
 /**
  * API Base URL Configuration
- * 
- * For Android Emulator: http://10.0.2.2:3000
- * For iOS Simulator: http://localhost:3000
- * For Physical Device: http://<YOUR_COMPUTER_IP>:3000
- * 
- * Update this based on your development environment.
  */
-// export const API_BASE_URL = 'http://10.0.2.2:3000'; // Default for Android Emulator
-// export const API_BASE_URL = 'http://localhost:3000'; // Default for iOS Simulator
 
-// Getting the host URI automatically for Expo Go (development)
-const debuggerHost = Constants.expoConfig?.hostUri;
-const localhost = debuggerHost?.split(':')[0];
+// Helper to get the local IP address
+const getHost = () => {
+    // If we have a specific host URI (from Expo Go)
+    /* 
+       PROBLEM: When using `expo start --tunnel`, the hostUri returns a proxied domain (e.g. *.exp.direct)
+       which does NOT forward port 3000. This causes fetch requests to timeout.
+       
+       FIX: We must use the computer's local LAN IP address directly.
+       Your computer's IP is: 10.0.0.12
+    */
 
-export const API_BASE_URL = localhost
-    ? `http://${localhost}:3000`
-    : 'http://localhost:3000'; // Fallback
+    // Use your machine's local IP address
+    return 'http://10.0.0.12:3000';
+};
+
+export const API_BASE_URL = getHost();
+
+console.log('[API Config] Base URL:', API_BASE_URL);

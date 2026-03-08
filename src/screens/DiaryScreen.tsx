@@ -17,6 +17,7 @@ export default function DiaryScreen({ navigation }: any) {
     setModalVisible,
     markedDates,
     selectedDateEntries,
+    selectedDateGreetings,
     handleDayPress,
     handleMonthChange,
     goToToday,
@@ -42,7 +43,7 @@ export default function DiaryScreen({ navigation }: any) {
           current={currentMonth}
           onDayPress={handleDayPress}
           onMonthChange={handleMonthChange}
-          markingType="custom"
+          markingType="multi-dot"
           markedDates={markedDates}
           renderHeader={(date: any) => {
             const headerDate = new Date(date);
@@ -111,16 +112,16 @@ export default function DiaryScreen({ navigation }: any) {
 
         <View style={styles.legend}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#FCD34D' }]} />
-            <Text style={styles.legendText}>Single Mood</Text>
-          </View>
-          <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#A78BFA' }]} />
-            <Text style={styles.legendText}>Mixed Mood</Text>
+            <Text style={styles.legendText}>Mood</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSquare, { backgroundColor: '#1A1A2E' }]} />
-            <Text style={styles.legendText}>Selected</Text>
+            <View style={[styles.legendDot, { backgroundColor: '#0099ffff' }]} />
+            <Text style={styles.legendText}>Greeting</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+            <Text style={styles.legendText}>Goal</Text>
           </View>
         </View>
       </Card>
@@ -144,6 +145,7 @@ export default function DiaryScreen({ navigation }: any) {
         onClose={() => setModalVisible(false)}
         selectedDate={selectedDate}
         entries={selectedDateEntries}
+        greetings={selectedDateGreetings}
         onEditEntry={() => {
           setModalVisible(false);
         }}
