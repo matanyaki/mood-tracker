@@ -1,10 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
-import { Info } from 'lucide-react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
+import { EMOTIONS_CONFIG } from '../../constants/emotions';
+import { getEmotionColor } from '../../constants/colors';
+
+const screenWidth = Dimensions.get('window').width;
 
 interface TooltipData {
     day: number;
-    emotions: { emotion: string; scale: number; note: string }[];
+    x?: number;
+    y?: number;
+    emotions: { emotionKey: string; emotion: string; scale: number; note: string }[];
 }
 
 interface ChartTooltipModalProps {
@@ -14,6 +19,8 @@ interface ChartTooltipModalProps {
 }
 
 export default function ChartTooltipModal({ visible, data, onClose }: ChartTooltipModalProps) {
+    if (!data) return null;
+
     return (
         <Modal
             visible={visible}
@@ -24,40 +31,34 @@ export default function ChartTooltipModal({ visible, data, onClose }: ChartToolt
             <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
                 <View style={styles.modalContent}>
                     <View style={styles.modalHeader}>
-                        <Info size={24} color="#4F46E5" />
-                        <Text style={styles.modalTitle}>Point Details</Text>
+                        <Text style={styles.modalTitle}>Day {data.day}</Text>
+                        <Text style={styles.modalSubtitle}>Intensity Breakdown</Text>
                     </View>
-                    {data && (
-                        <View style={styles.modalBody}>
-                            <Text style={styles.detailText}>
-                                <Text style={styles.detailBold}>Date:</Text> Day {data.day} of Selected Month
-                            </Text>
-
-                            <View style={styles.divider} />
-
-                            {data.emotions.length > 0 ? (
-                                data.emotions.map((eItem, idx) => (
-                                    <View key={idx} style={styles.emotionItem}>
-                                        <Text style={styles.detailText}>
-                                            <Text style={styles.detailBold}>Emotion:</Text> {eItem.emotion}
-                                        </Text>
-                                        <Text style={styles.detailText}>
-                                            <Text style={styles.detailBold}>Intensity Scale:</Text> {eItem.scale}/5
-                                        </Text>
-                                        <Text style={styles.detailText}>
-                                            <Text style={styles.detailBold}>Note:</Text> {eItem.note}
-                                        </Text>
-                                        {idx < data.emotions.length - 1 && <View style={styles.dividerSmall} />}
+                    
+                    <View style={styles.modalBody}>
+                        {data.emotions.sort((a, b) => b.scale - a.scale).map((eItem, idx) => {
+                            const emotionColor = getEmotionColor(eItem.emotionKey || eItem.emotion.toLowerCase());
+                            return (
+                                <View key={idx} style={styles.emotionItem}>
+                                    <View style={styles.emotionRow}>
+                                        <Text style={[styles.emotionName, { color: emotionColor }]}>{eItem.emotion}</Text>
+                                        <Text style={styles.scaleText}>{eItem.scale}/5</Text>
                                     </View>
-                                ))
-                            ) : (
-                                <Text style={styles.detailText}>No emotions recorded on this day.</Text>
-                            )}
-                        </View>
-                    )}
-                    <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                        <Text style={styles.closeBtnText}>Close</Text>
-                    </TouchableOpacity>
+                                    
+                                    {/* Tiny inline bars for at-a-glance comparison */}
+                                    <View style={styles.barContainer}>
+                                        <View style={[styles.barFill, { width: `${(eItem.scale / 5) * 100}%`, backgroundColor: emotionColor }]} />
+                                    </View>
+                                    
+                                    {eItem.note ? (
+                                        <Text style={styles.noteText}>"{eItem.note}"</Text>
+                                    ) : null}
+                                    
+                                    {idx < data.emotions.length - 1 && <View style={styles.dividerSmall} />}
+                                </View>
+                            );
+                        })}
+                    </View>
                 </View>
             </TouchableOpacity>
         </Modal>
@@ -67,71 +68,84 @@ export default function ChartTooltipModal({ visible, data, onClose }: ChartToolt
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.3)', // Softer overlay
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20
     },
     modalContent: {
-        width: '85%',
+        width: Math.min(screenWidth * 0.85, 340),
         backgroundColor: '#fff',
         borderRadius: 24,
         padding: 24,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 10
     },
     modalHeader: {
-        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
-        gap: 8
+        marginBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+        paddingBottom: 16
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        color: '#1A1A2E'
+        color: '#111827',
+        marginBottom: 4
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        color: '#6B7280',
+        fontWeight: '500'
     },
     modalBody: {
-        marginBottom: 24,
-        gap: 8
+        gap: 12
     },
     emotionItem: {
-        marginBottom: 8,
-        gap: 4
+        marginBottom: 4,
     },
-    divider: {
-        height: 1,
-        backgroundColor: '#E5E7EB',
-        marginVertical: 12
+    emotionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6
+    },
+    emotionName: {
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    scaleText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#4B5563'
+    },
+    barContainer: {
+        height: 6,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 3,
+        overflow: 'hidden',
+        marginBottom: 8
+    },
+    barFill: {
+        height: '100%',
+        borderRadius: 3,
+    },
+    noteText: {
+        fontSize: 14,
+        color: '#6B7280',
+        fontStyle: 'italic',
+        marginTop: 2,
+        marginBottom: 4
     },
     dividerSmall: {
         height: 1,
         backgroundColor: '#F3F4F6',
-        marginVertical: 8,
-        width: '60%',
-        alignSelf: 'center'
-    },
-    detailText: {
-        fontSize: 16,
-        color: '#4B5563',
-        lineHeight: 24
-    },
-    detailBold: {
-        fontWeight: 'bold',
-        color: '#111827'
-    },
-    closeBtn: {
-        backgroundColor: '#4F46E5',
-        paddingVertical: 12,
-        borderRadius: 12,
-        alignItems: 'center'
-    },
-    closeBtnText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600'
+        marginTop: 12,
+        marginBottom: 4,
+        width: '100%',
     }
 });

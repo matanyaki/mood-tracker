@@ -6,19 +6,24 @@ import { JournalEntry } from '../models/JournalEntry';
 const GUEST_STORAGE_KEY = '@guest_journal_entries';
 
 export const InsightsService = {
-    getInsightsData: async (): Promise<JournalEntry[]> => {
+    getInsightsData: async (days: number = 30): Promise<JournalEntry[]> => {
         try {
             const user = auth.currentUser;
             if (!user) {
                 // --- LOCAL STORAGE ---
                 const existingEntriesJson = await AsyncStorage.getItem(GUEST_STORAGE_KEY);
-                const entries: JournalEntry[] = existingEntriesJson ? JSON.parse(existingEntriesJson) : [];
+                let entries: JournalEntry[] = existingEntriesJson ? JSON.parse(existingEntriesJson) : [];
+                
+                // Filter local entries by days
+                const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+                entries = entries.filter(e => e.timestamp >= cutoff);
+                
                 return entries.sort((a, b) => b.timestamp - a.timestamp);
             } else {
                 // --- API (Authenticated) ---
                 const token = await user.getIdToken();
 
-                const url = `${API_BASE_URL}/api/insights`;
+                const url = `${API_BASE_URL}/api/insights?days=${days}`;
                 console.log(`[InsightsService] Fetching GET ${url}`);
 
                 const response = await fetch(url, {

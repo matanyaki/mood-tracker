@@ -19,7 +19,8 @@ export const getInsightsData = async (req: Request, res: Response) => {
             } as ApiResponse<null>);
         }
 
-        const entries = await journalService.getEntries(userId);
+        const days = req.query.days ? parseInt(req.query.days as string, 10) : undefined;
+        const entries = await journalService.getEntries(userId, days);
 
         return res.status(200).json({
             success: true,

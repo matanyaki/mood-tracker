@@ -58,15 +58,20 @@ class JournalService {
     /**
      * Get all journal entries for a specific user.
      */
-    async getEntries(userId: string): Promise<JournalEntry[]> {
+    async getEntries(userId: string, days?: number): Promise<JournalEntry[]> {
         if (!db) {
             throw new Error('Firestore is not initialized.');
         }
 
         try {
-            const snapshot = await db.collection('users').doc(userId).collection('entries')
-                .orderBy('timestamp', 'desc')
-                .get();
+            let query: FirebaseFirestore.Query = db.collection('users').doc(userId).collection('entries');
+            
+            if (days) {
+                const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+                query = query.where('timestamp', '>=', cutoff);
+            }
+
+            const snapshot = await query.orderBy('timestamp', 'desc').get();
 
             if (snapshot.empty) {
                 return [];

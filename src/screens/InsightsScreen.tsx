@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { ScreenContainer, AppHeader, LoadingState } from '../components';
-import { useInsightsController } from '../controllers/useInsightsController';
+import { useProcessedInsights } from '../hooks/useInsightsQuery';
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { getEmotionColor } from '../constants/colors';
 
@@ -14,7 +14,7 @@ import ChartTooltipModal from '../components/Insights/ChartTooltipModal';
 const getDaysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate();
 
 export default function InsightsScreen({ navigation }: any) {
-  const { loading, entries, refreshStats } = useInsightsController();
+  const { loading, isFetching, entries, refreshStats } = useProcessedInsights(30);
 
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState((currentDate.getMonth() + 1).toString());
@@ -27,10 +27,13 @@ export default function InsightsScreen({ navigation }: any) {
   // Parse entries to process chart data
   const daysInMonth = getDaysInMonth(parseInt(selectedMonth), parseInt(selectedYear));
 
-  // Determine label step to prevent overlapping (e.g., skip every 5 days for clarity)
+  // Determine label step to show only 1, 7, 14, 21, 28 and the last day
   const labels = Array.from({ length: daysInMonth }, (_, i) => {
     const day = i + 1;
-    return day % 5 === 0 || day === 1 ? day.toString() : "";
+    if (day === 1 || day === 7 || day === 14 || day === 21 || day === 28 || day === daysInMonth) {
+      return day.toString();
+    }
+    return "";
   });
 
   const emotionDataMap: Record<string, { scale: number; note: string }[]> = {};
@@ -92,29 +95,35 @@ export default function InsightsScreen({ navigation }: any) {
 
   const filteredTotalEntries = filteredEntries.length;
 
-  const datasets = EMOTIONS_CONFIG.map((emotion) => {
-    return {
-      data: emotionDataMap[emotion.id].map(item => item.scale),
+  // We will manually stack the datasets so react-native-chart-kit can draw them as a Stacked Area.
+  // To do this correctly, we accumulate values for each day, and draw the LARGEST (Total) area first,
+  // then the next largest on top, and so on.
+  
+  let runningTotals = Array(daysInMonth).fill(0);
+  const stackedDatasets = [];
+
+  // Reverse EMOTIONS_CONFIG so that the first emotion is the "bottom" of the stack.
+  const reversedEmotions = [...EMOTIONS_CONFIG].reverse();
+
+  reversedEmotions.forEach((emotion) => {
+    const newData = emotionDataMap[emotion.id].map((item, index) => {
+      runningTotals[index] += item.scale;
+      return runningTotals[index];
+    });
+
+    stackedDatasets.unshift({
+      emotionKey: emotion.id,
       color: () => getEmotionColor(emotion.id),
+      data: [...newData],
       strokeWidth: 2,
-      emotionKey: emotion.id, // custom prop to identify which emotion was clicked
-      meta: emotionDataMap[emotion.id]
-    };
+      meta: emotionDataMap[emotion.id] // Keep original unstacked metadata for the tooltip
+    });
   });
 
-  // Hidden dataset to force the Y-Axis to render up to 5 without decimal overlaps
-  datasets.unshift({
-    data: Array(daysInMonth).fill(5),
-    color: () => 'rgba(0,0,0,0)',
-    strokeWidth: 0,
-    emotionKey: 'hidden',
-    meta: Array(daysInMonth).fill({ scale: 0, note: '' }),
-    withDots: false
-  } as any);
-
+  // Ensure datasets array is what chart-kit expects
   const chartData = {
     labels: labels,
-    datasets: datasets
+    datasets: stackedDatasets
   };
 
   const currentYear = new Date().getFullYear();
@@ -135,18 +144,26 @@ export default function InsightsScreen({ navigation }: any) {
 
     if (!emotionKeyAttr || emotionKeyAttr === 'hidden') return;
 
-    if (data.value > 0) {
-      const day = data.index + 1;
-      const metaInfo = datasetMeta?.[data.index];
+    const day = data.index + 1;
+    
+    // Gather ALL emotions for this day
+    const allEmotions = chartData.datasets.map(ds => {
+      const metaInfo = ds.meta?.[data.index];
+      return {
+        emotionKey: ds.emotionKey,
+        emotion: ds.emotionKey.charAt(0).toUpperCase() + ds.emotionKey.slice(1),
+        scale: metaInfo?.scale || 0,
+        note: metaInfo?.note || ""
+      };
+    }).filter(e => e.scale > 0); // Skip emotions with value 0
 
+    if (allEmotions.length > 0) {
       setTooltipData({
         day: day,
-        emotions: [{
-          emotion: emotionKeyAttr.charAt(0).toUpperCase() + emotionKeyAttr.slice(1),
-          scale: data.value,
-          note: metaInfo?.note || "No note provided"
-        }]
-      });
+        emotions: allEmotions,
+        x: data.x, // Passed from react-native-chart-kit
+        y: data.y
+      } as any);
       setTooltipVisible(true);
     }
   };
@@ -158,7 +175,7 @@ export default function InsightsScreen({ navigation }: any) {
         subtitle="Track Your Emotion Waves"
       />
 
-      {loading ? (
+      {loading && !entries?.length ? (
         <LoadingState />
       ) : (
         <ScrollView
@@ -178,6 +195,8 @@ export default function InsightsScreen({ navigation }: any) {
           <EmotionWavesChart
             chartData={chartData}
             handleDataPointClick={handleDataPointClick}
+            isFetching={isFetching}
+            hasData={filteredTotalEntries > 0}
           />
 
           <SummaryCards filteredTotalEntries={filteredTotalEntries} />
