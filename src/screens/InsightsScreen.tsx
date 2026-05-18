@@ -14,7 +14,7 @@ import ChartTooltipModal from '../components/Insights/ChartTooltipModal';
 const getDaysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate();
 
 export default function InsightsScreen({ navigation }: any) {
-  const { loading, isFetching, entries, refreshStats } = useProcessedInsights(30);
+  const { loading, isFetching, entries, refreshStats } = useProcessedInsights();
 
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState((currentDate.getMonth() + 1).toString());

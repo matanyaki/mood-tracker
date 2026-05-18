@@ -38,6 +38,8 @@ export const authenticateUser = async (req: Request, res: Response, next: NextFu
             email: decodedToken.email
         };
 
+        console.log(`[Auth Middleware] Authorized Request for UID:`, decodedToken.uid);
+
         return next();
 
     } catch (error: any) {

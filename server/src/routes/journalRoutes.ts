@@ -7,6 +7,16 @@ const router = express.Router();
 // Apply authentication middleware to all journal routes
 router.use(authenticateUser);
 
+// GET /api/entries/stats
+router.get('/stats', async (req, res, next) => {
+    try {
+        const { getEmotionStats } = await import('../controllers/insightsController');
+        await getEmotionStats(req, res);
+    } catch (e) {
+        next(e);
+    }
+});
+
 // GET /api/entries
 router.get('/', journalController.getEntries);
 

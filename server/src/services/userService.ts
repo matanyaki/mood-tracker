@@ -1,22 +1,19 @@
-import { db } from '../config/firebase';
-import { firestore } from 'firebase-admin';
+import { userRepository, UserProfile, CreateUserProfileDTO } from '../repositories/userRepository';
 
 class UserService {
-    async syncUser(user: any) {
-        if (!db) throw new Error('Firestore is not initialized.');
+    /**
+     * Sync user profile. Create if doesn't exist.
+     */
+    async syncUser(user: any): Promise<void> {
         try {
-            const userRef = db.collection('users').doc(user.uid);
-            const userSnap = await userRef.get();
+            const existingProfile = await userRepository.findById(user.uid);
 
-            if (!userSnap.exists) {
-                const newProfile = {
+            if (!existingProfile) {
+                const newProfile: CreateUserProfileDTO = {
                     uid: user.uid,
-                    email: user.email || '',
-                    createdAt: new Date().toISOString(),
-                    preferences: { theme: 'system', notificationsEnabled: false },
-                    stats: { totalEntries: 0, currentStreak: 0 }
+                    email: user.email || ''
                 };
-                await userRef.set(newProfile);
+                await userRepository.create(newProfile);
             }
         } catch (error: any) {
             console.error("Error syncing user profile:", error);
@@ -24,25 +21,36 @@ class UserService {
         }
     }
 
-    async incrementEntryCount(userId: string) {
-        if (!db) throw new Error('Firestore is not initialized.');
+    /**
+     * Increment user's total entry count and update last check-in date.
+     */
+    async incrementEntryCount(userId: string): Promise<void> {
         try {
-            const userRef = db.collection('users').doc(userId);
-            await userRef.update({
-                "stats.totalEntries": firestore.FieldValue.increment(1),
-                "stats.lastCheckInDate": new Date().toISOString().split('T')[0]
-            });
+            const userProfile = await userRepository.findById(userId);
+            
+            if (userProfile) {
+                const currentStats = userProfile.stats || { totalEntries: 0, currentStreak: 0 };
+                
+                await userRepository.update(userId, {
+                    stats: {
+                        ...currentStats,
+                        totalEntries: currentStats.totalEntries + 1,
+                        lastCheckInDate: new Date().toISOString().split('T')[0]
+                    }
+                });
+            }
         } catch (error: any) {
             console.error("Error incrementing entry count:", error);
             throw error;
         }
     }
 
-    async getProfile(userId: string) {
-        if (!db) throw new Error('Firestore is not initialized.');
+    /**
+     * Fetch user profile.
+     */
+    async getProfile(userId: string): Promise<UserProfile | null> {
         try {
-            const snap = await db.collection('users').doc(userId).get();
-            return snap.exists ? snap.data() : null;
+            return await userRepository.findById(userId);
         } catch (error: any) {
             console.error("Error fetching profile:", error);
             throw error;
