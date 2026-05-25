@@ -12,7 +12,7 @@ interface ApiResponse<T> {
 export const createEntry = async (req: Request, res: Response) => {
     try {
 
-        const { date, timestamp, emotions, aiFeedback } = req.body;
+        const { date, timestamp, emotions } = req.body;
         // Basic validation
         if (!date || !timestamp || !emotions || !Array.isArray(emotions)) {
             return res.status(400).json({
@@ -22,7 +22,11 @@ export const createEntry = async (req: Request, res: Response) => {
             } as ApiResponse<null>);
         }
 
-        // Simulating userId from middleware (which may extract it from token or header)
+        if (req.body.userId) {
+            delete req.body.userId;
+        }
+
+        // Extract userId from middleware
         const userId = (req as any).user?.uid;
         if (!userId) {
             return res.status(401).json({
@@ -32,7 +36,7 @@ export const createEntry = async (req: Request, res: Response) => {
             } as ApiResponse<null>);
         }
 
-        const entry = await journalService.createEntry(userId, { date, timestamp, emotions, aiFeedback });
+        const entry = await journalService.createEntry(userId, { date, timestamp, emotions });
 
         return res.status(201).json({
             success: true,
@@ -88,6 +92,10 @@ export const updateEntry = async (req: Request, res: Response) => {
                 data: null,
                 error: 'Unauthorized: No user ID found.'
             } as ApiResponse<null>);
+        }
+
+        if (req.body.userId) {
+            delete req.body.userId;
         }
 
         const { id } = req.params;

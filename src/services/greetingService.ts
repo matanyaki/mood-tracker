@@ -1,15 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 import { auth } from '../config/firebase';
+import type { Greeting } from '@shared/types';
 
 const GUEST_GREETINGS_KEY = '@guest_greetings';
-
-export interface Greeting {
-    id?: string;
-    userId: string;
-    text: string;
-    createdAt: string;
-}
 
 export const GreetingService = {
     /**

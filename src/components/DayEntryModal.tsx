@@ -115,16 +115,7 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                                     {/* Emotions List (Modular Component) */}
                                                     <EntryEmotionsList emotions={emotions} />
 
-                                                    {/* AI Insight Footer */}
-                                                    {/* {entry.aiFeedback && (
-                                                        <View style={styles.aiContainer}>
-                                                            <View style={styles.aiHeader}>
-                                                                <Sparkles size={14} color="#3B82F6" fill="#3B82F6" />
-                                                                <Text style={styles.aiTitle}>AI Insight</Text>
-                                                            </View>
-                                                            <Text style={styles.aiText}>{entry.aiFeedback}</Text>
-                                                        </View>
-                                                    )} */}
+
                                                 </View>
                                             );
                                         })}
@@ -292,33 +283,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
 
-    // AI Container
-    aiContainer: {
-        marginTop: 8,
-        backgroundColor: '#F0F9FF',
-        borderColor: '#BAE6FD',
-        borderWidth: 1,
-        borderRadius: 16,
-        padding: 16,
-    },
-    aiHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 8,
-    },
-    aiTitle: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#0284C7',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    aiText: {
-        fontSize: 14,
-        color: '#0369A1',
-        lineHeight: 22,
-    },
+
 
     bottomSpacer: {
         height: 40,

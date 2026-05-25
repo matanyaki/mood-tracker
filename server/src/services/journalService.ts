@@ -1,6 +1,7 @@
-import { journalRepository, JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO } from '../repositories/journalRepository';
+import { journalRepository } from '../repositories/journalRepository';
+import type { JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO } from '../../../shared/types';
 
-export { JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO };
+export type { JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO };
 
 class JournalService {
     /**

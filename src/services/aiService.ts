@@ -1,5 +1,5 @@
-import { API_BASE_URL } from '../config/api';
-import { JournalEntry } from "../models/JournalEntry";
+import { API_BASE_URL } from "../config/api";
+import type { JournalEntry } from '@shared/types';
 import { auth } from '../config/firebase'; // Added auth import
 
 export const AIService = {

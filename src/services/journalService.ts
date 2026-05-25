@@ -1,5 +1,5 @@
 // src/services/journalService.ts
-import { JournalEntry } from '../models/JournalEntry';
+import type { JournalEntry } from '@shared/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 import { auth } from '../config/firebase';

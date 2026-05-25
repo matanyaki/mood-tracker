@@ -1,28 +1,6 @@
 import { db } from '../config/firebase';
 import { firestore } from 'firebase-admin';
-
-export interface UserPreferences {
-    theme: string;
-    notificationsEnabled: boolean;
-}
-
-export interface UserStats {
-    totalEntries: number;
-    currentStreak: number;
-    lastCheckInDate?: string;
-}
-
-export interface UserProfile {
-    uid: string;
-    email: string;
-    createdAt: string;
-    preferences: UserPreferences;
-    stats: UserStats;
-    [key: string]: any;
-}
-
-export type CreateUserProfileDTO = Omit<UserProfile, 'createdAt' | 'preferences' | 'stats'>;
-export type UpdateUserProfileDTO = Partial<Omit<UserProfile, 'uid' | 'createdAt'>>;
+import type { UserProfile, CreateUserProfileDTO, UpdateUserProfileDTO } from '../../../shared/types';
 
 class UserRepository {
     async create(data: CreateUserProfileDTO): Promise<UserProfile> {

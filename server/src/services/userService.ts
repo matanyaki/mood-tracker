@@ -1,4 +1,5 @@
-import { userRepository, UserProfile, CreateUserProfileDTO } from '../repositories/userRepository';
+import { userRepository } from '../repositories/userRepository';
+import type { UserProfile, CreateUserProfileDTO } from '../../../shared/types';
 
 class UserService {
     /**

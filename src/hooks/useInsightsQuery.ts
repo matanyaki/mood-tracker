@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { InsightsService } from '../services/insightsService';
-import { JournalEntry } from '../models/JournalEntry';
+import type { JournalEntry } from '@shared/types';
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { getEmotionColor } from '../constants/colors';
 

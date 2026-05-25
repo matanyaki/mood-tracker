@@ -8,9 +8,11 @@ export const createGreeting = async (req: Request, res: Response) => {
         console.log("[GreetingController] Body:", req.body);
         console.log("[GreetingController] User Context:", req.user);
 
-        // userId should ideally come from req.user set by auth middleware
-        // But for flexible implementation as requested:
-        const userId = req.body.userId || req.user?.uid;
+        const userId = (req as any).user?.uid;
+        if (req.body.userId) {
+            delete req.body.userId;
+        }
+        
         const { text } = req.body;
 
         if (!userId) {
@@ -34,7 +36,7 @@ export const createGreeting = async (req: Request, res: Response) => {
 
 export const getGreetings = async (req: Request, res: Response) => {
     try {
-        const userId = (req.query.userId as string) || req.user?.uid;
+        const userId = (req as any).user?.uid;
 
         if (!userId) {
             return res.status(401).json({ error: 'Unauthorized: Missing userId' });

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 import { auth } from '../config/firebase';
 import { UserProfile } from '../models/UserProfile';
-import { JournalEntry } from '../models/JournalEntry';
+import { JournalEntry } from '@shared/types';
 
 export const UserService = {
     /**

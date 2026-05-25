@@ -1,54 +1,19 @@
 import { db } from '../config/firebase';
 import { firestore } from 'firebase-admin';
+import { BaseRepository } from './baseRepository';
+import type { JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO } from '../../../shared/types';
 
-export interface JournalEntry {
-    id?: string;
-    userId: string;
-    date: string;       // YYYY-MM-DD
-    timestamp: number;  // Unix timestamp from client
-    emotions: Array<{
-        id: string;
-        label: string;
-        scale: number;
-        note?: string;
-    }>;
-    aiFeedback?: string;
-    createdAt?: Date | firestore.Timestamp;
-    updatedAt?: Date | firestore.Timestamp;
-    [key: string]: any;
-}
-
-export type CreateJournalEntryDTO = Omit<JournalEntry, 'id' | 'createdAt' | 'updatedAt' | 'userId'>;
-export type UpdateJournalEntryDTO = Partial<CreateJournalEntryDTO>;
-
-class JournalRepository {
-    async create(userId: string, data: CreateJournalEntryDTO): Promise<JournalEntry> {
+class JournalRepository extends BaseRepository<JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO> {
+    
+    protected getCollection(userId: string): FirebaseFirestore.CollectionReference {
         if (!db) throw new Error('Firestore is not initialized.');
-
-        const entryData = {
-            ...data,
-            userId,
-            createdAt: firestore.FieldValue.serverTimestamp(),
-            updatedAt: firestore.FieldValue.serverTimestamp()
-        };
-
-        const docRef = await db.collection('users').doc(userId).collection('entries').add(entryData);
-        const docSnapshot = await docRef.get();
-
-        if (!docSnapshot.exists) {
-            throw new Error('Failed to retrieve the created entry.');
-        }
-
-        return {
-            id: docRef.id,
-            ...docSnapshot.data()
-        } as JournalEntry;
+        return db.collection('users').doc(userId).collection('entries');
     }
 
     async findAll(userId: string, days?: number): Promise<JournalEntry[]> {
         if (!db) throw new Error('Firestore is not initialized.');
 
-        let query: FirebaseFirestore.Query = db.collection('users').doc(userId).collection('entries');
+        let query: FirebaseFirestore.Query = this.getCollection(userId);
         
         if (days) {
             const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
@@ -67,61 +32,31 @@ class JournalRepository {
             return [];
         }
 
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        })) as JournalEntry[];
-    }
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            let createdAt = data.createdAt;
+            let updatedAt = data.updatedAt;
 
-    async findById(userId: string, entryId: string): Promise<JournalEntry | null> {
-        if (!db) throw new Error('Firestore is not initialized.');
+            if (createdAt && typeof createdAt.toDate === 'function') {
+                createdAt = createdAt.toDate();
+            }
+            if (updatedAt && typeof updatedAt.toDate === 'function') {
+                updatedAt = updatedAt.toDate();
+            }
 
-        const docRef = db.collection('users').doc(userId).collection('entries').doc(entryId);
-        const doc = await docRef.get();
-
-        if (!doc.exists) {
-            return null;
-        }
-
-        return {
-            id: doc.id,
-            ...doc.data()
-        } as JournalEntry;
-    }
-
-    async update(userId: string, entryId: string, data: UpdateJournalEntryDTO): Promise<void> {
-        if (!db) throw new Error('Firestore is not initialized.');
-
-        const docRef = db.collection('users').doc(userId).collection('entries').doc(entryId);
-        const doc = await docRef.get();
-
-        if (!doc.exists) {
-            throw new Error('Entry not found.');
-        }
-
-        await docRef.update({
-            ...data,
-            updatedAt: firestore.FieldValue.serverTimestamp()
+            return {
+                id: doc.id,
+                ...data,
+                createdAt,
+                updatedAt
+            } as JournalEntry;
         });
-    }
-
-    async delete(userId: string, entryId: string): Promise<void> {
-        if (!db) throw new Error('Firestore is not initialized.');
-
-        const docRef = db.collection('users').doc(userId).collection('entries').doc(entryId);
-        const doc = await docRef.get();
-
-        if (!doc.exists) {
-            throw new Error('Entry not found.');
-        }
-
-        await docRef.delete();
     }
 
     async getEmotionCounts(userId: string, days?: number): Promise<Record<string, number>> {
         if (!db) throw new Error('Firestore is not initialized.');
         
-        let query: FirebaseFirestore.Query = db.collection('users').doc(userId).collection('entries');
+        let query: FirebaseFirestore.Query = this.getCollection(userId);
         
         if (days) {
             const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);

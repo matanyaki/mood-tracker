@@ -1,39 +1,19 @@
 import { db } from '../config/firebase';
 import { firestore } from 'firebase-admin';
+import { BaseRepository } from './baseRepository';
+import type { Greeting, CreateGreetingDTO } from '../../../shared/types';
 
-export interface Greeting {
-    id?: string;
-    userId: string;
-    text: string;
-    createdAt?: Date | firestore.Timestamp;
-}
-
-export type CreateGreetingDTO = Omit<Greeting, 'id' | 'createdAt' | 'userId'>;
-
-class GreetingRepository {
-    async create(userId: string, data: CreateGreetingDTO): Promise<Greeting> {
+class GreetingRepository extends BaseRepository<Greeting, CreateGreetingDTO, Partial<CreateGreetingDTO>> {
+    
+    protected getCollection(userId: string): FirebaseFirestore.CollectionReference {
         if (!db) throw new Error('Firestore is not initialized.');
-
-        const greetingData = {
-            ...data,
-            userId,
-            createdAt: firestore.FieldValue.serverTimestamp(),
-        };
-
-        const docRef = await db.collection('users').doc(userId).collection('greetings').add(greetingData);
-        
-        return {
-            id: docRef.id,
-            userId,
-            text: data.text,
-            createdAt: new Date()
-        };
+        return db.collection('users').doc(userId).collection('greetings');
     }
 
     async findAll(userId: string): Promise<Greeting[]> {
         if (!db) throw new Error('Firestore is not initialized.');
 
-        const snapshot = await db.collection('users').doc(userId).collection('greetings')
+        const snapshot = await this.getCollection(userId)
             .orderBy('createdAt', 'desc')
             .get();
 
@@ -56,30 +36,6 @@ class GreetingRepository {
                 createdAt: createdAt
             } as Greeting;
         });
-    }
-
-    async findById(userId: string, greetingId: string): Promise<Greeting | null> {
-        if (!db) throw new Error('Firestore is not initialized.');
-
-        const docRef = db.collection('users').doc(userId).collection('greetings').doc(greetingId);
-        const doc = await docRef.get();
-
-        if (!doc.exists) {
-            return null;
-        }
-
-        const data = doc.data()!;
-        let createdAt = data.createdAt;
-        if (createdAt && typeof createdAt.toDate === 'function') {
-            createdAt = createdAt.toDate();
-        }
-
-        return {
-            id: doc.id,
-            userId: data.userId,
-            text: data.text,
-            createdAt: createdAt
-        } as Greeting;
     }
 }
 

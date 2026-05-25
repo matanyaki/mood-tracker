@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { subDays, startOfDay, isSameDay } from 'date-fns';
+import { journalService } from './journalService';
+import { EMOTIONS_CONFIG } from '../constants/emotions';
+import type { JournalEntry } from '@shared/types';
 import { API_BASE_URL } from '../config/api';
 import { auth } from '../config/firebase';
-import { JournalEntry } from '../models/JournalEntry';
 
 const GUEST_STORAGE_KEY = '@guest_journal_entries';
 

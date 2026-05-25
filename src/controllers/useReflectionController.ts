@@ -3,17 +3,12 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { auth, db } from '../config/firebase';
 import { JournalService } from '../services/journalService';
-import { AIService } from '../services/aiService';
 import { doc, updateDoc } from 'firebase/firestore';
 
 export const useReflectionController = (route: any, navigation: any) => {
     const { selections } = route.params;
     const [notes, setNotes] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
-
-    // AI Modal State
-    const [aiFeedback, setAiFeedback] = useState<string | null>(null);
-    const [showAiModal, setShowAiModal] = useState(false);
 
     const handleTextChange = (id: string, text: string) => {
         setNotes(prev => ({ ...prev, [id]: text }));
@@ -49,8 +44,7 @@ export const useReflectionController = (route: any, navigation: any) => {
                 timestamp: Date.now(),
 
                 // NEW SCHEMA COMPLETE
-                emotions: emotionEntries,
-                aiFeedback: ""
+                emotions: emotionEntries
             };
 
             // 2. Save to Firebase/Local (via JournalService)
@@ -75,17 +69,11 @@ export const useReflectionController = (route: any, navigation: any) => {
         }
     };
 
-    // Removed AI Modal handlers since logic is stripped
-    const closeAiModal = () => { };
-
     return {
         selections,
         notes,
         loading,
         handleTextChange,
-        handleSave,
-        aiFeedback: null,
-        showAiModal: false,
-        closeAiModal
+        handleSave
     };
 };

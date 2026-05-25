@@ -1,4 +1,5 @@
-import { greetingRepository, Greeting, CreateGreetingDTO } from '../repositories/greetingRepository';
+import { greetingRepository } from '../repositories/greetingRepository';
+import type { Greeting, CreateGreetingDTO } from '../../../shared/types';
 
 class GreetingService {
     /**
