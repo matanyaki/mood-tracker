@@ -49,7 +49,7 @@ export default function ReflectionScreen({ route, navigation }: any) {
                 label={item.label}
                 rootEmotionId={item.id}
                 note={notes[item.id] || ''}
-                onChangeText={(text) => handleTextChange(item.id, text)}
+                onChangeText={handleTextChange}
                 isLast={isLast}
               />
             );

@@ -1,5 +1,4 @@
-// src/controllers/useReflectionController.ts
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { auth, db } from '../config/firebase';
 import { JournalService } from '../services/journalService';
@@ -10,11 +9,11 @@ export const useReflectionController = (route: any, navigation: any) => {
     const [notes, setNotes] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
 
-    const handleTextChange = (id: string, text: string) => {
+    const handleTextChange = useCallback((id: string, text: string) => {
         setNotes(prev => ({ ...prev, [id]: text }));
-    };
+    }, []);
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         if (loading) return; // Prevent double taps
         setLoading(true);
 
@@ -67,7 +66,7 @@ export const useReflectionController = (route: any, navigation: any) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selections, notes, loading, navigation]);
 
     return {
         selections,

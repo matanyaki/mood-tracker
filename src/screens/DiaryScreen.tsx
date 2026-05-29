@@ -1,11 +1,51 @@
 // src/screens/DiaryScreen.tsx
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
 import { Calendar } from 'react-native-calendars';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, Card, LoadingState, EmptyState, DayEntryModal } from '../components';
 import { useDiaryController } from '../controllers/useDiaryController';
+
+const CALENDAR_THEME = {
+  calendarBackground: '#fff',
+  textSectionTitleColor: '#9CA3AF',
+  selectedDayBackgroundColor: '#1A1A2E',
+  selectedDayTextColor: '#ffffff',
+  todayTextColor: '#4F46E5',
+  dayTextColor: '#1F2937',
+  textDisabledColor: '#E5E7EB',
+  arrowColor: '#1A1A2E',
+  textDayFontSize: 16,
+  textDayHeaderFontSize: 13,
+  textDayHeaderFontWeight: '600',
+  'stylesheet.calendar.header': {
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingLeft: 10,
+      paddingRight: 10,
+      marginTop: 6,
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    week: {
+      marginTop: 5,
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingBottom: 5,
+      borderBottomWidth: 0,
+    }
+  },
+  'stylesheet.dot': {
+    dot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginTop: 2
+    }
+  }
+} as const;
 
 export default function DiaryScreen({ navigation }: any) {
   const {
@@ -23,6 +63,38 @@ export default function DiaryScreen({ navigation }: any) {
     goToToday,
   } = useDiaryController();
 
+  const handleAddFirstEntry = useCallback(() => navigation.navigate('CheckIn'), [navigation]);
+  const handleCloseModal = useCallback(() => setModalVisible(false), [setModalVisible]);
+  const handleEditEntry = useCallback(() => setModalVisible(false), [setModalVisible]);
+
+  const headerRightAction = useMemo(() => ({
+    label: 'Today',
+    onPress: goToToday
+  }), [goToToday]);
+
+  const renderCalendarHeader = useCallback((date: any) => {
+    const headerDate = new Date(date);
+    return (
+      <View style={styles.customHeaderContainer}>
+        <View style={styles.titleRow}>
+          <Text style={styles.monthTitle}>
+            {format(headerDate, 'MMMM yyyy')}
+          </Text>
+        </View>
+      </View>
+    );
+  }, []);
+
+  const renderCalendarArrow = useCallback((direction: 'left' | 'right') => (
+    <View style={styles.arrowContainer}>
+      {direction === 'left' ? (
+        <ChevronLeft size={20} color="#1A1A2E" strokeWidth={2.5} />
+      ) : (
+        <ChevronRight size={20} color="#1A1A2E" strokeWidth={2.5} />
+      )}
+    </View>
+  ), []);
+
   if (loading) {
     return (
       <ScreenContainer variant="calm">
@@ -35,7 +107,7 @@ export default function DiaryScreen({ navigation }: any) {
     <ScreenContainer variant="calm">
       <AppHeader
         title="Calendar"
-        rightAction={{ label: 'Today', onPress: goToToday }}
+        rightAction={headerRightAction}
       />
 
       <Card style={styles.calendarContainer} padding={16} elevation={4} borderRadius={24}>
@@ -45,66 +117,9 @@ export default function DiaryScreen({ navigation }: any) {
           onMonthChange={handleMonthChange}
           markingType="multi-dot"
           markedDates={markedDates}
-          renderHeader={(date: any) => {
-            const headerDate = new Date(date);
-            return (
-              <View style={styles.customHeaderContainer}>
-                <View style={styles.titleRow}>
-                  <Text style={styles.monthTitle}>
-                    {format(headerDate, 'MMMM yyyy')}
-                  </Text>
-                </View>
-              </View>
-            );
-          }}
-          theme={{
-            calendarBackground: '#fff',
-            textSectionTitleColor: '#9CA3AF',
-            selectedDayBackgroundColor: '#1A1A2E',
-            selectedDayTextColor: '#ffffff',
-            todayTextColor: '#4F46E5',
-            dayTextColor: '#1F2937',
-            textDisabledColor: '#E5E7EB',
-            arrowColor: '#1A1A2E',
-            textDayFontSize: 16,
-            textDayHeaderFontSize: 13,
-            textDayHeaderFontWeight: '600',
-            'stylesheet.calendar.header': {
-              header: {
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                paddingLeft: 10,
-                paddingRight: 10,
-                marginTop: 6,
-                alignItems: 'center',
-                marginBottom: 10,
-              },
-              week: {
-                marginTop: 5,
-                flexDirection: 'row',
-                justifyContent: 'space-around',
-                paddingBottom: 5,
-                borderBottomWidth: 0,
-              }
-            },
-            'stylesheet.dot': {
-              dot: {
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                marginTop: 2
-              }
-            }
-          } as any}
-          renderArrow={(direction) => (
-            direction === 'left' ?
-              <View style={styles.arrowContainer}>
-                <ChevronLeft size={20} color="#1A1A2E" strokeWidth={2.5} />
-              </View> :
-              <View style={styles.arrowContainer}>
-                <ChevronRight size={20} color="#1A1A2E" strokeWidth={2.5} />
-              </View>
-          )}
+          renderHeader={renderCalendarHeader}
+          theme={CALENDAR_THEME as any}
+          renderArrow={renderCalendarArrow}
           enableSwipeMonths={true}
           hideExtraDays={false}
           firstDay={0}
@@ -132,7 +147,7 @@ export default function DiaryScreen({ navigation }: any) {
           title="No entries yet"
           subtitle="Start tracking your emotions to see patterns over time"
           buttonLabel="Add Your First Entry"
-          onButtonPress={() => navigation.navigate('CheckIn')}
+          onButtonPress={handleAddFirstEntry}
         />
       )}
 
@@ -142,13 +157,11 @@ export default function DiaryScreen({ navigation }: any) {
       */}
       <DayEntryModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={handleCloseModal}
         selectedDate={selectedDate}
         entries={selectedDateEntries}
         greetings={selectedDateGreetings}
-        onEditEntry={() => {
-          setModalVisible(false);
-        }}
+        onEditEntry={handleEditEntry}
       />
     </ScreenContainer>
   );

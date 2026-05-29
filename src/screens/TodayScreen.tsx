@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { AppHeader, ScreenContainer, FabMenu, QuoteCard, GratitudeNote } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
@@ -8,7 +8,7 @@ export default function TodayScreen({ navigation }: any) {
     const [isGratitudeVisible, setIsGratitudeVisible] = useState(false);
     const { saveGreeting, isLoading } = useGreetingController();
 
-    const handleFabAction = (action: string) => {
+    const handleFabAction = useCallback((action: string) => {
         console.log(`Fab Action: ${action}`);
         if (action === 'Emotions') {
             navigation.navigate('CheckIn');
@@ -17,9 +17,9 @@ export default function TodayScreen({ navigation }: any) {
         } else if (action === 'Greeting') {
             setIsGratitudeVisible(true);
         }
-    };
+    }, [navigation]);
 
-    const handleSaveGratitude = async (text: string) => {
+    const handleSaveGratitude = useCallback(async (text: string) => {
         try {
             await saveGreeting(text);
             console.log('Saved gratitude:', text);
@@ -27,11 +27,11 @@ export default function TodayScreen({ navigation }: any) {
         } catch (error) {
             Alert.alert("Error", "Failed to save your gratitude note. Please try again.");
         }
-    };
+    }, [saveGreeting]);
 
-    // ... rest of component
+    const handleCloseGratitude = useCallback(() => setIsGratitudeVisible(false), []);
 
-    const fabActions = [
+    const fabActions = useMemo(() => [
         {
             label: 'Emotions',
             icon: <Smile size={20} color="#FBBF24" />,
@@ -50,8 +50,7 @@ export default function TodayScreen({ navigation }: any) {
             onPress: () => handleFabAction('Greeting'),
             color: '#D1FAE5',
         },
-        // We could keep greeting or other actions
-    ];
+    ], [handleFabAction]);
 
     return (
         <ScreenContainer variant="focus">
@@ -79,7 +78,7 @@ export default function TodayScreen({ navigation }: any) {
             {/* Gratitude Modal */}
             <GratitudeNote
                 visible={isGratitudeVisible}
-                onClose={() => setIsGratitudeVisible(false)}
+                onClose={handleCloseGratitude}
                 onSave={handleSaveGratitude}
             />
         </ScreenContainer>

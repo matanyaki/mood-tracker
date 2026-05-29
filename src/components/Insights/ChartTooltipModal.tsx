@@ -5,7 +5,7 @@ import { getEmotionColor } from '../../constants/colors';
 
 const screenWidth = Dimensions.get('window').width;
 
-interface TooltipData {
+export interface TooltipData {
     day: number;
     x?: number;
     y?: number;

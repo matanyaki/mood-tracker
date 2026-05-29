@@ -21,13 +21,13 @@ interface ReflectionCardProps {
     label: string;
     rootEmotionId: string;
     note: string;
-    onChangeText: (text: string) => void;
+    onChangeText: (id: string, text: string) => void;
     isLast: boolean; // Optional: Determine if we show save button here or externally
     onSave?: () => void;
     loading?: boolean;
 }
 
-const ReflectionCard: React.FC<ReflectionCardProps> = ({
+const ReflectionCard: React.FC<ReflectionCardProps> = React.memo(({
     label,
     rootEmotionId,
     note,
@@ -55,11 +55,11 @@ const ReflectionCard: React.FC<ReflectionCardProps> = ({
                 multiline
                 textAlignVertical="top"
                 value={note}
-                onChangeText={onChangeText}
+                onChangeText={(text) => onChangeText(rootEmotionId, text)}
             />
         </Card>
     );
-};
+});
 
 const styles = StyleSheet.create({
     card: {

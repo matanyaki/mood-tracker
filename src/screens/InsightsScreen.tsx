@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { ScreenContainer, AppHeader, LoadingState } from '../components';
 import { useProcessedInsights } from '../hooks/useInsightsQuery';
@@ -9,7 +9,7 @@ import FilterRow from '../components/Insights/FilterRow';
 import SummaryCards from '../components/Insights/SummaryCards';
 import EmotionBreakdown from '../components/Insights/EmotionBreakdown';
 import EmotionWavesChart from '../components/Insights/EmotionWavesChart';
-import ChartTooltipModal from '../components/Insights/ChartTooltipModal';
+import ChartTooltipModal, { TooltipData } from '../components/Insights/ChartTooltipModal';
 
 const getDaysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate();
 
@@ -22,114 +22,115 @@ export default function InsightsScreen({ navigation }: any) {
 
   // Tooltip Modal State
   const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipData, setTooltipData] = useState<{ day: number; emotions: { emotion: string; scale: number; note: string }[] } | null>(null);
+  const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
 
   // Parse entries to process chart data
-  const daysInMonth = getDaysInMonth(parseInt(selectedMonth), parseInt(selectedYear));
+  const { chartData, filteredStats, filteredTotalEntries } = useMemo(() => {
+    const daysInMonth = getDaysInMonth(parseInt(selectedMonth), parseInt(selectedYear));
 
-  // Determine label step to show only 1, 7, 14, 21, 28 and the last day
-  const labels = Array.from({ length: daysInMonth }, (_, i) => {
-    const day = i + 1;
-    if (day === 1 || day === 7 || day === 14 || day === 21 || day === 28 || day === daysInMonth) {
-      return day.toString();
-    }
-    return "";
-  });
+    // Determine label step to show only 1, 7, 14, 21, 28 and the last day
+    const labels = Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+      if (day === 1 || day === 7 || day === 14 || day === 21 || day === 28 || day === daysInMonth) {
+        return day.toString();
+      }
+      return "";
+    });
 
-  const emotionDataMap: Record<string, { scale: number; note: string }[]> = {};
+    const emotionDataMap: Record<string, { scale: number; note: string }[]> = {};
 
-  EMOTIONS_CONFIG.forEach(emotion => {
-    emotionDataMap[emotion.id] = Array(daysInMonth).fill({ scale: 0, note: '' });
-  });
+    EMOTIONS_CONFIG.forEach(emotion => {
+      emotionDataMap[emotion.id] = Array(daysInMonth).fill({ scale: 0, note: '' });
+    });
 
-  // Filter for month and year
-  const filteredEntries = (entries || []).filter((entry: any) => {
-    if (!entry.date) return false;
-    const entryDate = new Date(entry.date);
-    return (entryDate.getMonth() + 1).toString() === selectedMonth &&
-      entryDate.getFullYear().toString() === selectedYear;
-  });
+    // Filter for month and year without timezone displacement
+    const filtered = (entries || []).filter((entry: any) => {
+      if (!entry.date) return false;
+      const parts = entry.date.split('-');
+      if (parts.length !== 3) return false;
+      const entryYear = parseInt(parts[0], 10);
+      const entryMonth = parseInt(parts[1], 10);
+      
+      return entryMonth === parseInt(selectedMonth, 10) &&
+        entryYear === parseInt(selectedYear, 10);
+    });
 
-  filteredEntries.forEach((entry: any) => {
-    const entryDate = new Date(entry.date);
-    const dayIndex = entryDate.getDate() - 1;
+    filtered.forEach((entry: any) => {
+      if (!entry.date) return;
+      const parts = entry.date.split('-');
+      if (parts.length !== 3) return;
+      const dayIndex = parseInt(parts[2], 10) - 1;
 
-    if (entry.emotions && dayIndex >= 0 && dayIndex < daysInMonth) {
-      entry.emotions.forEach((eItem: any) => {
-        const key = (eItem.id || eItem.label || 'unknown').toLowerCase();
-        if (emotionDataMap[key]) {
-          if (eItem.scale > emotionDataMap[key][dayIndex].scale) {
-            emotionDataMap[key][dayIndex] = {
-              scale: eItem.scale,
-              note: eItem.note || ''
-            };
+      if (entry.emotions && dayIndex >= 0 && dayIndex < daysInMonth) {
+        entry.emotions.forEach((eItem: any) => {
+          const key = (eItem.id || eItem.label || 'unknown').toLowerCase();
+          if (emotionDataMap[key]) {
+            if (eItem.scale > emotionDataMap[key][dayIndex].scale) {
+              emotionDataMap[key][dayIndex] = {
+                scale: eItem.scale,
+                note: eItem.note || ''
+              };
+            }
           }
-        }
-      });
-    }
-  });
+        });
+      }
+    });
 
-  // Calculate local Summary and Breakdown stats for the filtered month
-  const localCounts: Record<string, number> = {};
-  let totalLocalEmotions = 0;
+    // Calculate local Summary and Breakdown stats for the filtered month
+    const localCounts: Record<string, number> = {};
+    let totalLocalEmotions = 0;
 
-  filteredEntries.forEach((entry: any) => {
-    if (entry.emotions && entry.emotions.length > 0) {
-      entry.emotions.forEach((eItem: any) => {
-        const key = (eItem.id || eItem.label || 'unknown').toLowerCase();
-        localCounts[key] = (localCounts[key] || 0) + 1;
-        totalLocalEmotions++;
-      });
-    }
-  });
+    filtered.forEach((entry: any) => {
+      if (entry.emotions && entry.emotions.length > 0) {
+        entry.emotions.forEach((eItem: any) => {
+          const key = (eItem.id || eItem.label || 'unknown').toLowerCase();
+          localCounts[key] = (localCounts[key] || 0) + 1;
+          totalLocalEmotions++;
+        });
+      }
+    });
 
-  const filteredStats = EMOTIONS_CONFIG.map(emotion => {
-    const count = localCounts[emotion.id] || 0;
+    const stats = EMOTIONS_CONFIG.map(emotion => {
+      const count = localCounts[emotion.id] || 0;
+      return {
+        label: emotion.label,
+        count: count,
+        color: getEmotionColor(emotion.id),
+        percentage: totalLocalEmotions > 0 ? (count / totalLocalEmotions) * 100 : 0
+      };
+    }).filter(item => item.count > 0).sort((a, b) => b.count - a.count);
+
+    const filteredTotal = filtered.length;
+
+    // Generate unstacked datasets for direct 1-5 scale plotting
+    const datasets = EMOTIONS_CONFIG.map((emotion) => {
+      const data = emotionDataMap[emotion.id].map(item => item.scale);
+
+      return {
+        emotionKey: emotion.id,
+        color: () => getEmotionColor(emotion.id),
+        data: data,
+        strokeWidth: 2,
+        meta: emotionDataMap[emotion.id] // Keep unstacked metadata
+      };
+    });
+
     return {
-      label: emotion.label,
-      count: count,
-      color: getEmotionColor(emotion.id),
-      percentage: totalLocalEmotions > 0 ? (count / totalLocalEmotions) * 100 : 0
+      chartData: {
+        labels: labels,
+        datasets: datasets
+      },
+      filteredStats: stats,
+      filteredTotalEntries: filteredTotal
     };
-  }).filter(item => item.count > 0).sort((a, b) => b.count - a.count);
+  }, [entries, selectedMonth, selectedYear]);
 
-  const filteredTotalEntries = filteredEntries.length;
+  const years = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return [currentYear.toString(), (currentYear - 1).toString(), (currentYear - 2).toString()];
+  }, []);
 
-  // We will manually stack the datasets so react-native-chart-kit can draw them as a Stacked Area.
-  // To do this correctly, we accumulate values for each day, and draw the LARGEST (Total) area first,
-  // then the next largest on top, and so on.
-  
-  let runningTotals = Array(daysInMonth).fill(0);
-  const stackedDatasets = [];
-
-  // Reverse EMOTIONS_CONFIG so that the first emotion is the "bottom" of the stack.
-  const reversedEmotions = [...EMOTIONS_CONFIG].reverse();
-
-  reversedEmotions.forEach((emotion) => {
-    const newData = emotionDataMap[emotion.id].map((item, index) => {
-      runningTotals[index] += item.scale;
-      return runningTotals[index];
-    });
-
-    stackedDatasets.unshift({
-      emotionKey: emotion.id,
-      color: () => getEmotionColor(emotion.id),
-      data: [...newData],
-      strokeWidth: 2,
-      meta: emotionDataMap[emotion.id] // Keep original unstacked metadata for the tooltip
-    });
-  });
-
-  // Ensure datasets array is what chart-kit expects
-  const chartData = {
-    labels: labels,
-    datasets: stackedDatasets
-  };
-
-  const currentYear = new Date().getFullYear();
-  const years = [currentYear.toString(), (currentYear - 1).toString(), (currentYear - 2).toString()];
-
-  const handleDataPointClick = (data: any) => {
+  const handleDataPointClick = useCallback((data: any) => {
     // Fallback if data.dataset doesn't have our custom keys
     let datasetMeta = data?.dataset?.meta;
     let emotionKeyAttr = data?.dataset?.emotionKey;
@@ -166,7 +167,7 @@ export default function InsightsScreen({ navigation }: any) {
       } as any);
       setTooltipVisible(true);
     }
-  };
+  }, [chartData]);
 
   return (
     <ScreenContainer>

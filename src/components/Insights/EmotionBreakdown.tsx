@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { BarChart3 } from 'lucide-react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing, useColorScheme, Image } from 'react-native';
 import Card from '../../components/Card';
+import { EMOTIONS_CONFIG } from '../../constants/emotions';
+import { MOOD_IMAGES } from '../../constants/images';
 
-interface EmotionStat {
+export interface EmotionStat {
     label: string;
     count: number;
     color: string;
@@ -14,83 +15,263 @@ interface EmotionBreakdownProps {
     stats: EmotionStat[];
 }
 
-export default function EmotionBreakdown({ stats }: EmotionBreakdownProps) {
+/**
+ * Resolves standard required image source from MOOD_IMAGES.
+ */
+const getImageSource = (key: string) => {
+    return MOOD_IMAGES[key] || MOOD_IMAGES['happy'];
+};
+
+/**
+ * Helper to compute an opacity-reduced background color and a heavily darkened text
+ * color from the base emotion color hex for contrast and readability.
+ */
+const getContrastColorStyle = (hexColor: string) => {
+    let hex = hexColor.replace('#', '');
+    if (hex.length === 3) {
+        hex = hex.split('').map(c => c + c).join('');
+    }
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+
+    // 15% opacity background
+    const bg = `rgba(${r}, ${g}, ${b}, 0.15)`;
+
+    // Heavily darkened text color (multiply RGB channels by 0.45 for contrast)
+    const darkR = Math.round(r * 0.45);
+    const darkG = Math.round(g * 0.45);
+    const darkB = Math.round(b * 0.45);
+    const text = `rgb(${darkR}, ${darkG}, ${darkB})`;
+
+    return { bg, text };
+};
+
+/**
+ * Individual emotion row displaying text, count, percentage, and an animated progress bar.
+ */
+const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: React.Key }) => {
+    const animatedValue = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.timing(animatedValue, {
+            toValue: 1,
+            duration: 600,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: false,
+        }).start();
+    }, [animatedValue]);
+
+    // Look up emotion imageKey from EMOTIONS_CONFIG using its label matching config
+    const emotionConfig = EMOTIONS_CONFIG.find(
+        (e) => e.label.trim().toLowerCase() === item.label.trim().toLowerCase()
+    );
+    const imageKey = emotionConfig?.imageKey || 'happy';
+
+    const { bg: badgeBg, text: badgeText } = getContrastColorStyle(item.color);
+
+    const animatedWidth = animatedValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0%', `${item.percentage}%`],
+    });
+
     return (
-        <>
-            <View style={styles.sectionHeader}>
-                <BarChart3 size={20} color="#1A202C" />
-                <Text style={styles.sectionTitle}>Emotion Breakdown</Text>
+        <View style={styles.rowContainer}>
+            {/* Top Row: Info and Count/Percentage */}
+            <View style={styles.topRow}>
+                {/* Left Side: Image Asset and Label */}
+                <View style={styles.leftGroup}>
+                    <Image
+                        source={getImageSource(imageKey)}
+                        style={styles.emotionImage}
+                        resizeMode="contain"
+                    />
+                    <Text style={[styles.labelText, { color: theme.primaryText }]}>
+                        {item.label}
+                    </Text>
+                </View>
+
+                {/* Right Side: Percentage and Occurrence Badge */}
+                <View style={styles.rightGroup}>
+                    <Text style={[styles.percentageText, { color: theme.secondaryText }]}>
+                        {Math.round(item.percentage)}%
+                    </Text>
+                    <View style={[styles.badgePill, { backgroundColor: badgeBg }]}>
+                        <Text style={[styles.badgeText, { color: badgeText }]}>
+                            {item.count}×
+                        </Text>
+                    </View>
+                </View>
             </View>
 
-            <Card padding={20} borderRadius={24}>
-                {stats.length > 0 ? (
-                    stats.map((item, index) => (
-                        <View key={item.label} style={[styles.statRow, index === stats.length - 1 && styles.lastStatRow]}>
-                            <View style={styles.labelContainer}>
-                                <Text style={styles.statLabel}>{item.label}</Text>
-                                <Text style={styles.statCount}>{item.count} times</Text>
-                            </View>
-                            <View style={styles.barBackground}>
-                                <View
-                                    style={[
-                                        styles.barFill,
-                                        { width: `${item.percentage}%`, backgroundColor: item.color }
-                                    ]}
+            {/* Bottom Row: Horizontal Progress Bar */}
+            <View style={[styles.progressBarTrack, { backgroundColor: theme.trackBg }]}>
+                <Animated.View
+                    style={[
+                        styles.progressBarFill,
+                        {
+                            width: animatedWidth,
+                            backgroundColor: item.color,
+                        },
+                    ]}
+                />
+            </View>
+        </View>
+    );
+};
+
+export default function EmotionBreakdown({ stats = [] }: EmotionBreakdownProps) {
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === 'dark';
+
+    // Theme values for seamless light/dark mode support
+    const theme = {
+        cardBg: isDark ? '#1E293B' : '#FFFFFF',
+        cardBorder: isDark ? '#334155' : '#E2E8F0',
+        primaryText: isDark ? '#F1F5F9' : '#0F172A',
+        secondaryText: isDark ? '#94A3B8' : '#64748B',
+        tertiaryText: isDark ? '#64748B' : '#94A3B8',
+        trackBg: isDark ? '#334155' : '#E2E8F0',
+    };
+
+    // 1. Data Filtering: Skip rows where count <= 0
+    const activeStats = (stats || []).filter(item => item && item.count > 0);
+    const hasActiveEmotions = activeStats.length > 0;
+
+    return (
+        <Card
+            padding={20}
+            borderRadius={24}
+            elevation={0}
+            style={[
+                styles.cardContainer,
+                {
+                    backgroundColor: theme.cardBg,
+                    borderColor: theme.cardBorder,
+                }
+            ]}
+            children={(
+                <>
+                    {/* Card Header */}
+                    <View style={styles.cardHeader}>
+                        <Text style={[styles.cardTitle, { color: theme.primaryText }]}>
+                            Emotion breakdown
+                        </Text>
+                        <Text style={[styles.cardSubtitle, { color: theme.secondaryText }]}>
+                            Frequency and relative weight this month
+                        </Text>
+                    </View>
+
+                    {/* Active Emotion Rows flat list (No valence sections) */}
+                    {hasActiveEmotions ? (
+                        <View style={styles.rowsContainer}>
+                            {activeStats.map((row) => (
+                                <EmotionRowItem
+                                    key={row.label}
+                                    item={row}
+                                    theme={theme}
                                 />
-                            </View>
+                            ))}
                         </View>
-                    ))
-                ) : (
-                    <Text style={{ textAlign: 'center', color: '#6B7280', marginVertical: 10 }}>
-                        No entries matching filter
-                    </Text>
-                )}
-            </Card>
-        </>
+                    ) : (
+                        <View style={styles.emptyContainer}>
+                            <Text style={[styles.emptyText, { color: theme.secondaryText }]}>
+                                No entries matching filter
+                            </Text>
+                        </View>
+                    )}
+                </>
+            )}
+        />
     );
 }
 
 const styles = StyleSheet.create({
-    sectionHeader: {
+    cardContainer: {
+        borderWidth: 1,
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        marginBottom: 24,
+    },
+    cardHeader: {
+        marginBottom: 16,
+    },
+    cardTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        letterSpacing: -0.3,
+    },
+    cardSubtitle: {
+        fontSize: 13,
+        fontWeight: '400',
+        marginTop: 2,
+    },
+    rowsContainer: {
+        gap: 12, // 12px vertical gap between rows
+    },
+    rowContainer: {
+        flexDirection: 'column',
+    },
+    topRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    leftGroup: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        marginBottom: 16
     },
-    sectionTitle: {
-        fontSize: 20,
+    emotionImage: {
+        width: 25,
+        height: 25,
+    },
+    labelText: {
+        fontSize: 15,
         fontWeight: '700',
-        color: '#1A1A2E',
     },
-    statRow: {
-        marginBottom: 20,
-    },
-    lastStatRow: {
-        marginBottom: 0,
-    },
-    labelContainer: {
+    rightGroup: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
+        alignItems: 'center',
+        gap: 6,
     },
-    statLabel: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#1A1A2E',
-    },
-    statCount: {
-        fontSize: 16,
-        color: '#4A4A4A',
+    percentageText: {
+        fontSize: 13,
         fontWeight: '600',
     },
-    barBackground: {
-        height: 10,
-        backgroundColor: '#F1F5F9',
-        borderRadius: 5,
-        overflow: 'hidden',
+    badgePill: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+        minWidth: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    barFill: {
+    badgeText: {
+        fontSize: 12,
+        fontWeight: '700',
+        lineHeight: 12,
+    },
+    progressBarTrack: {
+        height: 4,
+        borderRadius: 2,
+        overflow: 'hidden',
+        width: '100%',
+    },
+    progressBarFill: {
         height: '100%',
-        borderRadius: 5,
-    }
+        borderRadius: 2,
+    },
+    emptyContainer: {
+        paddingVertical: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
 });

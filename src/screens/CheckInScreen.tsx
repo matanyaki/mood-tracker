@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useCheckInController } from '../controllers/useCheckInController';
 import { ScreenContainer, AppHeader, EmotionRow, PrimaryButton } from '../components';
@@ -12,13 +12,17 @@ export default function CheckInScreen({ navigation }: any) {
     canSubmit
   } = useCheckInController();
 
-  const handleComplete = () => {
+  const handleComplete = useCallback(() => {
     const data = submitCheckIn();
     if (data) {
       // Pass selections to Reflection Screen
       navigation.navigate('Reflection', { selections: data });
     }
-  };
+  }, [submitCheckIn, navigation]);
+
+  const handleScaleChange = useCallback((id: string, label: string, val: number) => {
+    updateScale(id, label, val);
+  }, [updateScale]);
 
   return (
     <ScreenContainer variant="focus">
@@ -45,7 +49,7 @@ export default function CheckInScreen({ navigation }: any) {
             label={emotion.label}
             imageKey={emotion.imageKey}
             currentScale={getScale(emotion.id)}
-            onScaleChange={(val) => updateScale(emotion.id, emotion.label, val)}
+            onScaleChange={handleScaleChange}
           />
         ))}
       </ScrollView>

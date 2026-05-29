@@ -7,17 +7,25 @@ import Constants from 'expo-constants';
 
 // Helper to get the local IP address
 const getHost = () => {
-    // If we have a specific host URI (from Expo Go)
-    /* 
-       PROBLEM: When using `expo start --tunnel`, the hostUri returns a proxied domain (e.g. *.exp.direct)
-       which does NOT forward port 3000. This causes fetch requests to timeout.
-       
-       FIX: We must use the computer's local LAN IP address directly.
-       Your computer's IP is: 10.0.0.12
-    */
+    // Attempt to get hostUri dynamically from Expo constants (works when running in LAN mode)
+    const hostUri = Constants.expoConfig?.hostUri || 
+                    (Constants as any).manifest?.debuggerHost || 
+                    (Constants as any).manifest2?.extra?.expoGoLaunchMetadata?.debuggerHost;
+    
+    if (hostUri) {
+        const parts = hostUri.split(':');
+        const ip = parts[0];
+        
+        // Ensure it's not a tunnel URL or loopback address
+        if (ip && !ip.includes('exp.direct') && !ip.includes('localhost') && !ip.includes('127.0.0.1')) {
+            console.log('[API Config] Dynamically detected LAN IP:', ip);
+            return `http://${ip}:3000`;
+        }
+    }
 
-    // Use your machine's local IP address
-    return 'http://10.0.0.12:3000';
+    // Fallback to the computer's actual current Wi-Fi LAN IP address
+    // Your computer's current Wi-Fi IP is: 192.168.1.183
+    return 'http://192.168.1.183:3000';
 };
 
 export const API_BASE_URL = getHost();

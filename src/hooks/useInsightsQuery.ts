@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { InsightsService } from '../services/insightsService';
 import type { JournalEntry } from '@shared/types';
@@ -17,34 +18,36 @@ export const useInsightsQuery = (days?: number) => {
 export const useProcessedInsights = (days?: number) => {
     const { data: entries, isLoading, isFetching, refetch } = useInsightsQuery(days);
 
+    const safeEntries = useMemo(() => entries || [], [entries]);
+
     // Compute stats
-    const counts: Record<string, number> = {};
-    let totalEmotionCount = 0;
+    const statsArray = useMemo(() => {
+        const counts: Record<string, number> = {};
+        let totalEmotionCount = 0;
 
-    const safeEntries = entries || [];
+        safeEntries.forEach(entry => {
+            if (entry.emotions && entry.emotions.length > 0) {
+                entry.emotions.forEach((emotionItem: any) => {
+                    const key = (emotionItem.id || emotionItem.label || 'unknown').toLowerCase();
+                    counts[key] = (counts[key] || 0) + 1;
+                    totalEmotionCount++;
+                });
+            }
+        });
 
-    safeEntries.forEach(entry => {
-        if (entry.emotions && entry.emotions.length > 0) {
-            entry.emotions.forEach((emotionItem: any) => {
-                const key = (emotionItem.id || emotionItem.label || 'unknown').toLowerCase();
-                counts[key] = (counts[key] || 0) + 1;
-                totalEmotionCount++;
-            });
-        }
-    });
+        return Object.keys(counts).map(key => {
+            const color = getEmotionColor(key);
+            const label = key.charAt(0).toUpperCase() + key.slice(1);
 
-    const statsArray = Object.keys(counts).map(key => {
-        const color = getEmotionColor(key);
-        const label = key.charAt(0).toUpperCase() + key.slice(1);
-
-        return {
-            id: key,
-            label: label,
-            count: counts[key],
-            color: color,
-            percentage: totalEmotionCount > 0 ? (counts[key] / totalEmotionCount) * 100 : 0
-        };
-    }).sort((a, b: any) => b.count - a.count);
+            return {
+                id: key,
+                label: label,
+                count: counts[key],
+                color: color,
+                percentage: totalEmotionCount > 0 ? (counts[key] / totalEmotionCount) * 100 : 0
+            };
+        }).sort((a, b: any) => b.count - a.count);
+    }, [safeEntries]);
 
     return {
         entries: safeEntries,

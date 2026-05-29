@@ -130,7 +130,7 @@ export const useDiaryController = () => {
     }, [selectedDate, greetings]);
 
     // --- Handlers ---
-    const handleDayPress = (day: DateData) => {
+    const handleDayPress = useCallback((day: DateData) => {
         const dateStr = day.dateString;
         setSelectedDate(dateStr);
 
@@ -148,15 +148,15 @@ export const useDiaryController = () => {
         if (hasEntries || hasGreetings) {
             setModalVisible(true);
         }
-    };
+    }, [entries, greetings]);
 
-    const handleMonthChange = (month: DateData) => setCurrentMonth(month.dateString);
+    const handleMonthChange = useCallback((month: DateData) => setCurrentMonth(month.dateString), []);
 
-    const goToToday = () => {
+    const goToToday = useCallback(() => {
         const today = format(new Date(), 'yyyy-MM-dd');
         setCurrentMonth(today);
         setSelectedDate(today);
-    };
+    }, []);
 
     return {
         entries,

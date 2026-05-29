@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { Droplets } from 'lucide-react-native';
@@ -8,8 +8,22 @@ import { getEmotionColor } from '../../constants/colors';
 
 const screenWidth = Dimensions.get('window').width;
 
+// Strongly type the chart dataset and data contract
+export interface ChartDataset {
+    emotionKey: string;
+    color?: (opacity?: number) => string;
+    data: number[];
+    strokeWidth?: number;
+    meta?: Array<{ scale: number; note: string }>;
+}
+
+export interface ChartData {
+    labels: string[];
+    datasets: ChartDataset[];
+}
+
 interface EmotionWavesChartProps {
-    chartData: any;
+    chartData: ChartData;
     handleDataPointClick: (data: any) => void;
     isFetching?: boolean;
     hasData?: boolean;
@@ -19,29 +33,45 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
     const [isolatedEmotion, setIsolatedEmotion] = useState<string | null>(null);
 
     // Process chart data to handle opacity for isolated emotion
-    const processedChartData = {
-        ...chartData,
-        datasets: chartData.datasets.map((ds: any) => {
-            const isFaded = isolatedEmotion && ds.emotionKey !== isolatedEmotion;
-            
-            // Helper to add opacity to a hex color
-            const hexToRgba = (hex: string, op: number) => {
-                let r = parseInt(hex.slice(1, 3), 16) || 0,
-                    g = parseInt(hex.slice(3, 5), 16) || 0,
-                    b = parseInt(hex.slice(5, 7), 16) || 0;
-                return `rgba(${r}, ${g}, ${b}, ${op})`;
-            };
-
-            const hexColor = getEmotionColor(ds.emotionKey);
-            const lineOpacity = isFaded ? 0.15 : 1;
-            
+    const processedChartData = useMemo(() => {
+        if (!chartData || !chartData.datasets) {
             return {
-                ...ds,
-                color: () => hexToRgba(hexColor, lineOpacity),
-                strokeWidth: isFaded ? 1 : 2, // Thinner lines if faded
+                labels: [],
+                datasets: []
             };
-        })
-    };
+        }
+
+        return {
+            ...chartData,
+            labels: chartData.labels || [],
+            datasets: chartData.datasets.map((ds: ChartDataset) => {
+                const emotionKey = ds.emotionKey || 'unknown';
+                const isFaded = isolatedEmotion !== null && emotionKey !== isolatedEmotion;
+
+                // Helper to add opacity to a hex color safely
+                const hexToRgba = (hex: string, op: number) => {
+                    const cleanHex = hex.replace('#', '');
+                    const r = parseInt(cleanHex.slice(0, 2), 16) || 0;
+                    const g = parseInt(cleanHex.slice(2, 4), 16) || 0;
+                    const b = parseInt(cleanHex.slice(4, 6), 16) || 0;
+                    return `rgba(${r}, ${g}, ${b}, ${op})`;
+                };
+
+                const hexColor = getEmotionColor(emotionKey) || '#A78BFA';
+                const lineOpacity = isFaded ? 0.15 : 1.0;
+
+                // Ensure data points are numbers with a fallback of 0 to prevent rendering crashes
+                const safeData = (ds.data || []).map((val) => (typeof val === 'number' && !isNaN(val) ? val : 0));
+
+                return {
+                    ...ds,
+                    data: safeData,
+                    color: (opacity: number = 1) => hexToRgba(hexColor, lineOpacity * opacity),
+                    strokeWidth: isFaded ? 1 : 2, // Thinner lines if faded
+                };
+            })
+        };
+    }, [chartData, isolatedEmotion]);
 
     if (!hasData && !isFetching) {
         return (
@@ -54,11 +84,11 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
     }
 
     return (
-        <Card padding={10} borderRadius={24} style={[styles.chartCard, { marginHorizontal: -15 }]}>
+        <Card padding={12} borderRadius={24} style={[styles.chartCard, { marginHorizontal: -15, paddingHorizontal: 0 }]}>
             <View style={styles.headerContainer}>
                 <View>
-                    <Text style={styles.chartTitle}>Emotion Island Waves</Text>
-                    <Text style={styles.chartSubtitle}>Y: Stacked Intensity | X: Day of Month</Text>
+                    <Text style={styles.chartTitle}>Emotion Wave Chart</Text>
+                    <Text style={styles.chartSubtitle}>Y: Intensity (1-5) | X: Day of Month</Text>
                 </View>
                 {isFetching && (
                     <ActivityIndicator size="small" color="#4F46E5" style={styles.fetchingIndicator} />
@@ -68,7 +98,7 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
             <View style={{ opacity: isFetching ? 0.7 : 1 }}>
                 <LineChart
                     data={processedChartData}
-                    width={screenWidth - 10} // Adjust width to account for wider negative margins
+                    width={screenWidth + 10} // Expand width to fill full layout card horizontally
                     height={350}
                     yAxisLabel=""
                     yAxisSuffix=""
@@ -109,20 +139,22 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                     style={{
                         marginVertical: 8,
                         borderRadius: 16,
+                        paddingRight: 45, // Prevent X-axis label clipping on the far right
+                        marginLeft: -15,  // Shift left to utilize horizontal canvas space
                     }}
                     onDataPointClick={handleDataPointClick}
                 />
             </View>
-            <Text style={styles.tapHint}>Tap anywhere on the waves for details</Text>
+
 
             {/* Custom Stylized Legend - Placed BELOW chart */}
             <View style={styles.legendContainer}>
                 {EMOTIONS_CONFIG.map(e => {
                     const isFaded = isolatedEmotion && isolatedEmotion !== e.id;
                     return (
-                        <TouchableOpacity 
-                            key={e.id} 
-                            style={styles.legendItem} 
+                        <TouchableOpacity
+                            key={e.id}
+                            style={styles.legendItem}
                             onPress={() => setIsolatedEmotion(isolatedEmotion === e.id ? null : e.id)}
                             activeOpacity={0.7}
                         >

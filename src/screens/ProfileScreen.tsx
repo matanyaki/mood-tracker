@@ -1,9 +1,18 @@
-// src/screens/ProfileScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { LogOut, User, Shield, ChevronRight, CloudOff } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, Card } from '../components';
 import { useAuth } from '../context/AuthContext';
+
+const MenuRow = ({ icon: Icon, label, color = '#4A4A4A', onPress }: any) => (
+    <TouchableOpacity style={styles.menuRow} onPress={onPress}>
+        <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
+            <Icon size={20} color={color} />
+        </View>
+        <Text style={[styles.menuLabel, { color }]}>{label}</Text>
+        <ChevronRight size={20} color="#9CA3AF" />
+    </TouchableOpacity>
+);
 
 export default function ProfileScreen() {
     const { user, isGuest, logout, login, signup } = useAuth();
@@ -14,7 +23,7 @@ export default function ProfileScreen() {
     const [isSignUp, setIsSignUp] = useState(false);
     const [authLoading, setAuthLoading] = useState(false);
 
-    const handleAuth = async () => {
+    const handleAuth = useCallback(async () => {
         if (!email || !password) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
@@ -37,13 +46,13 @@ export default function ProfileScreen() {
         } finally {
             setAuthLoading(false);
         }
-    };
+    }, [email, password, isSignUp, signup, login]);
 
-    const handleComingSoon = () => {
+    const handleComingSoon = useCallback(() => {
         Alert.alert("Coming Soon", "This feature is under development.");
-    };
+    }, []);
 
-    const handleLogout = async () => {
+    const handleLogout = useCallback(async () => {
         Alert.alert(
             "Log Out",
             "Are you sure? If you haven't synced your data, it might be lost.",
@@ -62,17 +71,7 @@ export default function ProfileScreen() {
                 }
             ]
         );
-    };
-
-    const MenuRow = ({ icon: Icon, label, color = '#4A4A4A', onPress }: any) => (
-        <TouchableOpacity style={styles.menuRow} onPress={onPress}>
-            <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
-                <Icon size={20} color={color} />
-            </View>
-            <Text style={[styles.menuLabel, { color }]}>{label}</Text>
-            <ChevronRight size={20} color="#9CA3AF" />
-        </TouchableOpacity>
-    );
+    }, [logout]);
 
     // --- RENDER GUEST / LOGIN VIEW ---
     if (!user) {

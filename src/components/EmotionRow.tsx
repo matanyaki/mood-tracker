@@ -8,7 +8,7 @@ export interface EmotionRowProps {
     label: string;
     imageKey: string;
     currentScale: number;
-    onScaleChange: (val: number) => void;
+    onScaleChange: (id: string, label: string, val: number) => void;
 }
 
 const SCALE_POINTS = [1, 2, 3, 4, 5];
@@ -17,7 +17,7 @@ const getImageSource = (key: string) => {
     return MOOD_IMAGES[key] || MOOD_IMAGES['happy']; // Fallback
 };
 
-export const EmotionRow: React.FC<EmotionRowProps> = ({
+export const EmotionRow: React.FC<EmotionRowProps> = React.memo(({
     id, label, imageKey, currentScale, onScaleChange
 }) => {
     const color = getEmotionColor(id);
@@ -54,7 +54,7 @@ export const EmotionRow: React.FC<EmotionRowProps> = ({
                                 styles.scaleButton,
                                 isActive && { backgroundColor: color, borderColor: color }
                             ]}
-                            onPress={() => onScaleChange(isActive ? 0 : point)} // Toggle off if active
+                            onPress={() => onScaleChange(id, label, isActive ? 0 : point)} // Toggle off if active
                             activeOpacity={0.7}
                         >
                             <Text style={[
@@ -69,7 +69,7 @@ export const EmotionRow: React.FC<EmotionRowProps> = ({
             </View>
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     emotionRow: {

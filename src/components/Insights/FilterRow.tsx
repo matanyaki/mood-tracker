@@ -10,7 +10,12 @@ interface FilterRowProps {
     years: string[];
 }
 
-export default function FilterRow({
+const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+export const FilterRow = React.memo(function FilterRow({
     selectedMonth,
     setSelectedMonth,
     selectedYear,
@@ -25,10 +30,10 @@ export default function FilterRow({
                     onValueChange={(itemValue) => setSelectedMonth(itemValue)}
                     style={styles.picker}
                 >
-                    {Array.from({ length: 12 }, (_, i) => (
+                    {MONTH_NAMES.map((monthName, i) => (
                         <Picker.Item
                             key={i}
-                            label={new Date(0, i).toLocaleString('default', { month: 'long' })}
+                            label={monthName}
                             value={(i + 1).toString()}
                         />
                     ))}
@@ -46,7 +51,9 @@ export default function FilterRow({
             </View>
         </View>
     );
-}
+});
+
+export default FilterRow;
 
 const styles = StyleSheet.create({
     filterRow: {

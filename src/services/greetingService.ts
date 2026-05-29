@@ -3,6 +3,8 @@ import { API_BASE_URL } from '../config/api';
 import { auth } from '../config/firebase';
 import type { Greeting } from '@shared/types';
 
+export type { Greeting };
+
 const GUEST_GREETINGS_KEY = '@guest_greetings';
 
 export const GreetingService = {

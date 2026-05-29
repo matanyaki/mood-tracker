@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 
 export type EmotionId = 'happy' | 'sad' | 'worry' | 'fear' | 'angry';
@@ -12,7 +12,7 @@ export interface EmotionSelection {
 export const useCheckInController = () => {
     const [selections, setSelections] = useState<EmotionSelection[]>([]);
 
-    const updateScale = (id: string, label: string, newScale: number) => {
+    const updateScale = useCallback((id: string, label: string, newScale: number) => {
         const emotionId = id as EmotionId;
 
         setSelections(prev => {
@@ -30,25 +30,25 @@ export const useCheckInController = () => {
                 return [...prev, { id: emotionId, label, scale: newScale }];
             }
         });
-    };
+    }, []);
 
-    const getScale = (id: string) => selections.find(e => e.id === id)?.scale || 0;
+    const getScale = useCallback((id: string) => selections.find(e => e.id === id)?.scale || 0, [selections]);
 
-    const validate = () => selections.length > 0;
+    const canSubmit = useMemo(() => selections.length > 0, [selections]);
 
-    const submitCheckIn = () => {
-        if (!validate()) {
+    const submitCheckIn = useCallback(() => {
+        if (selections.length === 0) {
             Alert.alert("Selection Required", "Please select at least one emotion to check in.");
             return null;
         }
         return selections;
-    };
+    }, [selections]);
 
     return {
         selections,
         updateScale,
         getScale,
-        canSubmit: validate(),
+        canSubmit,
         submitCheckIn
     };
 };
