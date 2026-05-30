@@ -3,7 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { db, admin } from './config/firebase';
 import journalRoutes from './routes/journalRoutes';
-import aiRoutes from './routes/aiRoutes';
 import greetingRoutes from './routes/greetingRoutes';
 import userRoutes from './routes/userRoutes';
 import insightsRoutes from './routes/insightsRoutes';
@@ -23,7 +22,6 @@ app.use((req: Request, res: Response, next: import('express').NextFunction) => {
 
 // API Routes
 app.use('/api/entries', journalRoutes);
-app.use('/api/ai', aiRoutes);
 app.use('/api/greetings', greetingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/insights', insightsRoutes);

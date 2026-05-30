@@ -79,30 +79,6 @@ async function runTests() {
         console.error('Update Entry Failed:', e.message);
     }
 
-    // 5. AI Reflection
-    console.log('\n--- 5. Generate AI Reflection ---');
-    try {
-        const aiRes = await fetch(`${BASE_URL}/api/ai/reflect`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                emotion: "Ecstatic",
-                scale: 5,
-                note: "Things are going great... REALLY great!"
-            })
-        });
-        const aiData = await aiRes.json() as any;
-        console.log('Status:', aiRes.status);
-        if (aiRes.ok) {
-            console.log('Reflection:', aiData.data.reflection);
-            console.log('Detected Emotions:', aiData.data.detectedEmotions);
-        } else {
-            console.error('AI Reflection Failed:', aiData);
-        }
-    } catch (e: any) {
-        console.error('AI Reflection Failed:', e.message);
-    }
-
     // 6. Delete Entry
     console.log('\n--- 6. Delete Journal Entry ---');
     try {
