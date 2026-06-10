@@ -10,7 +10,7 @@ interface ApiResponse<T> {
 
 export const getInsightsData = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.uid;
+        const userId = req.user?.uid;
         if (!userId) {
             return res.status(401).json({
                 success: false,
@@ -43,7 +43,7 @@ export const getInsightsData = async (req: Request, res: Response) => {
 
 export const getEmotionStats = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.uid;
+        const userId = req.user?.uid;
         if (!userId) {
             return res.status(401).json({
                 success: false,
@@ -53,7 +53,7 @@ export const getEmotionStats = async (req: Request, res: Response) => {
         }
 
         const days = req.query.days ? parseInt(req.query.days as string, 10) : undefined;
-        
+
         // This time, call insightsService instead of journalService
         const { default: insightsService } = await import('../services/insightsService');
         const counts = await insightsService.getEmotionCounts(userId, days);

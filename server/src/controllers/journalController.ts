@@ -1,5 +1,9 @@
 import { Request, Response } from 'express';
 import journalService, { JournalEntry } from '../services/journalService';
+import { JournalEntrySchema } from '../../../shared/types';
+
+const CreateEntryBodySchema = JournalEntrySchema.omit({ id: true, userId: true, createdAt: true, updatedAt: true });
+const UpdateEntryBodySchema = CreateEntryBodySchema.partial();
 
 // Standardized response interface
 interface ApiResponse<T> {
@@ -12,22 +16,16 @@ interface ApiResponse<T> {
 export const createEntry = async (req: Request, res: Response) => {
     try {
 
-        const { date, timestamp, emotions } = req.body;
-        // Basic validation
-        if (!date || !timestamp || !emotions || !Array.isArray(emotions)) {
+        const parsed = CreateEntryBodySchema.safeParse(req.body);
+        if (!parsed.success) {
             return res.status(400).json({
                 success: false,
                 data: null,
-                error: 'Missing required fields: date, timestamp, emotions(array).'
+                error: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')
             } as ApiResponse<null>);
         }
 
-        if (req.body.userId) {
-            delete req.body.userId;
-        }
-
-        // Extract userId from middleware
-        const userId = (req as any).user?.uid;
+        const userId = req.user?.uid;
         if (!userId) {
             return res.status(401).json({
                 success: false,
@@ -36,7 +34,7 @@ export const createEntry = async (req: Request, res: Response) => {
             } as ApiResponse<null>);
         }
 
-        const entry = await journalService.createEntry(userId, { date, timestamp, emotions });
+        const entry = await journalService.createEntry(userId, parsed.data);
 
         return res.status(201).json({
             success: true,
@@ -56,7 +54,7 @@ export const createEntry = async (req: Request, res: Response) => {
 
 export const getEntries = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.uid;
+        const userId = req.user?.uid;
         if (!userId) {
             return res.status(401).json({
                 success: false,
@@ -65,7 +63,16 @@ export const getEntries = async (req: Request, res: Response) => {
             } as ApiResponse<null>);
         }
 
-        const entries = await journalService.getEntries(userId);
+        const month = req.query.month as string | undefined;
+        let entries: JournalEntry[];
+
+        if (month) {
+            console.log(`[Journal Controller] Fetching entries for month: ${month}`);
+            entries = await journalService.getEntriesByMonth(userId, month);
+        } else {
+            console.log(`[Journal Controller] No month query parameter. Fetching default last 30 days.`);
+            entries = await journalService.getEntries(userId, 30);
+        }
 
         return res.status(200).json({
             success: true,
@@ -85,7 +92,7 @@ export const getEntries = async (req: Request, res: Response) => {
 
 export const updateEntry = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.uid;
+        const userId = req.user?.uid;
         if (!userId) {
             return res.status(401).json({
                 success: false,
@@ -94,13 +101,7 @@ export const updateEntry = async (req: Request, res: Response) => {
             } as ApiResponse<null>);
         }
 
-        if (req.body.userId) {
-            delete req.body.userId;
-        }
-
         const { id } = req.params;
-        const updates = req.body;
-
         if (!id) {
             return res.status(400).json({
                 success: false,
@@ -109,13 +110,22 @@ export const updateEntry = async (req: Request, res: Response) => {
             } as ApiResponse<null>);
         }
 
-        await journalService.updateEntry(userId, id as string, updates);
+        const parsed = UpdateEntryBodySchema.safeParse(req.body);
+        if (!parsed.success) {
+            return res.status(400).json({
+                success: false,
+                data: null,
+                error: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')
+            } as ApiResponse<null>);
+        }
+
+        await journalService.updateEntry(userId, id as string, parsed.data);
 
         return res.status(200).json({
             success: true,
-            data: { id, ...updates }, // Return updated/merged object logically, or null
+            data: { id, ...parsed.data },
             error: null
-        } as ApiResponse<any>); // Could refetch if strict consistency needed
+        } as ApiResponse<any>);
 
     } catch (error: any) {
         console.error('Error updating journal entry:', error);
@@ -129,7 +139,7 @@ export const updateEntry = async (req: Request, res: Response) => {
 
 export const deleteEntry = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.uid;
+        const userId = req.user?.uid;
         if (!userId) {
             return res.status(401).json({
                 success: false,

@@ -1,11 +1,13 @@
 // src/controllers/useDiaryController.ts
 import { useState, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { JournalService } from '../services/journalService';
 import { GreetingService, Greeting } from '../services/greetingService';
-import { auth } from '../config/firebase'; // Ensure auth is available or handle user check
+import { auth } from '../config/firebase';
 import { format } from 'date-fns';
 import { DateData } from 'react-native-calendars';
+import equal from 'fast-deep-equal';
 
 import { getEmotionColor } from '../constants/colors';
 
@@ -13,7 +15,7 @@ export const useDiaryController = () => {
     // --- State ---
     const [entries, setEntries] = useState<any[]>([]);
     const [greetings, setGreetings] = useState<Greeting[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [selectedDate, setSelectedDate] = useState('');
     const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [modalVisible, setModalVisible] = useState(false);
@@ -27,20 +29,67 @@ export const useDiaryController = () => {
         try {
             const user = auth.currentUser;
             const userId = user ? user.uid : JournalService.GUEST_ID;
+            const monthParam = currentMonth.substring(0, 7); // Format: 'YYYY-MM'
+            const cacheKey = `@journal_month_${monthParam}`;
+            const greetingsCacheKey = `@greetings_cache`;
 
-            const [entriesData, greetingsData] = await Promise.all([
-                JournalService.getUserEntries(userId),
-                GreetingService.getUserGreetings(userId)
+            console.log(`[useDiaryController] SWR cache query key: ${cacheKey}`);
+
+            // 1. Instantly query AsyncStorage cache
+            const [cachedData, cachedGreetings] = await Promise.all([
+                AsyncStorage.getItem(cacheKey),
+                AsyncStorage.getItem(greetingsCacheKey)
             ]);
 
-            setEntries(entriesData || []);
-            setGreetings(greetingsData || []);
+            let initialEntries: any[] = [];
+            if (cachedData) {
+                initialEntries = JSON.parse(cachedData);
+                setEntries(initialEntries);
+            }
+
+            let initialGreetings: Greeting[] = [];
+            if (cachedGreetings) {
+                initialGreetings = JSON.parse(cachedGreetings);
+                setGreetings(initialGreetings);
+            }
+
+            // 2. Simultaneously fire network request in background
+            const [entriesData, greetingsData] = await Promise.all([
+                JournalService.getUserEntries(userId, monthParam).catch(err => {
+                    console.log("[useDiaryController] Failed to fetch entries from server:", err);
+                    return initialEntries; // Fallback to cache
+                }),
+                GreetingService.getUserGreetings(userId).catch(err => {
+                    console.log("[useDiaryController] Failed to fetch greetings from server:", err);
+                    return initialGreetings; // Fallback to cache
+                })
+            ]);
+
+            const resolvedEntriesData = entriesData || [];
+            const resolvedGreetingsData = greetingsData || [];
+
+            // 3. Deep equality check
+            if (!equal(resolvedEntriesData, initialEntries)) {
+                console.log(`[useDiaryController] State mismatch detected. Updating entries state and local cache.`);
+                setEntries(resolvedEntriesData);
+                await AsyncStorage.setItem(cacheKey, JSON.stringify(resolvedEntriesData));
+            } else {
+                console.log(`[useDiaryController] Cached state is identical. Skipping update.`);
+            }
+
+            if (!equal(resolvedGreetingsData, initialGreetings)) {
+                console.log(`[useDiaryController] Greetings state mismatch detected. Updating greetings state and local cache.`);
+                setGreetings(resolvedGreetingsData);
+                await AsyncStorage.setItem(greetingsCacheKey, JSON.stringify(resolvedGreetingsData));
+            } else {
+                console.log(`[useDiaryController] Cached greetings are identical. Skipping update.`);
+            }
         } catch (error) {
             console.log("Error fetching data:", error);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [currentMonth]);
 
     useFocusEffect(
         useCallback(() => {
@@ -56,19 +105,6 @@ export const useDiaryController = () => {
         entries.forEach(entry => {
             if (entry.timestamp) {
                 const dateStr = format(new Date(entry.timestamp), 'yyyy-MM-dd');
-                const emotions = entry.emotions || [];
-
-                let dotColor = '#A78BFA'; // fallback purple
-                if (emotions.length > 0) {
-                    if (emotions.length === 1) {
-                        const emotionId = emotions[0].id || emotions[0].name || 'neutral';
-                        dotColor = getEmotionColor(emotionId);
-                    } else {
-                        dotColor = '#A78BFA'; // mixed mood
-                    }
-                } else if (entry.emotion) {
-                    dotColor = getEmotionColor(entry.emotion.toLowerCase());
-                }
 
                 if (!marked[dateStr]) {
                     marked[dateStr] = { dots: [] };
@@ -76,7 +112,7 @@ export const useDiaryController = () => {
 
                 // Add mood dot
                 if (!marked[dateStr].dots.some((d: any) => d.key === 'mood')) {
-                    marked[dateStr].dots.push({ key: 'mood', color: dotColor });
+                    marked[dateStr].dots.push({ key: 'mood', color: '#A78BFA' });
                 }
             }
         });

@@ -5,10 +5,8 @@ import greetingService from '../services/greetingService';
 export const createGreeting = async (req: Request, res: Response) => {
     try {
         console.log("[GreetingController] Received create request");
-        console.log("[GreetingController] Body:", req.body);
-        console.log("[GreetingController] User Context:", req.user);
 
-        const userId = (req as any).user?.uid;
+        const userId = req.user?.uid;
         if (req.body.userId) {
             delete req.body.userId;
         }
@@ -26,7 +24,6 @@ export const createGreeting = async (req: Request, res: Response) => {
 
         console.log(`[GreetingController] Creating greeting for user: ${userId}`);
         const greeting = await greetingService.createGreeting(userId, text);
-        console.log("[GreetingController] Success:", greeting);
         res.status(201).json({ success: true, data: greeting });
     } catch (error: any) {
         console.error("Create Greeting Error:", error);
@@ -36,7 +33,7 @@ export const createGreeting = async (req: Request, res: Response) => {
 
 export const getGreetings = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.uid;
+        const userId = req.user?.uid;
 
         if (!userId) {
             return res.status(401).json({ error: 'Unauthorized: Missing userId' });
