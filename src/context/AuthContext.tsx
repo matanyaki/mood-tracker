@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
 import { UserService } from '../services/userService';
 import { JournalService } from '../services/journalService';
+import { GreetingService } from '../services/greetingService';
 
 interface AuthContextType {
     user: User | null;
@@ -12,7 +13,6 @@ interface AuthContextType {
     login: (email: string, pass: string) => Promise<void>;
     signup: (email: string, pass: string) => Promise<void>;
     logout: () => Promise<void>;
-    continueAsGuest: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -44,18 +44,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 // Auto-Migrate Guest Data on any login if it exists
                 // This covers: 1. Signup crash recovery, 2. Login from guest mode
                 try {
-                    const guestEntries = await UserService.migrateGuestData(currentUser);
-                    if (guestEntries && guestEntries.length > 0) {
-                        console.log(`[AuthContext] Found ${guestEntries.length} un-synced guest entries. Migrating now...`);
-                        for (const entry of guestEntries) {
-                            const { id, ...entryData } = entry;
-                            await JournalService.addEntry({
-                                ...entryData,
-                                userId: currentUser.uid,
-                            });
+                    const migrationData = await UserService.migrateGuestData(currentUser);
+                    if (migrationData) {
+                        const { entries, greetings } = migrationData;
+                        let migratedAny = false;
+
+                        if (entries && entries.length > 0) {
+                            console.log(`[AuthContext] Found ${entries.length} un-synced guest entries. Migrating now...`);
+                            for (const entry of entries) {
+                                const { id, ...entryData } = entry;
+                                await JournalService.addEntry({
+                                    ...entryData,
+                                    userId: currentUser.uid,
+                                });
+                            }
+                            migratedAny = true;
                         }
-                        await UserService.clearGuestData();
-                        console.log("[AuthContext] Recovery migration complete.");
+
+                        if (greetings && greetings.length > 0) {
+                            console.log(`[AuthContext] Found ${greetings.length} un-synced guest greetings. Migrating now...`);
+                            for (const greeting of greetings) {
+                                await GreetingService.addGreeting(currentUser.uid, greeting.text);
+                            }
+                            migratedAny = true;
+                        }
+
+                        if (migratedAny) {
+                            await UserService.clearGuestData();
+                            console.log("[AuthContext] Recovery migration complete.");
+                        }
                     }
                 } catch (e) {
                     console.error("[AuthContext] Auto-migration error:", e);
@@ -107,25 +124,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (wasGuest) {
             try {
                 // Fetch local data
-                const guestEntries = await UserService.migrateGuestData(cred.user);
+                const migrationData = await UserService.migrateGuestData(cred.user);
 
-                if (guestEntries && guestEntries.length > 0) {
-                    console.log(`[AuthContext] Migrating ${guestEntries.length} guest entries...`);
+                if (migrationData) {
+                    const { entries, greetings } = migrationData;
+                    let migratedAny = false;
 
-                    // Upload each entry to the backend with the new User ID
-                    for (const entry of guestEntries) {
-                        const { id, ...entryData } = entry;
-                        // We use JournalService.addEntry which handles the API call
-                        // Ensure we pass the new userId explicitly
-                        await JournalService.addEntry({
-                            ...entryData,
-                            userId: cred.user.uid,
-                        });
+                    if (entries && entries.length > 0) {
+                        console.log(`[AuthContext] Migrating ${entries.length} guest entries...`);
+
+                        // Upload each entry to the backend with the new User ID
+                        for (const entry of entries) {
+                            const { id, ...entryData } = entry;
+                            // We use JournalService.addEntry which handles the API call
+                            // Ensure we pass the new userId explicitly
+                            await JournalService.addEntry({
+                                ...entryData,
+                                userId: cred.user.uid,
+                            });
+                        }
+                        migratedAny = true;
                     }
 
-                    // Clear local guest data
-                    await UserService.clearGuestData();
-                    console.log("[AuthContext] Migration complete.");
+                    if (greetings && greetings.length > 0) {
+                        console.log(`[AuthContext] Migrating ${greetings.length} guest greetings...`);
+                        for (const greeting of greetings) {
+                            await GreetingService.addGreeting(cred.user.uid, greeting.text);
+                        }
+                        migratedAny = true;
+                    }
+
+                    if (migratedAny) {
+                        // Clear local guest data
+                        await UserService.clearGuestData();
+                        console.log("[AuthContext] Migration complete.");
+                    }
                 }
             } catch (e) {
                 console.error("[AuthContext] Migration warning:", e);
@@ -136,14 +169,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const logout = async () => {
         console.log("[AuthContext] User initiated logout");
         await firebaseSignOut(auth);
+
+        // Clear this user's cached data so the next user to log in doesn't see it.
+        // Guest device keys (@guest_journal_entries, @guest_greetings) are left intact.
+        try {
+            const allKeys = await AsyncStorage.getAllKeys();
+            const keysToClear = allKeys.filter(key => key.startsWith('@journal_month_'));
+            keysToClear.push('@greetings_cache');
+            await AsyncStorage.multiRemove(keysToClear);
+        } catch (e) {
+            console.error("[AuthContext] Failed to clear cache on logout:", e);
+        }
+
         setUser(null);
         setIsGuest(true); // Fallback to guest mode
-    };
-
-    const continueAsGuest = async () => {
-        // This function might be redundant now since we default to guest, 
-        // but kept for compatibility.
-        setIsGuest(true);
     };
 
     return (
@@ -153,8 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             isLoading,
             login,
             signup,
-            logout,
-            continueAsGuest
+            logout
         }}>
             {children}
         </AuthContext.Provider>

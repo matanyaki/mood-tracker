@@ -1,70 +1,92 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { auth } from '../config/firebase';
-import { InsightsService } from '../services/insightsService';
+import { useInsightsQuery } from '../hooks/useInsightsQuery';
 
-import { getEmotionColor } from '../constants/colors';
+export const useInsightsController = (month?: string) => {
+    const { data: rawEntries, isLoading, isFetching, refetch } = useInsightsQuery(month);
 
-export const useInsightsController = () => {
-    const [loading, setLoading] = useState(true);
-    const [entries, setEntries] = useState<any[]>([]);
-
-    const loadStats = useCallback(async () => {
-        try {
-            const user = auth.currentUser;
-            if (!user) return;
-
-            // Fetch raw entries directly from the insights backend
-            const rawEntries = await InsightsService.getInsightsData();
-            setEntries(rawEntries || []);
-        } catch (error) {
-            console.log("Error fetching stats:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
+    // Refresh stats when the screen is focused
     useFocusEffect(
         useCallback(() => {
-            loadStats();
-        }, [loadStats])
+            refetch();
+        }, [refetch])
     );
 
-    const totalEntries = useMemo(() => entries.length, [entries]);
+    // Aggregate entries by date: average scale per unique emotion id per day
+    const aggregatedEntries = useMemo(() => {
+        if (!rawEntries || rawEntries.length === 0) return [];
 
-    const stats = useMemo(() => {
-        const counts: Record<string, number> = {};
-        let totalEmotionCount = 0;
-
-        entries.forEach(entry => {
-            if (entry.emotions && entry.emotions.length > 0) {
-                entry.emotions.forEach((emotionItem: any) => {
-                    const key = (emotionItem.id || emotionItem.label || 'unknown').toLowerCase();
-                    counts[key] = (counts[key] || 0) + 1;
-                    totalEmotionCount++;
-                });
+        const groupedByDate: Record<string, typeof rawEntries> = {};
+        rawEntries.forEach(entry => {
+            if (!entry.date) return;
+            if (!groupedByDate[entry.date]) {
+                groupedByDate[entry.date] = [];
             }
+            groupedByDate[entry.date].push(entry);
         });
 
-        return Object.keys(counts).map(key => {
-            const color = getEmotionColor(key);
-            const label = key.charAt(0).toUpperCase() + key.slice(1);
+        return Object.keys(groupedByDate).map(date => {
+            const group = groupedByDate[date];
+            if (group.length === 1) {
+                return group[0];
+            }
+
+            // Average timestamp across the same day
+            const avgTimestamp = group.reduce((sum, e) => sum + (e.timestamp || 0), 0) / group.length;
+
+            // Map and average emotions by unique ID
+            const emotionSum: Record<string, { scaleSum: number; count: number; label: string; notes: string[] }> = {};
+
+            group.forEach(entry => {
+                if (entry.emotions) {
+                    entry.emotions.forEach((e: any) => {
+                        const id = (e.id || e.label || 'unknown').toLowerCase();
+                        if (!emotionSum[id]) {
+                            emotionSum[id] = {
+                                scaleSum: 0,
+                                count: 0,
+                                label: e.label || e.id || 'unknown',
+                                notes: []
+                            };
+                        }
+                        emotionSum[id].scaleSum += e.scale || 0;
+                        emotionSum[id].count += 1;
+                        if (e.note) {
+                            emotionSum[id].notes.push(e.note);
+                        }
+                    });
+                }
+            });
+
+            const aggregatedEmotions = Object.keys(emotionSum).map(id => {
+                const item = emotionSum[id];
+                return {
+                    id,
+                    label: item.label,
+                    scale: item.count > 0 ? Number((item.scaleSum / item.count).toFixed(2)) : 0,
+                    note: item.notes.filter(n => n.trim() !== '').join('; ')
+                };
+            });
 
             return {
-                id: key,
-                label: label,
-                count: counts[key],
-                color: color,
-                percentage: totalEmotionCount > 0 ? (counts[key] / totalEmotionCount) * 100 : 0
+                id: `aggregated-${date}`,
+                date,
+                timestamp: avgTimestamp,
+                emotions: aggregatedEmotions,
+                isAggregated: true,
+                originalCount: group.length
             };
-        }).sort((a, b: any) => b.count - a.count);
-    }, [entries]);
+        });
+    }, [rawEntries]);
+
+    const totalEntries = useMemo(() => rawEntries.length, [rawEntries]);
 
     return {
-        loading,
-        stats,
+        loading: isLoading,
+        isFetching,
         totalEntries,
-        entries,
-        refreshStats: loadStats
+        entries: rawEntries,
+        aggregatedEntries,
+        refreshStats: refetch
     };
-};
+};

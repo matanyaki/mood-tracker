@@ -95,13 +95,6 @@ export default function DiaryScreen({ navigation }: any) {
     </View>
   ), []);
 
-  if (loading) {
-    return (
-      <ScreenContainer variant="calm">
-        <LoadingState fullScreen />
-      </ScreenContainer>
-    );
-  }
 
   return (
     <ScreenContainer variant="calm">
@@ -141,7 +134,7 @@ export default function DiaryScreen({ navigation }: any) {
         </View>
       </Card>
 
-      {entries.length === 0 && (
+      {/* {entries.length === 0 && (
         <EmptyState
           emoji="📔"
           title="No entries yet"
@@ -149,7 +142,7 @@ export default function DiaryScreen({ navigation }: any) {
           buttonLabel="Add Your First Entry"
           onButtonPress={handleAddFirstEntry}
         />
-      )}
+      )} */}
 
       {/* 
         Ensure DayEntryModal is updated to use new image constants if it displays images. 

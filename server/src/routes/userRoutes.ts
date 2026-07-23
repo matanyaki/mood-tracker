@@ -10,6 +10,6 @@ router.use(authenticateUser);
 
 router.post('/sync', userController.syncUser);
 router.post('/increment-entry', userController.incrementEntryCount);
-router.get('/:userId', userController.getProfile);
+router.get('/me', userController.getProfile);
 
 export default router;

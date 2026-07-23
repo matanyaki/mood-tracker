@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { auth, db } from '../config/firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { JournalService } from '../services/journalService';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 export const useReflectionController = (route: any, navigation: any) => {
+    const { user, isGuest } = useAuth();
     const { selections } = route.params;
     const [notes, setNotes] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
@@ -18,8 +19,14 @@ export const useReflectionController = (route: any, navigation: any) => {
         setLoading(true);
 
         try {
-            const user = auth.currentUser;
-            if (!user) return;
+            // Resolve the acting userId the same way the greeting flow does:
+            // guests get GUEST_ID, which JournalService branches on internally.
+            const userId = isGuest || !user ? JournalService.GUEST_ID : user.uid;
+
+            if (!user && !isGuest) {
+                Alert.alert("Not signed in", "Please sign in or continue as a guest to save your entry.");
+                return;
+            }
 
             // 1. Prepare Data
             // Collect ALL emotions into an array
@@ -30,15 +37,8 @@ export const useReflectionController = (route: any, navigation: any) => {
                 note: notes[sel.id] || ""
             }));
 
-            // Identification of "Primary" emotion (e.g. highest intensity) for quick reference
-            const primarySelection = selections.reduce((prev: any, current: any) =>
-                (prev.scale > current.scale) ? prev : current
-                , selections[0]);
-
-            if (!primarySelection) return;
-
             const entryData = {
-                userId: user.uid,
+                userId,
                 date: new Date().toISOString().split('T')[0],
                 timestamp: Date.now(),
 
@@ -47,12 +47,16 @@ export const useReflectionController = (route: any, navigation: any) => {
             };
 
             // 2. Save to Firebase/Local (via JournalService)
-            console.log("[Reflection] Saving entry for User UID:", user.uid);
+            console.log("[Reflection] Saving entry for User UID:", userId);
             console.log("[Reflection] Data payload:", JSON.stringify(entryData));
 
             // @ts-ignore
             const entryId = await JournalService.addEntry(entryData);
             console.log("[Reflection] Entry saved successfully. ID:", entryId);
+
+            // Invalidate the cached month so the just-saved entry appears on Insights immediately
+            const monthKey = `@journal_month_${entryData.date.slice(0, 7)}`;
+            await AsyncStorage.removeItem(monthKey);
 
             // 3. Navigate Home immediately (AI Removed as requested)
             navigation.reset({
@@ -66,7 +70,7 @@ export const useReflectionController = (route: any, navigation: any) => {
         } finally {
             setLoading(false);
         }
-    }, [selections, notes, loading, navigation]);
+    }, [selections, notes, loading, navigation, user, isGuest]);
 
     return {
         selections,

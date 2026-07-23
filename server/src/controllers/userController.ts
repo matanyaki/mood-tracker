@@ -1,47 +1,54 @@
 import { Request, Response } from 'express';
 import userService from '../services/userService';
+import { UserProfile } from '../../../shared/types';
+import { asyncWrap } from '../middleware/errorHandler';
+import { requireUid } from '../middleware/auth';
 
-export const syncUser = async (req: Request, res: Response) => {
-    try {
-        const user = req.body.user;
-        if (!user || !user.uid) {
-            return res.status(400).json({ success: false, error: 'Missing user data' });
-        }
-        await userService.syncUser(user);
-        res.status(200).json({ success: true, message: 'User synced successfully' });
-    } catch (error: any) {
-        console.error("Sync User Error:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
+// Standardized response interface
+interface ApiResponse<T> {
+    success: boolean;
+    data: T | null;
+    error: string | null;
+}
 
-export const incrementEntryCount = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.uid;
-        if (!userId) {
-            return res.status(401).json({ success: false, error: 'Unauthorized: Missing userId' });
-        }
-        await userService.incrementEntryCount(userId);
-        res.status(200).json({ success: true, message: 'Stats updated successfully' });
-    } catch (error: any) {
-        console.error("Increment Entry Error:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
+export const syncUser = asyncWrap(async (req: Request, res: Response) => {
+    // Never trust req.body for identity — a caller could sync a profile under any
+    // uid/email. Build it from the token verified by authenticateUser. The body is
+    // ignored entirely, which is why there is no schema to parse here.
+    const uid = requireUid(req);
 
-export const getProfile = async (req: Request, res: Response) => {
-    try {
-        let userId = req.params.userId || req.user?.uid;
-        if (Array.isArray(userId)) {
-            userId = userId[0];
-        }
-        if (!userId || typeof userId !== 'string') {
-            return res.status(401).json({ success: false, error: 'Unauthorized: Missing userId' });
-        }
-        const profile = await userService.getProfile(userId);
-        res.status(200).json({ success: true, data: profile });
-    } catch (error: any) {
-        console.error("Get Profile Error:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
+    // Firebase permits emailless accounts; the repository stores '' in that case.
+    await userService.syncUser({ uid, email: req.user?.email ?? '' });
+
+    return res.status(200).json({
+        success: true,
+        data: null,
+        error: null
+    } as ApiResponse<null>);
+});
+
+export const incrementEntryCount = asyncWrap(async (req: Request, res: Response) => {
+    const userId = requireUid(req);
+
+    await userService.incrementEntryCount(userId);
+
+    return res.status(200).json({
+        success: true,
+        data: null,
+        error: null
+    } as ApiResponse<null>);
+});
+
+export const getProfile = asyncWrap(async (req: Request, res: Response) => {
+    // Ignore any client-supplied user id entirely (IDOR). Always use the uid
+    // verified by the auth middleware.
+    const userId = requireUid(req);
+
+    const profile = await userService.getProfile(userId);
+
+    return res.status(200).json({
+        success: true,
+        data: profile,
+        error: null
+    } as ApiResponse<UserProfile | null>);
+});

@@ -1,5 +1,6 @@
 import express from 'express';
 import * as journalController from '../controllers/journalController';
+import * as insightsController from '../controllers/insightsController';
 import { authenticateUser } from '../middleware/auth';
 
 const router = express.Router();
@@ -7,15 +8,8 @@ const router = express.Router();
 // Apply authentication middleware to all journal routes
 router.use(authenticateUser);
 
-// GET /api/entries/stats
-router.get('/stats', async (req, res, next) => {
-    try {
-        const { getEmotionStats } = await import('../controllers/insightsController');
-        await getEmotionStats(req, res);
-    } catch (e) {
-        next(e);
-    }
-});
+// GET /api/entries/stats — must stay above any '/:id' route.
+router.get('/stats', insightsController.getEmotionStats);
 
 // GET /api/entries
 router.get('/', journalController.getEntries);

@@ -1,4 +1,5 @@
 import { journalRepository } from '../repositories/journalRepository';
+import { rethrow } from '../middleware/errorHandler';
 
 class InsightsService {
     /**
@@ -7,9 +8,8 @@ class InsightsService {
     async getEmotionCounts(userId: string, days?: number): Promise<Record<string, number>> {
         try {
             return await journalRepository.getEmotionCounts(userId, days);
-        } catch (error: any) {
-            console.error('Error calculating emotion counts:', error);
-            throw new Error(`Failed to calculate emotion counts: ${error.message}`);
+        } catch (error: unknown) {
+            return rethrow(error, 'Failed to calculate emotion counts');
         }
     }
 }

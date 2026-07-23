@@ -66,7 +66,7 @@ export default function EntryEmotionsList({ emotions }: EntryEmotionsListProps) 
                             {/* Display note if passed (handled in DiaryController usually, but if attached to emotion) */}
                             {emotion.note ? (
                                 <Text style={styles.noteText}>
-                                    "{emotion.note}"
+                                    {emotion.note}
                                 </Text>
                             ) : null}
                         </View>

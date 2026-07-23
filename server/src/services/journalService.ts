@@ -1,4 +1,5 @@
 import { journalRepository } from '../repositories/journalRepository';
+import { rethrow } from '../middleware/errorHandler';
 import type { JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO } from '../../../shared/types';
 
 export type { JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO };
@@ -10,9 +11,8 @@ class JournalService {
     async createEntry(userId: string, data: CreateJournalEntryDTO): Promise<JournalEntry> {
         try {
             return await journalRepository.create(userId, data);
-        } catch (error: any) {
-            console.error('Error creating journal entry:', error);
-            throw new Error(`Failed to create journal entry: ${error.message}`);
+        } catch (error: unknown) {
+            return rethrow(error, 'Failed to create journal entry');
         }
     }
 
@@ -22,9 +22,19 @@ class JournalService {
     async getEntries(userId: string, days?: number): Promise<JournalEntry[]> {
         try {
             return await journalRepository.findAll(userId, days);
-        } catch (error: any) {
-            console.error('Error fetching journal entries:', error);
-            throw new Error(`Failed to fetch journal entries: ${error.message}`);
+        } catch (error: unknown) {
+            return rethrow(error, 'Failed to fetch journal entries');
+        }
+    }
+
+    /**
+     * Get journal entries for a specific month.
+     */
+    async getEntriesByMonth(userId: string, yearMonth: string): Promise<JournalEntry[]> {
+        try {
+            return await journalRepository.getEntriesByMonth(userId, yearMonth);
+        } catch (error: unknown) {
+            return rethrow(error, 'Failed to fetch journal entries by month');
         }
     }
 
@@ -34,9 +44,8 @@ class JournalService {
     async updateEntry(userId: string, entryId: string, data: UpdateJournalEntryDTO): Promise<void> {
         try {
             await journalRepository.update(userId, entryId, data);
-        } catch (error: any) {
-            console.error(`Error updating journal entry ${entryId}:`, error);
-            throw new Error(`Failed to update journal entry: ${error.message}`);
+        } catch (error: unknown) {
+            rethrow(error, `Failed to update journal entry ${entryId}`);
         }
     }
 
@@ -46,9 +55,8 @@ class JournalService {
     async deleteEntry(userId: string, entryId: string): Promise<void> {
         try {
             await journalRepository.delete(userId, entryId);
-        } catch (error: any) {
-            console.error(`Error deleting journal entry ${entryId}:`, error);
-            throw new Error(`Failed to delete journal entry: ${error.message}`);
+        } catch (error: unknown) {
+            rethrow(error, `Failed to delete journal entry ${entryId}`);
         }
     }
 }

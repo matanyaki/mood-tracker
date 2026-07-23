@@ -1,48 +1,46 @@
-
 import { Request, Response } from 'express';
 import greetingService from '../services/greetingService';
+import { Greeting, GreetingSchema } from '../../../shared/types';
+import { asyncWrap } from '../middleware/errorHandler';
+import { requireUid } from '../middleware/auth';
 
-export const createGreeting = async (req: Request, res: Response) => {
-    try {
-        console.log("[GreetingController] Received create request");
+// Derived from the canonical schema. Omitting userId means an unknown-key strip
+// (Zod's default) drops any client-supplied userId — the owner always comes from
+// the verified token instead.
+// NOTE: the length bound is a boundary concern applied locally; it arguably belongs
+// on GreetingSchema itself, but shared/types is out of scope for this pass.
+const CreateGreetingBodySchema = GreetingSchema
+    .omit({ id: true, userId: true, createdAt: true })
+    .extend({ text: GreetingSchema.shape.text.trim().min(1).max(2000) });
 
-        const userId = req.user?.uid;
-        if (req.body.userId) {
-            delete req.body.userId;
-        }
-        
-        const { text } = req.body;
+// Standardized response interface
+interface ApiResponse<T> {
+    success: boolean;
+    data: T | null;
+    error: string | null;
+}
 
-        if (!userId) {
-            console.error("[GreetingController] Missing userId");
-            return res.status(401).json({ error: 'Unauthorized: Missing userId' });
-        }
-        if (!text) {
-            console.error("[GreetingController] Missing text");
-            return res.status(400).json({ error: 'Missing text' });
-        }
+export const createGreeting = asyncWrap(async (req: Request, res: Response) => {
+    const userId = requireUid(req);
+    const { text } = CreateGreetingBodySchema.parse(req.body);
 
-        console.log(`[GreetingController] Creating greeting for user: ${userId}`);
-        const greeting = await greetingService.createGreeting(userId, text);
-        res.status(201).json({ success: true, data: greeting });
-    } catch (error: any) {
-        console.error("Create Greeting Error:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
+    const greeting = await greetingService.createGreeting(userId, text);
 
-export const getGreetings = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.uid;
+    return res.status(201).json({
+        success: true,
+        data: greeting,
+        error: null
+    } as ApiResponse<Greeting>);
+});
 
-        if (!userId) {
-            return res.status(401).json({ error: 'Unauthorized: Missing userId' });
-        }
+export const getGreetings = asyncWrap(async (req: Request, res: Response) => {
+    const userId = requireUid(req);
 
-        const greetings = await greetingService.getGreetings(userId);
-        res.status(200).json({ success: true, data: greetings });
-    } catch (error: any) {
-        console.error("Get Greetings Error:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
+    const greetings = await greetingService.getGreetings(userId);
+
+    return res.status(200).json({
+        success: true,
+        data: greetings,
+        error: null
+    } as ApiResponse<Greeting[]>);
+});

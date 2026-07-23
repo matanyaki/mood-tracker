@@ -1,5 +1,13 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import journalService, { JournalEntry } from '../services/journalService';
+import insightsService from '../services/insightsService';
+import { asyncWrap } from '../middleware/errorHandler';
+import { requireUid } from '../middleware/auth';
+
+// A bare parseInt turns `?days=abc` into NaN, which is falsy, which silently means
+// "no time filter" — i.e. read the user's entire history. Coerce and bound it.
+const DaysQuerySchema = z.coerce.number().int().positive().max(365).default(30);
 
 // Standardized response interface
 interface ApiResponse<T> {
@@ -8,68 +16,28 @@ interface ApiResponse<T> {
     error: string | null;
 }
 
-export const getInsightsData = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.uid;
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                data: null,
-                error: 'Unauthorized: No user ID found.'
-            } as ApiResponse<null>);
-        }
+export const getInsightsData = asyncWrap(async (req: Request, res: Response) => {
+    const userId = requireUid(req);
+    const days = DaysQuerySchema.parse(req.query.days);
 
-        const days = req.query.days ? parseInt(req.query.days as string, 10) : undefined;
-        console.log(`[Insights Controller] Requested Days:`, days);
+    const entries = await journalService.getEntries(userId, days);
 
-        const entries = await journalService.getEntries(userId, days);
-        console.log(`[Insights Controller] Entries retrieved from Service:`, entries.length);
+    return res.status(200).json({
+        success: true,
+        data: entries,
+        error: null
+    } as ApiResponse<JournalEntry[]>);
+});
 
-        return res.status(200).json({
-            success: true,
-            data: entries,
-            error: null
-        } as ApiResponse<JournalEntry[]>);
+export const getEmotionStats = asyncWrap(async (req: Request, res: Response) => {
+    const userId = requireUid(req);
+    const days = DaysQuerySchema.parse(req.query.days);
 
-    } catch (error: any) {
-        console.error('Error getting insights data:', error);
-        return res.status(500).json({
-            success: false,
-            data: null,
-            error: error.message || 'Internal Server Error'
-        } as ApiResponse<null>);
-    }
-};
+    const counts = await insightsService.getEmotionCounts(userId, days);
 
-export const getEmotionStats = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.uid;
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                data: null,
-                error: 'Unauthorized: No user ID found.'
-            } as ApiResponse<null>);
-        }
-
-        const days = req.query.days ? parseInt(req.query.days as string, 10) : undefined;
-
-        // This time, call insightsService instead of journalService
-        const { default: insightsService } = await import('../services/insightsService');
-        const counts = await insightsService.getEmotionCounts(userId, days);
-
-        return res.status(200).json({
-            success: true,
-            data: counts,
-            error: null
-        } as ApiResponse<Record<string, number>>);
-
-    } catch (error: any) {
-        console.error('Error getting emotion stats:', error);
-        return res.status(500).json({
-            success: false,
-            data: null,
-            error: error.message || 'Internal Server Error'
-        } as ApiResponse<null>);
-    }
-};
+    return res.status(200).json({
+        success: true,
+        data: counts,
+        error: null
+    } as ApiResponse<Record<string, number>>);
+});

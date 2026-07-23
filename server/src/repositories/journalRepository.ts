@@ -1,7 +1,7 @@
 import { db } from '../config/firebase';
 import { firestore } from 'firebase-admin';
 import { BaseRepository } from './baseRepository';
-import type { JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO } from '../../../shared/types';
+import type { JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO } from '@shared/types';
 
 class JournalRepository extends BaseRepository<JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO> {
     
@@ -27,6 +27,41 @@ class JournalRepository extends BaseRepository<JournalEntry, CreateJournalEntryD
         if (!snapshot.empty) {
             console.log(`[Repository] Sample DB Timestamp:`, snapshot.docs[0].data().timestamp);
         }
+
+        if (snapshot.empty) {
+            return [];
+        }
+
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            let createdAt = data.createdAt;
+            let updatedAt = data.updatedAt;
+
+            if (createdAt && typeof createdAt.toDate === 'function') {
+                createdAt = createdAt.toDate();
+            }
+            if (updatedAt && typeof updatedAt.toDate === 'function') {
+                updatedAt = updatedAt.toDate();
+            }
+
+            return {
+                id: doc.id,
+                ...data,
+                createdAt,
+                updatedAt
+            } as JournalEntry;
+        });
+    }
+
+    async getEntriesByMonth(userId: string, yearMonth: string): Promise<JournalEntry[]> {
+        if (!db) throw new Error('Firestore is not initialized.');
+
+        const query = this.getCollection(userId)
+            .where('date', '>=', `${yearMonth}-01`)
+            .where('date', '<=', `${yearMonth}-31`)
+            .orderBy('date', 'desc');
+
+        const snapshot = await query.get();
 
         if (snapshot.empty) {
             return [];

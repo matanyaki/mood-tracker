@@ -1,5 +1,6 @@
 
 import Constants from 'expo-constants';
+import { API_HOST } from '@env';
 
 /**
  * API Base URL Configuration
@@ -23,9 +24,15 @@ const getHost = () => {
         }
     }
 
-    // Fallback to the computer's actual current Wi-Fi LAN IP address
-    // Your computer's current Wi-Fi IP is: 192.168.1.183
-    return 'http://192.168.1.183:3000';
+    // With --tunnel, hostUri is an exp.direct address, so detection above is always
+    // skipped and we land here. Set API_HOST in the root .env to your machine's
+    // current LAN IP (`ipconfig` -> IPv4 Address) — it changes when DHCP renews.
+    if (API_HOST) {
+        return `http://${API_HOST}:3000`;
+    }
+
+    console.warn('[API Config] API_HOST is not set in .env — backend calls will fail.');
+    return 'http://localhost:3000';
 };
 
 export const API_BASE_URL = getHost();

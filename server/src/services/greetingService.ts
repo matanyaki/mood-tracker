@@ -1,4 +1,5 @@
 import { greetingRepository } from '../repositories/greetingRepository';
+import { rethrow } from '../middleware/errorHandler';
 import type { Greeting, CreateGreetingDTO } from '../../../shared/types';
 
 class GreetingService {
@@ -9,9 +10,8 @@ class GreetingService {
         try {
             const data: CreateGreetingDTO = { text };
             return await greetingRepository.create(userId, data);
-        } catch (error: any) {
-            console.error('Error creating greeting:', error);
-            throw new Error(`Failed to create greeting: ${error.message}`);
+        } catch (error: unknown) {
+            return rethrow(error, 'Failed to create greeting');
         }
     }
 
@@ -21,9 +21,8 @@ class GreetingService {
     async getGreetings(userId: string): Promise<Greeting[]> {
         try {
             return await greetingRepository.findAll(userId);
-        } catch (error: any) {
-            console.error('Error fetching greetings:', error);
-            throw new Error(`Failed to fetch greetings: ${error.message}`);
+        } catch (error: unknown) {
+            return rethrow(error, 'Failed to fetch greetings');
         }
     }
 }

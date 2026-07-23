@@ -11,6 +11,8 @@
   },
   "exclude": [
     "node_modules",
-    "server"
+    "server",
+    "dist",
+    ".expo"
   ]
 }

@@ -1,48 +1,32 @@
 import { userRepository } from '../repositories/userRepository';
+import { rethrow } from '../middleware/errorHandler';
 import type { UserProfile, CreateUserProfileDTO } from '../../../shared/types';
 
 class UserService {
     /**
-     * Sync user profile. Create if doesn't exist.
+     * Sync user profile. Creates it if absent.
+     *
+     * The repository's create is transactional and idempotent, so the previous
+     * service-level findById check has been removed: it cost an extra read and
+     * still raced, since two concurrent syncs could both pass it.
      */
-    async syncUser(user: any): Promise<void> {
+    async syncUser(user: Pick<CreateUserProfileDTO, 'uid' | 'email'>): Promise<void> {
         try {
-            const existingProfile = await userRepository.findById(user.uid);
-
-            if (!existingProfile) {
-                const newProfile: CreateUserProfileDTO = {
-                    uid: user.uid,
-                    email: user.email || ''
-                };
-                await userRepository.create(newProfile);
-            }
-        } catch (error: any) {
-            console.error("Error syncing user profile:", error);
-            throw error;
+            await userRepository.create({ uid: user.uid, email: user.email || '' });
+        } catch (error: unknown) {
+            rethrow(error, 'Failed to sync user profile');
         }
     }
 
     /**
-     * Increment user's total entry count and update last check-in date.
+     * Increment the user's total entry count and stamp today's check-in date.
+     * Delegates to an atomic server-side increment — no read-modify-write.
      */
     async incrementEntryCount(userId: string): Promise<void> {
         try {
-            const userProfile = await userRepository.findById(userId);
-            
-            if (userProfile) {
-                const currentStats = userProfile.stats || { totalEntries: 0, currentStreak: 0 };
-                
-                await userRepository.update(userId, {
-                    stats: {
-                        ...currentStats,
-                        totalEntries: currentStats.totalEntries + 1,
-                        lastCheckInDate: new Date().toISOString().split('T')[0]
-                    }
-                });
-            }
-        } catch (error: any) {
-            console.error("Error incrementing entry count:", error);
-            throw error;
+            await userRepository.incrementEntryStats(userId);
+        } catch (error: unknown) {
+            rethrow(error, 'Failed to increment entry count');
         }
     }
 
@@ -52,9 +36,8 @@ class UserService {
     async getProfile(userId: string): Promise<UserProfile | null> {
         try {
             return await userRepository.findById(userId);
-        } catch (error: any) {
-            console.error("Error fetching profile:", error);
-            throw error;
+        } catch (error: unknown) {
+            return rethrow(error, 'Failed to fetch user profile');
         }
     }
 }

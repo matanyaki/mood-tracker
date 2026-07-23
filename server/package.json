@@ -19,10 +19,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.3.5",
-    "dotenv": "^17.2.4",
     "eslint": "^9.39.4",
-    "express": "^5.2.1",
-    "firebase-admin": "^13.6.1",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
@@ -30,6 +27,11 @@
   },
   "dependencies": {
     "cors": "^2.8.6",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.0",
+    "firebase-admin": "^13.6.1",
+    "helmet": "^8.3.0",
     "zod": "^4.4.3"
   }
 }

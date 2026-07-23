@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions, ActivityIndicator, TouchableOpacity } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { Droplets } from 'lucide-react-native';
 import Card from '../../components/Card';
@@ -15,6 +15,7 @@ export interface ChartDataset {
     data: number[];
     strokeWidth?: number;
     meta?: Array<{ scale: number; note: string }>;
+    withDots?: boolean;
 }
 
 export interface ChartData {
@@ -30,55 +31,101 @@ interface EmotionWavesChartProps {
 }
 
 export default function EmotionWavesChart({ chartData, handleDataPointClick, isFetching, hasData = true }: EmotionWavesChartProps) {
-    const [isolatedEmotion, setIsolatedEmotion] = useState<string | null>(null);
+    const CARD_HORIZONTAL_MARGIN = 30;
+    const CARD_HORIZONTAL_PADDING = 24;
+    const chartWidth = screenWidth - CARD_HORIZONTAL_MARGIN - CARD_HORIZONTAL_PADDING;
 
-    // Process chart data to handle opacity for isolated emotion
-    const processedChartData = useMemo(() => {
-        if (!chartData || !chartData.datasets) {
+    const processedData = useMemo(() => {
+        if (!chartData || !chartData.datasets || chartData.datasets.length === 0) {
             return {
                 labels: [],
-                datasets: []
+                datasets: [],
+                dominantEmotions: [],
+                dayHasEntry: [],
+                totalDataPoints: 0,
+                hasValidData: false,
+                activeEmotions: []
             };
         }
 
+        const labels = chartData.labels || [];
+        const numDays = labels.length;
+
+        const peakIntensities = Array(numDays).fill(1); // default to 1 so the wave doesn't collapse below the grid
+        const dominantEmotions = Array(numDays).fill('');
+        const dayHasEntry = Array(numDays).fill(false);
+        let totalDataPoints = 0;
+
+        for (let i = 0; i < numDays; i++) {
+            let maxVal = 0;
+            let dominantKey = '';
+            chartData.datasets.forEach(ds => {
+                const val = ds.data[i];
+                if (typeof val === 'number' && !isNaN(val) && val > maxVal) {
+                    maxVal = val;
+                    dominantKey = ds.emotionKey;
+                }
+            });
+            if (maxVal > 0) {
+                peakIntensities[i] = maxVal;
+                dominantEmotions[i] = dominantKey;
+                dayHasEntry[i] = true;
+                totalDataPoints++;
+            }
+        }
+
+        // Filter X-axis labels: show exactly 1, 7, 14, 21, 28 as days of the month
+        const displayLabels = labels.map((label, index) => {
+            const dayNum = parseInt(label.replace(/\D/g, ''), 10);
+            const isMatch = dayNum === 1 || dayNum === 7 || dayNum === 14 || dayNum === 21 || dayNum === 28 ||
+                            index === 0 || index === 6 || index === 13 || index === 20 || index === 27;
+            return isMatch ? label : '';
+        });
+
+        // Fixed indigo rgba(79, 70, 229, opacity) for line itself
+        const datasets: ChartDataset[] = [
+            {
+                emotionKey: 'aggregated_wave',
+                data: peakIntensities,
+                color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
+                strokeWidth: 2,
+            },
+            // Dummy dataset to force the Y-axis range to be 1 to 5
+            {
+                emotionKey: 'y_bounds_dummy',
+                data: numDays >= 2 ? [1, 5, ...Array(numDays - 2).fill(1)] : [1, 5],
+                color: (opacity = 1) => 'rgba(0, 0, 0, 0)',
+                strokeWidth: 0,
+                withDots: false
+            }
+        ];
+
+        // Filter EMOTIONS_CONFIG to only include emotions that have at least one value > 0 in chartData.datasets for current month
+        const activeEmotions = EMOTIONS_CONFIG.filter(e =>
+            chartData.datasets.some(ds =>
+                ds.emotionKey === e.id && ds.data.some(v => v > 0)
+            )
+        );
+
         return {
-            ...chartData,
-            labels: chartData.labels || [],
-            datasets: chartData.datasets.map((ds: ChartDataset) => {
-                const emotionKey = ds.emotionKey || 'unknown';
-                const isFaded = isolatedEmotion !== null && emotionKey !== isolatedEmotion;
-
-                // Helper to add opacity to a hex color safely
-                const hexToRgba = (hex: string, op: number) => {
-                    const cleanHex = hex.replace('#', '');
-                    const r = parseInt(cleanHex.slice(0, 2), 16) || 0;
-                    const g = parseInt(cleanHex.slice(2, 4), 16) || 0;
-                    const b = parseInt(cleanHex.slice(4, 6), 16) || 0;
-                    return `rgba(${r}, ${g}, ${b}, ${op})`;
-                };
-
-                const hexColor = getEmotionColor(emotionKey) || '#A78BFA';
-                const lineOpacity = isFaded ? 0.15 : 1.0;
-
-                // Ensure data points are numbers with a fallback of 0 to prevent rendering crashes
-                const safeData = (ds.data || []).map((val) => (typeof val === 'number' && !isNaN(val) ? val : 0));
-
-                return {
-                    ...ds,
-                    data: safeData,
-                    color: (opacity: number = 1) => hexToRgba(hexColor, lineOpacity * opacity),
-                    strokeWidth: isFaded ? 1 : 2, // Thinner lines if faded
-                };
-            })
+            labels: displayLabels,
+            datasets,
+            dominantEmotions,
+            dayHasEntry,
+            totalDataPoints,
+            hasValidData: totalDataPoints > 0,
+            activeEmotions
         };
-    }, [chartData, isolatedEmotion]);
+    }, [chartData]);
 
-    if (!hasData && !isFetching) {
+    const showEmptyState = !hasData || !processedData.hasValidData;
+
+    if (showEmptyState) {
         return (
             <Card padding={24} borderRadius={24} style={styles.emptyCard}>
-                <Droplets size={48} color="#9CA3AF" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyTitle}>The waters are calm</Text>
-                <Text style={styles.emptyText}>You haven't logged any emotions this month yet. Take a moment to reflect and start shaping your waves.</Text>
+                <Droplets size={44} color="#9CA3AF" />
+                <Text style={styles.emptyTitle}>No waves yet</Text>
+                <Text style={styles.emptyText}>Start journaling to see your emotion wave take shape.</Text>
             </Card>
         );
     }
@@ -95,20 +142,26 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                 )}
             </View>
 
-            <View style={{ opacity: isFetching ? 0.7 : 1 }}>
+            {processedData.totalDataPoints === 1 && (
+                <Text style={styles.singleEntryHint}>
+                    Keep journaling — your wave forms with more entries
+                </Text>
+            )}
+
+            <View style={{ opacity: isFetching ? 0.7 : 1, overflow: 'hidden', borderRadius: 20 }}>
                 <LineChart
-                    data={processedChartData}
-                    width={screenWidth + 10} // Expand width to fill full layout card horizontally
+                    data={processedData}
+                    width={chartWidth}
                     height={350}
                     yAxisLabel=""
                     yAxisSuffix=""
                     yAxisInterval={1}
                     yLabelsOffset={5}
-                    fromZero={true}
-                    segments={3} // 3 dashed horizontal guide lines
-                    withVerticalLines={false} // Clean up background grid
+                    fromZero={false}
+                    segments={4}
+                    withVerticalLines={false}
                     withHorizontalLines={true}
-                    withOuterLines={false} // Remove y-axis spine
+                    withOuterLines={false}
                     chartConfig={{
                         backgroundColor: "transparent",
                         backgroundGradientFrom: "#ffffff",
@@ -116,53 +169,58 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                         backgroundGradientFromOpacity: 0,
                         backgroundGradientToOpacity: 0,
                         decimalPlaces: 0,
-                        useShadowColorFromDataset: true, // This makes the area fill use the dataset's color
-                        color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                        useShadowColorFromDataset: true,
+                        color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
                         labelColor: (opacity = 1) => `rgba(100, 100, 100, ${opacity})`,
-                        fillShadowGradientFromOpacity: 0.8, // 80% opacity on filled areas
-                        fillShadowGradientToOpacity: 0.75, // 75% opacity bottom
+                        fillShadowGradientFromOpacity: 0.10,
+                        fillShadowGradientToOpacity: 0.01,
                         propsForBackgroundLines: {
                             strokeDasharray: "4 4",
                             strokeWidth: 1,
-                            stroke: "rgba(200, 200, 200, 0.3)"
+                            stroke: "rgba(200, 200, 200, 0.25)"
                         },
                         style: {
                             borderRadius: 16
-                        },
-                        propsForDots: {
-                            r: "12", // Large hit target for interactivity
-                            strokeWidth: "0",
-                            fill: "rgba(0,0,0,0)" // Invisible points!
                         }
                     }}
-                    bezier // Smooth curves, never jagged lines
+                    bezier
+                    getDotColor={(dataPoint, index) => {
+                        const emotionKey = processedData.dominantEmotions[index];
+                        return getEmotionColor(emotionKey) || '#4F46E5';
+                    }}
+                    getDotProps={(dataPoint, index) => {
+                        const hasEntry = processedData.dayHasEntry[index];
+                        if (hasEntry) {
+                            return {
+                                r: '5',
+                                strokeWidth: '2',
+                                stroke: '#ffffff',
+                            };
+                        } else {
+                            return {
+                                r: '0',
+                            };
+                        }
+                    }}
                     style={{
                         marginVertical: 8,
                         borderRadius: 16,
-                        paddingRight: 45, // Prevent X-axis label clipping on the far right
-                        marginLeft: -15,  // Shift left to utilize horizontal canvas space
+                        paddingTop: 16,
+                        paddingBottom: 16,
+                        paddingLeft: 12,
+                        paddingRight: 40,
                     }}
                     onDataPointClick={handleDataPointClick}
                 />
             </View>
 
-
-            {/* Custom Stylized Legend - Placed BELOW chart */}
             <View style={styles.legendContainer}>
-                {EMOTIONS_CONFIG.map(e => {
-                    const isFaded = isolatedEmotion && isolatedEmotion !== e.id;
-                    return (
-                        <TouchableOpacity
-                            key={e.id}
-                            style={styles.legendItem}
-                            onPress={() => setIsolatedEmotion(isolatedEmotion === e.id ? null : e.id)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.legendSquare, { backgroundColor: getEmotionColor(e.id), opacity: isFaded ? 0.2 : 1 }]} />
-                            <Text style={[styles.legendText, { opacity: isFaded ? 0.5 : 1 }]}>{e.label}</Text>
-                        </TouchableOpacity>
-                    );
-                })}
+                {EMOTIONS_CONFIG.map(e => (
+                    <View key={e.id} style={styles.legendItem}>
+                        <View style={[styles.legendSquare, { backgroundColor: getEmotionColor(e.id) }]} />
+                        <Text style={styles.legendText}>{e.label}</Text>
+                    </View>
+                ))}
             </View>
         </Card>
     );
@@ -171,7 +229,8 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
 const styles = StyleSheet.create({
     chartCard: {
         marginBottom: 10,
-        alignItems: 'center'
+        alignItems: 'center',
+        minHeight: 220,
     },
     headerContainer: {
         flexDirection: 'row',
@@ -195,18 +254,19 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         marginBottom: 10
     },
-    tapHint: {
+    singleEntryHint: {
         fontSize: 12,
         color: '#9CA3AF',
-        marginTop: -10,
-        marginBottom: 10,
-        fontStyle: 'italic'
+        fontStyle: 'italic',
+        marginBottom: 8,
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10
     },
     legendContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        gap: 16,
+        gap: 10,
         marginVertical: 12,
         paddingHorizontal: 10,
     },
@@ -229,24 +289,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 40,
-        marginBottom: 20,
+        marginBottom: 10,
         marginHorizontal: -15,
-        backgroundColor: '#F9FAFB',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderStyle: 'dashed'
+        backgroundColor: '#ffffff',
+        minHeight: 220,
     },
     emptyTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 17,
+        fontWeight: '600',
         color: '#374151',
+        marginTop: 12,
         marginBottom: 8
     },
     emptyText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: '#9CA3AF',
         textAlign: 'center',
-        lineHeight: 20,
+        lineHeight: 22,
         paddingHorizontal: 20
     }
 });

@@ -1,11 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 import { auth } from '../config/firebase';
+import { GUEST_ID , GUEST_GREETINGS_KEY } from '../constants/variables';
 import type { Greeting } from '@shared/types';
 
 export type { Greeting };
-
-const GUEST_GREETINGS_KEY = '@guest_greetings';
 
 export const GreetingService = {
     /**
@@ -15,14 +14,14 @@ export const GreetingService = {
     */
     addGreeting: async (userId: string, text: string): Promise<Greeting> => {
         try {
-            if (!userId || userId === 'guest-user') {
+            if (!userId || userId === GUEST_ID) {
                 // --- LOCAL STORAGE (Guest) ---
                 const existingJson = await AsyncStorage.getItem(GUEST_GREETINGS_KEY);
                 const existing: Greeting[] = existingJson ? JSON.parse(existingJson) : [];
 
                 const newGreeting: Greeting = {
                     id: Date.now().toString(),
-                    userId: 'guest-user',
+                    userId: GUEST_ID,
                     text,
                     createdAt: new Date().toISOString()
                 };
@@ -72,7 +71,7 @@ export const GreetingService = {
      */
     getUserGreetings: async (userId: string): Promise<Greeting[]> => {
         try {
-            if (!userId || userId === 'guest-user') {
+            if (!userId || userId === GUEST_ID) {
                 const existingJson = await AsyncStorage.getItem(GUEST_GREETINGS_KEY);
                 const greetings: Greeting[] = existingJson ? JSON.parse(existingJson) : [];
                 return greetings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

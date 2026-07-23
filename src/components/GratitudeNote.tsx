@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -30,7 +30,13 @@ const GRATITUDE_PROMPTS = [
     "A favorite song or book"
 ];
 
-const LINE_HEIGHT = 36; // Reduced height to shrink text cursor and make paper lines tighter
+const LINE_HEIGHT = 32;       // Row height for both ruled lines and text (kept in sync so words sit on the lines)
+const INPUT_PADDING_TOP = 14; // Must match linesContainer paddingTop so text baselines land on the rules
+const NUM_LINES = 6;
+const BULLET = '■  '; // Pixel-block bullet prefix so the note reads as a retro list
+
+// Monospace face gives the whole note a pixel / typewriter feel
+const MONO = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 interface GratitudeNoteProps {
     visible: boolean;
@@ -49,9 +55,6 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
     const [showSuggestion, setShowSuggestion] = useState(false);
     const [suggestionText, setSuggestionText] = useState('');
     const [fadeAnim] = useState(new Animated.Value(0));
-
-    // Reset text when opened if needed, or keep state? 
-    // Let's keep state for now, but maybe reset if saved.
 
     const handleSuggestionPress = () => {
         // Haptic feedback
@@ -83,11 +86,36 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
         }).start(() => setShowSuggestion(false));
     };
 
+    // Turn the note into a bullet list: prefix the first line and every new line.
+    const handleChangeText = (newText: string) => {
+        // First character on an empty note → start the first bullet
+        if (text.length === 0 && newText.length > 0 && !newText.startsWith(BULLET)) {
+            setText(BULLET + newText);
+            return;
+        }
+        // User pressed Enter (newline added at the end) → start a new bullet line
+        if (newText.length > text.length && newText.endsWith('\n')) {
+            setText(newText + BULLET);
+            return;
+        }
+        setText(newText);
+    };
+
     const handleSave = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        // Save as a single string: keep bullets, drop empty/trailing bullet-only lines
+        const cleaned = text
+            .split('\n')
+            .map(line => line.replace(/\s+$/, ''))
+            .filter(line => line !== '' && line !== BULLET.trim() && line !== BULLET.trimEnd())
+            .join('\n');
+
         if (onSave) {
-            onSave(text);
+            onSave(cleaned);
         }
+        // Clear the note so it opens fresh next time (only on save)
+        setText('');
         // Close modal after save
         onClose();
     };
@@ -111,70 +139,75 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
                         behavior={Platform.OS === "ios" ? "padding" : "height"}
                         style={styles.keyboardView}
                     >
-                        <View style={styles.paper}>
+                        <View style={styles.paperWrapper}>
+                            {/* Hard offset block = pixel-art drop shadow (no blur) */}
+                            <View style={styles.pixelShadow} pointerEvents="none" />
 
-                            {/* Close Button (X) */}
-                            <TouchableOpacity
-                                style={styles.closeButton}
-                                onPress={onClose}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            >
-                                <X size={24} color="#78350F" />
-                            </TouchableOpacity>
+                            <View style={styles.paper}>
 
-                            <View style={styles.header}>
-                                <Text style={styles.headerTitle}>What are you thankful for today?</Text>
-                            </View>
+                                {/* Close Button (X) */}
+                                <TouchableOpacity
+                                    style={styles.closeButton}
+                                    onPress={onClose}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                    <X size={20} color="#78350F" strokeWidth={2.5} />
+                                </TouchableOpacity>
 
-                            {/* Lined Input Area */}
-                            <View style={styles.inputContainer}>
-                                {/* Background Lines & Aligned Holes */}
-                                <View style={styles.linesContainer} pointerEvents="none">
-                                    {Array.from({ length: 6 }).map((_, i) => (
-                                        <View key={i} style={styles.lineRow}>
-                                            <View style={styles.hole} />
-                                            <View style={styles.line} />
-                                        </View>
-                                    ))}
+                                <View style={styles.header}>
+                                    <Text style={styles.headerEyebrow}>◆ GRATITUDE ◆</Text>
+                                    <Text style={styles.headerTitle}>What are you{'\n'}thankful for today?</Text>
                                 </View>
 
-                                <TextInput
-                                    style={styles.input}
-                                    multiline
-                                    placeholder="I am grateful for..."
-                                    placeholderTextColor="#9CA3AF"
-                                    value={text}
-                                    onChangeText={setText}
-                                    textAlignVertical="top"
-                                />
+                                {/* Lined Input Area */}
+                                <View style={styles.inputContainer}>
+                                    {/* Background ruled lines */}
+                                    <View style={styles.linesContainer} pointerEvents="none">
+                                        {Array.from({ length: NUM_LINES }).map((_, i) => (
+                                            <View key={i} style={styles.lineRow}>
+                                                <View style={styles.line} />
+                                            </View>
+                                        ))}
+                                    </View>
+
+                                    <TextInput
+                                        style={styles.input}
+                                        multiline
+                                        placeholder="I am grateful for..."
+                                        placeholderTextColor="#B79A5E"
+                                        value={text}
+                                        onChangeText={handleChangeText}
+                                        textAlignVertical="top"
+                                    />
+                                </View>
+
+                                {/* Footer Actions */}
+                                <View style={styles.footer}>
+                                    <TouchableOpacity
+                                        style={styles.suggestionButton}
+                                        onPress={handleSuggestionPress}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Lightbulb size={16} color="#D97706" />
+                                        <Text style={styles.suggestionText}>HINT</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.saveButton}
+                                        onPress={handleSave}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={styles.saveButtonText}>SAVE</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Suggestion Popup Overlay */}
+                                {showSuggestion && (
+                                    <Animated.View style={[styles.suggestionPopup, { opacity: fadeAnim }]}>
+                                        <Text style={styles.popupText}>{suggestionText}</Text>
+                                    </Animated.View>
+                                )}
                             </View>
-
-                            {/* Footer Actions */}
-                            <View style={styles.footer}>
-                                <TouchableOpacity
-                                    style={styles.suggestionButton}
-                                    onPress={handleSuggestionPress}
-                                    activeOpacity={0.7}
-                                >
-                                    <Lightbulb size={18} color="#F59E0B" />
-                                    <Text style={styles.suggestionText}>Suggestion</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={styles.saveButton}
-                                    onPress={handleSave}
-                                    activeOpacity={0.8}
-                                >
-                                    <Text style={styles.saveButtonText}>Save</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* Suggestion Popup Overlay */}
-                            {showSuggestion && (
-                                <Animated.View style={[styles.suggestionPopup, { opacity: fadeAnim }]}>
-                                    <Text style={styles.popupText}>"{suggestionText}"</Text>
-                                </Animated.View>
-                            )}
                         </View>
                     </KeyboardAvoidingView>
                 </View>
@@ -183,13 +216,19 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
     );
 };
 
+// Pixel-art palette
+const INK = '#78350F';       // Dark amber "ink" outline
+const PAPER = '#FFF7DB';     // Warm cream paper
+const RULE = '#E7C98F';      // Ruled-line amber
+const ACCENT = '#D97706';    // Amber accent
+
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)', // Dimmed background
-        padding: 20,
+        backgroundColor: 'rgba(30,20,0,0.55)', // Warm dimmed backdrop
+        padding: 24,
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
@@ -198,70 +237,75 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
     },
-    paper: {
+    paperWrapper: {
         width: '100%',
-        maxWidth: 400,
-        backgroundColor: '#FFFBE6', // Cream Soft Yellow
-        borderRadius: 16,
-        padding: 20,
-        paddingLeft: 30, // Space for holes
-        paddingBottom: 20,
-        minHeight: 350,
-        // Drop Shadow
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.25,
-        shadowRadius: 15,
-        elevation: 10,
-        borderWidth: 1,
-        borderColor: '#FDE68A', // Soft Amber border
+        maxWidth: 380,
+        position: 'relative',
+    },
+    pixelShadow: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: INK,
+        borderRadius: 8,
+        transform: [{ translateX: 8 }, { translateY: 8 }],
+    },
+    paper: {
+        backgroundColor: PAPER,
+        borderRadius: 8,
+        borderWidth: 3,
+        borderColor: INK,
+        paddingHorizontal: 22,
+        paddingTop: 18,
+        paddingBottom: 18,
+        minHeight: 340,
         position: 'relative',
         overflow: 'hidden',
+        zIndex: 1,
     },
     closeButton: {
         position: 'absolute',
-        top: 15,
-        right: 15,
+        top: 12,
+        right: 12,
         zIndex: 10,
-        opacity: 0.6,
-    },
-    hole: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: '#9CA3AF', // Darker gray to simulate hole
-        opacity: 0.25,
-        marginLeft: -20, // Sit perfectly in the left paper padding
-        marginRight: 10,
-        marginBottom: 4, // Lift slightly above bottom line
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 1,
+        width: 30,
+        height: 30,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: INK,
+        backgroundColor: PAPER,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     header: {
-        marginBottom: 0,
-        paddingBottom: 10,
-        borderBottomWidth: 2,
-        borderBottomColor: '#FCA5A5', // Red margin line
-        marginRight: 20, // Space for close button
-        marginTop: 10,
+        paddingBottom: 12,
+        marginBottom: 6,
+        marginRight: 36, // Space for close button
+        borderBottomWidth: 3,
+        borderBottomColor: INK,
+    },
+    headerEyebrow: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: ACCENT,
+        fontFamily: MONO,
+        letterSpacing: 3,
+        marginBottom: 6,
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#78350F', // Dark Amber/Brown
-        fontFamily: Platform.OS === 'ios' ? 'American Typewriter' : 'serif',
+        fontSize: 19,
+        fontWeight: '700',
+        color: INK,
+        fontFamily: MONO,
         letterSpacing: 0.5,
+        lineHeight: 26,
     },
     inputContainer: {
         position: 'relative',
-        minHeight: LINE_HEIGHT * 6,
-        marginTop: 0,
+        minHeight: LINE_HEIGHT * NUM_LINES,
+        marginTop: 6,
     },
     linesContainer: {
         ...StyleSheet.absoluteFillObject,
-        paddingTop: 8,
+        paddingTop: INPUT_PADDING_TOP,
     },
     lineRow: {
         flexDirection: 'row',
@@ -271,78 +315,83 @@ const styles = StyleSheet.create({
     },
     line: {
         flex: 1,
-        borderBottomWidth: 1,
-        borderBottomColor: '#CBD5E1',
-        opacity: 0.6,
+        borderBottomWidth: 2,
+        borderBottomColor: RULE,
+        // Dotted rule reads more "pixel"
+        borderStyle: 'dotted',
     },
     input: {
-        fontSize: 18,
+        fontSize: 16,
         lineHeight: LINE_HEIGHT,
-        color: '#374151', // Slate Gray
-        paddingTop: 12 + 4,
-        paddingBottom: 12,
-        fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
-        minHeight: LINE_HEIGHT * 6,
+        color: '#3F2A12', // Ink-brown text
+        paddingTop: INPUT_PADDING_TOP,
+        paddingBottom: 8,
+        fontFamily: MONO,
+        fontWeight: '600',
+        minHeight: LINE_HEIGHT * NUM_LINES,
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 10,
-        paddingTop: 10,
+        marginTop: 14,
+        paddingTop: 14,
+        borderTopWidth: 3,
+        borderTopColor: INK,
     },
     suggestionButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 8,
-        backgroundColor: 'rgba(255,255,255,0.5)',
-        borderRadius: 20,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        backgroundColor: '#FFFDF3',
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: INK,
     },
     suggestionText: {
         marginLeft: 6,
-        color: '#D97706', // Amber 600
-        fontSize: 14,
-        fontWeight: '500',
+        color: ACCENT,
+        fontSize: 13,
+        fontWeight: '700',
+        fontFamily: MONO,
+        letterSpacing: 1,
     },
     saveButton: {
-        backgroundColor: '#D97706', // Amber 600
+        backgroundColor: ACCENT,
         paddingVertical: 10,
-        paddingHorizontal: 24,
-        borderRadius: 12,
-        shadowColor: '#D97706',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 2,
+        paddingHorizontal: 26,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: INK,
     },
     saveButtonText: {
-        color: '#FFF',
-        fontSize: 16,
+        color: '#FFF7DB',
+        fontSize: 15,
         fontWeight: '700',
+        fontFamily: MONO,
+        letterSpacing: 1,
     },
     suggestionPopup: {
         position: 'absolute',
-        bottom: 70,
-        right: 20,
-        backgroundColor: '#FFF',
-        padding: 12,
-        borderRadius: 12,
+        bottom: 78,
+        right: 18,
+        backgroundColor: '#FFFDF3',
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: INK,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
-        maxWidth: 200,
-        borderWidth: 1,
-        borderColor: '#EEE',
+        maxWidth: 220,
         transform: [{ rotate: '-2deg' }],
     },
     popupText: {
-        color: '#6B7280',
-        fontStyle: 'italic',
-        fontSize: 14,
+        color: INK,
+        fontSize: 13,
+        fontFamily: MONO,
+        fontWeight: '600',
         textAlign: 'center',
     }
 });

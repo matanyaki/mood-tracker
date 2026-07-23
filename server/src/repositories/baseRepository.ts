@@ -1,5 +1,6 @@
 import { db } from '../config/firebase';
 import { firestore } from 'firebase-admin';
+import { AppError } from '../middleware/errorHandler';
 
 export abstract class BaseRepository<T, CreateDTO, UpdateDTO> {
     
@@ -131,7 +132,7 @@ export abstract class BaseRepository<T, CreateDTO, UpdateDTO> {
         const doc = await docRef.get();
 
         if (!doc.exists) {
-            throw new Error('Entry not found.');
+            throw new AppError('Entry not found.', 404);
         }
 
         await docRef.update({
@@ -153,7 +154,7 @@ export abstract class BaseRepository<T, CreateDTO, UpdateDTO> {
         const doc = await docRef.get();
 
         if (!doc.exists) {
-            throw new Error('Entry not found.');
+            throw new AppError('Entry not found.', 404);
         }
 
         await docRef.delete();

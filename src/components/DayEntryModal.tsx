@@ -68,7 +68,18 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                                         <Text style={styles.entryTime}>
                                                             {format(new Date(greeting.createdAt), 'h:mm a')}
                                                         </Text>
-                                                        <Text style={styles.greetingText}>"{greeting.text}"</Text>
+                                                        <View style={styles.greetingList}>
+                                                            {String(greeting.text)
+                                                                .split('\n')
+                                                                .map((line: string) => line.replace(/^[■▪◼•]\s*/, '').trim())
+                                                                .filter((line: string) => line !== '')
+                                                                .map((line: string, i: number) => (
+                                                                    <View key={i} style={styles.greetingRow}>
+                                                                        <Text style={styles.greetingBullet}>▪</Text>
+                                                                        <Text style={styles.greetingText}>{line}</Text>
+                                                                    </View>
+                                                                ))}
+                                                        </View>
                                                     </View>
                                                 </View>
                                             );
@@ -264,12 +275,27 @@ const styles = StyleSheet.create({
         paddingTop: 8,
         paddingBottom: 24,
     },
+    greetingList: {
+        marginTop: 6,
+    },
+    greetingRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: 4,
+    },
+    greetingBullet: {
+        fontSize: 16,
+        color: '#0099ffff',
+        lineHeight: 22,
+        marginRight: 10,
+        marginTop: 1,
+    },
     greetingText: {
+        flex: 1,
         fontSize: 15,
         color: '#334155',
         lineHeight: 22,
         fontStyle: 'italic',
-        marginTop: 6,
     },
     cardHeader: {
         flexDirection: 'row',

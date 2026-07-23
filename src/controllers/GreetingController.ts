@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { GreetingService } from '../services/greetingService';
+import { GUEST_ID } from '../services/journalService';
 import { useAuth } from '../context/AuthContext';
 
 export const useGreetingController = () => {
@@ -14,7 +15,7 @@ export const useGreetingController = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const userId = isGuest || !user ? 'guest-user' : user.uid;
+            const userId = isGuest || !user ? GUEST_ID : user.uid;
             console.log(`[GreetingController] Saving greeting for UserID: ${userId} (Guest Mode: ${isGuest})`);
             await GreetingService.addGreeting(userId, text);
             console.log("Greeting saved for user:", userId);

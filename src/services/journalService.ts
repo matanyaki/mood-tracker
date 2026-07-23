@@ -3,9 +3,7 @@ import type { JournalEntry } from '@shared/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 import { auth } from '../config/firebase';
-
-const GUEST_STORAGE_KEY = '@guest_journal_entries';
-const GUEST_ID = 'guest-user';
+import { GUEST_STORAGE_KEY , GUEST_ID } from '../constants/variables';
 
 export const JournalService = {
 
@@ -74,12 +72,21 @@ export const JournalService = {
    * - Authenticated: Fetches via Custom Backend API
    * - Guest: Fetches from AsyncStorage
    */
-  getUserEntries: async (userId: string): Promise<JournalEntry[]> => {
+  getUserEntries: async (userId: string, month?: string): Promise<JournalEntry[]> => {
     try {
       if (userId === GUEST_ID) {
         // --- LOCAL STORAGE ---
         const existingEntriesJson = await AsyncStorage.getItem(GUEST_STORAGE_KEY);
-        const entries: JournalEntry[] = existingEntriesJson ? JSON.parse(existingEntriesJson) : [];
+        let entries: JournalEntry[] = existingEntriesJson ? JSON.parse(existingEntriesJson) : [];
+        
+        if (month) {
+          entries = entries.filter(e => e.date && e.date.startsWith(month));
+        } else {
+          // Default to last 30 days
+          const cutoff = Date.now() - (30 * 24 * 60 * 60 * 1000);
+          entries = entries.filter(e => e.timestamp >= cutoff);
+        }
+        
         return entries.sort((a, b) => b.timestamp - a.timestamp);
 
       } else {
@@ -89,7 +96,10 @@ export const JournalService = {
 
         const token = await user.getIdToken();
 
-        const url = `${API_BASE_URL}/api/entries`;
+        let url = `${API_BASE_URL}/api/entries`;
+        if (month) {
+          url += `?month=${month}`;
+        }
         console.log(`[JournalService] Fetching GET ${url} for userId: ${userId}`);
         const response = await fetch(url, {
           method: 'GET',
@@ -111,133 +121,6 @@ export const JournalService = {
       }
     } catch (error) {
       console.error("Error [getUserEntries]:", error);
-      throw error;
-    }
-  },
-
-  getStats: async (userId: string) => {
-    const entries = await JournalService.getUserEntries(userId);
-    const counts: Record<string, number> = {};
-    let totalEmotionCount = 0;
-    let totalEntriesCount = 0;
-
-    entries.forEach(entry => {
-      totalEntriesCount++;
-      // Iterate through ALL emotions in the entry
-      if (entry.emotions && entry.emotions.length > 0) {
-        entry.emotions.forEach(emotionItem => {
-          // Normalize to lowercase for ID/Key consistency
-          const key = (emotionItem.id || emotionItem.label || 'unknown').toLowerCase();
-
-          counts[key] = (counts[key] || 0) + 1;
-          totalEmotionCount++;
-        });
-      } else {
-        // Fallback for legacy/broken entries (casting to any to bypass TS error)
-        const key = ((entry as any).emotion || 'unknown').toLowerCase();
-        counts[key] = (counts[key] || 0) + 1;
-        totalEmotionCount++;
-      }
-    });
-
-    return { counts, total: totalEmotionCount, totalEntries: totalEntriesCount };
-  },
-
-  deleteEntry: async (entryId: string, userId: string) => {
-    try {
-      if (userId === GUEST_ID) {
-        // --- LOCAL STORAGE ---
-        const existingEntriesJson = await AsyncStorage.getItem(GUEST_STORAGE_KEY);
-        if (!existingEntriesJson) return false;
-
-        const entries: JournalEntry[] = JSON.parse(existingEntriesJson);
-        const updatedEntries = entries.filter(e => e.id !== entryId);
-
-        await AsyncStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(updatedEntries));
-        return true;
-
-      } else {
-        // --- API (Authenticated) ---
-        const user = auth.currentUser;
-        if (!user) throw new Error("User not authenticated.");
-
-        const token = await user.getIdToken();
-
-        const response = await fetch(`${API_BASE_URL}/api/entries/${entryId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to delete entry: ${response.status}`);
-        }
-
-        return true;
-      }
-    } catch (error) {
-      console.error("Error [deleteEntry]:", error);
-      throw error;
-    }
-  },
-
-  updateEntry: async (entryId: string, updates: Partial<JournalEntry>) => {
-    try {
-      const localData = await AsyncStorage.getItem(GUEST_STORAGE_KEY);
-      let isLocal = false;
-      let localEntries: JournalEntry[] = [];
-
-      if (localData) {
-        localEntries = JSON.parse(localData);
-        if (localEntries.some(e => e.id === entryId)) {
-          isLocal = true;
-        }
-      }
-
-      const targetUserId = updates.userId || (isLocal ? GUEST_ID : null);
-
-      if (targetUserId === GUEST_ID || isLocal) {
-        // --- LOCAL STORAGE ---
-        if (!localEntries.length && localData) localEntries = JSON.parse(localData);
-
-        const index = localEntries.findIndex(e => e.id === entryId);
-        if (index === -1) throw new Error("Entry not found locally");
-
-        const updatedEntry = { ...localEntries[index], ...updates, updatedAt: new Date().toISOString() };
-        localEntries[index] = updatedEntry;
-
-        await AsyncStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(localEntries));
-        return updatedEntry;
-
-      } else if (targetUserId) {
-        // --- API (Authenticated) ---
-        const user = auth.currentUser;
-        if (!user) throw new Error("User not authenticated.");
-
-        const token = await user.getIdToken();
-
-        const response = await fetch(`${API_BASE_URL}/api/entries/${entryId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(updates)
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to update entry: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data as JournalEntry;
-      } else {
-        throw new Error("Cannot update entry: Missing userId to determine storage location.");
-      }
-
-    } catch (error) {
-      console.error("Error [updateEntry]:", error);
       throw error;
     }
   },
