@@ -33,14 +33,13 @@ Build backend | `npm run build` | server/ |
 
 ## Env Vars
 
-- Frontend: root `.env` via `@env` alias (react-native-dotenv / babel.config.js) ⚠️ committed to git
+- Frontend: root `.env` via `@env` alias (react-native-dotenv / babel.config.js)
 - Backend: `server/.env` + `server/service-account.json` — both gitignored ✔
 
 ## Gotchas
 
 - `--tunnel` always. LAN IP in `src/config/api.ts` is machine-specific, not a real default.
 - Backend compiled output is `dist/server/src/index.js` not `dist/index.js` — tsconfig includes `../shared/types/**/*` which shifts layout.
-- Root `.env` Firebase keys are in git history — flag if asked about security.
 - Frontend env = `@env` alias. Backend env = `process.env` via `dotenv.config()`.
 
 ## Emotion System
