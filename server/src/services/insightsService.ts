@@ -5,9 +5,9 @@ class InsightsService {
     /**
      * Calculate emotion counts directly from the repository.
      */
-    async getEmotionCounts(userId: string, days?: number): Promise<Record<string, number>> {
+    async getEmotionCounts(userId: string, days?: number, month?: string): Promise<Record<string, number>> {
         try {
-            return await journalRepository.getEmotionCounts(userId, days);
+            return await journalRepository.getEmotionCounts(userId, days, month);
         } catch (error: unknown) {
             return rethrow(error, 'Failed to calculate emotion counts');
         }

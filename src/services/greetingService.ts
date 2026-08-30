@@ -1,8 +1,10 @@
+import { z } from 'zod';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/api';
+import api from '../config/api';
 import { auth } from '../config/firebase';
 import { GUEST_ID , GUEST_GREETINGS_KEY } from '../constants/variables';
 import type { Greeting } from '@shared/types';
+import { GreetingSchema } from '../../shared/types';
 
 export type { Greeting };
 
@@ -36,29 +38,13 @@ export const GreetingService = {
                 const user = auth.currentUser;
                 if (!user) throw new Error("User not authenticated.");
 
-                const token = await user.getIdToken();
-
                 const finalData = {
                     userId,
                     text
                 };
 
-                const response = await fetch(`${API_BASE_URL}/api/greetings`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(finalData)
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Failed to create greeting: ${response.status} - ${errorText}`);
-                }
-
-                const result = await response.json();
-                return result.data as Greeting;
+                const created = await api.post('/api/greetings', finalData);
+                return GreetingSchema.parse(created);
             }
         } catch (error) {
             console.error("Error adding greeting:", error);
@@ -80,27 +66,11 @@ export const GreetingService = {
                 const user = auth.currentUser;
                 if (!user) throw new Error("User not authenticated.");
 
-                const token = await user.getIdToken();
-
-                const url = `${API_BASE_URL}/api/greetings?userId=${userId}`;
-                console.log(`[GreetingService] Fetching GET ${url}`);
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                console.log(`[GreetingService] Fetching greetings for userId: ${userId}`);
+                const result = await api.get('/api/greetings', {
+                    params: { userId }
                 });
-                console.log(`[GreetingService] GET Response Status:`, response.status);
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(`[GreetingService] GET Error Text:`, errorText);
-                    throw new Error(`Failed to get greetings: ${response.status} - ${errorText}`);
-                }
-
-                const result = await response.json();
-                console.log(`[GreetingService] GET Response JSON returned ${result.data?.length || 0} greetings`);
-                return result.data as Greeting[];
+                return z.array(GreetingSchema).parse(result);
             }
         } catch (error) {
             console.error("Error [getUserGreetings]:", error);

@@ -100,14 +100,7 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                             <Text style={[styles.sectionTitle, { color: '#A78BFA' }]}>EMOTIONS</Text>
                                         </View>
                                         {entries.map((entry, index) => {
-                                            const emotions = entry.emotions && entry.emotions.length > 0
-                                                ? entry.emotions
-                                                : (entry.emotion ? [{
-                                                    id: entry.emotion.toLowerCase(),
-                                                    label: entry.emotion,
-                                                    scale: entry.scale,
-                                                    note: entry.note
-                                                }] : []);
+                                            const emotions = entry.emotions;
 
                                             return (
                                                 <View key={entry.id} style={styles.innerEntryContainer}>

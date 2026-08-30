@@ -1,7 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 
-export type EmotionId = 'happy' | 'sad' | 'worry' | 'fear' | 'angry';
+import type { EmotionId } from '@shared/types';
+
+export type { EmotionId };
 
 export interface EmotionSelection {
     id: EmotionId;

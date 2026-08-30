@@ -88,12 +88,19 @@ class JournalRepository extends BaseRepository<JournalEntry, CreateJournalEntryD
         });
     }
 
-    async getEmotionCounts(userId: string, days?: number): Promise<Record<string, number>> {
+    async getEmotionCounts(userId: string, days?: number, month?: string): Promise<Record<string, number>> {
         if (!db) throw new Error('Firestore is not initialized.');
         
         let query: FirebaseFirestore.Query = this.getCollection(userId);
         
-        if (days) {
+        // A month is an absolute window, `days` a rolling one — the Insights screen
+        // asks for a specific month, so that wins when both are supplied. Same date
+        // predicate as getEntriesByMonth, so counts and entries agree on the window.
+        if (month) {
+            query = query
+                .where('date', '>=', `${month}-01`)
+                .where('date', '<=', `${month}-31`);
+        } else if (days) {
             const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
             query = query.where('timestamp', '>=', cutoff);
         }
@@ -107,7 +114,7 @@ class JournalRepository extends BaseRepository<JournalEntry, CreateJournalEntryD
             const data = doc.data() as JournalEntry;
             if (data.emotions && Array.isArray(data.emotions)) {
                 data.emotions.forEach(emotion => {
-                    const key = (emotion.id || emotion.label || 'unknown').toLowerCase();
+                    const key = emotion.id;
                     counts[key] = (counts[key] || 0) + 1;
                 });
             }

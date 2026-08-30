@@ -1,101 +1,42 @@
 // src/controllers/useDiaryController.ts
 import { useState, useCallback, useMemo } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { JournalService } from '../services/journalService';
-import { GreetingService, Greeting } from '../services/greetingService';
-import { auth } from '../config/firebase';
 import { format } from 'date-fns';
 import { DateData } from 'react-native-calendars';
-import equal from 'fast-deep-equal';
 
+import { useEntriesQuery } from '../hooks/useEntriesQuery';
+import { useGreetingsQuery } from '../hooks/useGreetingsQuery';
 import { getEmotionColor } from '../constants/colors';
+
+// Stable identities so the memos below don't recompute while a query is pending.
+const NO_ENTRIES: NonNullable<ReturnType<typeof useEntriesQuery>['data']> = [];
+const NO_GREETINGS: NonNullable<ReturnType<typeof useGreetingsQuery>['data']> = [];
+
+/**
+ * Pins a 'YYYY-MM-DD' string to the first of its month.
+ *
+ * currentMonth drives two things at once — the calendar's visible month and the
+ * ['entries', month] query key — so it is normalized to month granularity. Sliced
+ * rather than re-parsed: new Date('2026-09-01') is UTC midnight, which lands on
+ * August in any negative-offset timezone.
+ */
+const monthStart = (dateStr: string) => `${dateStr.substring(0, 7)}-01`;
 
 export const useDiaryController = () => {
     // --- State ---
-    const [entries, setEntries] = useState<any[]>([]);
-    const [greetings, setGreetings] = useState<Greeting[]>([]);
-    const [loading, setLoading] = useState(false);
     const [selectedDate, setSelectedDate] = useState('');
-    const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [currentMonth, setCurrentMonth] = useState(() => monthStart(format(new Date(), 'yyyy-MM-dd')));
     const [modalVisible, setModalVisible] = useState(false);
 
     // --- Data Fetching ---
-    /* 
-       Note: We assume auth.currentUser is available. 
-       In a real app, might want to use a context or listener.
-    */
-    const loadData = useCallback(async () => {
-        try {
-            const user = auth.currentUser;
-            const userId = user ? user.uid : JournalService.GUEST_ID;
-            const monthParam = currentMonth.substring(0, 7); // Format: 'YYYY-MM'
-            const cacheKey = `@journal_month_${monthParam}`;
-            const greetingsCacheKey = `@greetings_cache`;
+    // Same ['entries', month] key InsightsScreen reads, so visiting both screens on
+    // the same month costs one request, and returning within staleTime costs none.
+    const monthParam = currentMonth.substring(0, 7); // Format: 'YYYY-MM'
+    const entriesQuery = useEntriesQuery(monthParam);
+    const greetingsQuery = useGreetingsQuery();
 
-            console.log(`[useDiaryController] SWR cache query key: ${cacheKey}`);
-
-            // 1. Instantly query AsyncStorage cache
-            const [cachedData, cachedGreetings] = await Promise.all([
-                AsyncStorage.getItem(cacheKey),
-                AsyncStorage.getItem(greetingsCacheKey)
-            ]);
-
-            let initialEntries: any[] = [];
-            if (cachedData) {
-                initialEntries = JSON.parse(cachedData);
-                setEntries(initialEntries);
-            }
-
-            let initialGreetings: Greeting[] = [];
-            if (cachedGreetings) {
-                initialGreetings = JSON.parse(cachedGreetings);
-                setGreetings(initialGreetings);
-            }
-
-            // 2. Simultaneously fire network request in background
-            const [entriesData, greetingsData] = await Promise.all([
-                JournalService.getUserEntries(userId, monthParam).catch(err => {
-                    console.log("[useDiaryController] Failed to fetch entries from server:", err);
-                    return initialEntries; // Fallback to cache
-                }),
-                GreetingService.getUserGreetings(userId).catch(err => {
-                    console.log("[useDiaryController] Failed to fetch greetings from server:", err);
-                    return initialGreetings; // Fallback to cache
-                })
-            ]);
-
-            const resolvedEntriesData = entriesData || [];
-            const resolvedGreetingsData = greetingsData || [];
-
-            // 3. Deep equality check
-            if (!equal(resolvedEntriesData, initialEntries)) {
-                console.log(`[useDiaryController] State mismatch detected. Updating entries state and local cache.`);
-                setEntries(resolvedEntriesData);
-                await AsyncStorage.setItem(cacheKey, JSON.stringify(resolvedEntriesData));
-            } else {
-                console.log(`[useDiaryController] Cached state is identical. Skipping update.`);
-            }
-
-            if (!equal(resolvedGreetingsData, initialGreetings)) {
-                console.log(`[useDiaryController] Greetings state mismatch detected. Updating greetings state and local cache.`);
-                setGreetings(resolvedGreetingsData);
-                await AsyncStorage.setItem(greetingsCacheKey, JSON.stringify(resolvedGreetingsData));
-            } else {
-                console.log(`[useDiaryController] Cached greetings are identical. Skipping update.`);
-            }
-        } catch (error) {
-            console.log("Error fetching data:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [currentMonth]);
-
-    useFocusEffect(
-        useCallback(() => {
-            loadData();
-        }, [loadData])
-    );
+    const entries = entriesQuery.data ?? NO_ENTRIES;
+    const greetings = greetingsQuery.data ?? NO_GREETINGS;
+    const loading = entriesQuery.isLoading || greetingsQuery.isLoading;
 
     // --- Calendar Logic ---
     const markedDates = useMemo(() => {
@@ -186,11 +127,11 @@ export const useDiaryController = () => {
         }
     }, [entries, greetings]);
 
-    const handleMonthChange = useCallback((month: DateData) => setCurrentMonth(month.dateString), []);
+    const handleMonthChange = useCallback((month: DateData) => setCurrentMonth(monthStart(month.dateString)), []);
 
     const goToToday = useCallback(() => {
         const today = format(new Date(), 'yyyy-MM-dd');
-        setCurrentMonth(today);
+        setCurrentMonth(monthStart(today));
         setSelectedDate(today);
     }, []);
 

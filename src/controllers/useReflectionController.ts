@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQueryClient } from '@tanstack/react-query';
 import { JournalService } from '../services/journalService';
 import { useAuth } from '../context/AuthContext';
 
 export const useReflectionController = (route: any, navigation: any) => {
     const { user, isGuest } = useAuth();
+    const queryClient = useQueryClient();
     const { selections } = route.params;
     const [notes, setNotes] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
@@ -54,9 +55,10 @@ export const useReflectionController = (route: any, navigation: any) => {
             const entryId = await JournalService.addEntry(entryData);
             console.log("[Reflection] Entry saved successfully. ID:", entryId);
 
-            // Invalidate the cached month so the just-saved entry appears on Insights immediately
-            const monthKey = `@journal_month_${entryData.date.slice(0, 7)}`;
-            await AsyncStorage.removeItem(monthKey);
+            // Invalidate the saved month so Diary and Insights both refresh on next read
+            const currentMonth = entryData.date.slice(0, 7);
+            queryClient.invalidateQueries({ queryKey: ['entries', currentMonth] });
+            queryClient.invalidateQueries({ queryKey: ['entries', 'stats', currentMonth] });
 
             // 3. Navigate Home immediately (AI Removed as requested)
             navigation.reset({
@@ -70,7 +72,7 @@ export const useReflectionController = (route: any, navigation: any) => {
         } finally {
             setLoading(false);
         }
-    }, [selections, notes, loading, navigation, user, isGuest]);
+    }, [selections, notes, loading, navigation, user, isGuest, queryClient]);
 
     return {
         selections,

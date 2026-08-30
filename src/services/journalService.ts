@@ -1,7 +1,9 @@
 // src/services/journalService.ts
-import type { JournalEntry } from '@shared/types';
+import { z } from 'zod';
+import type { JournalEntry, EntryStats } from '@shared/types';
+import { JournalEntrySchema, EntryStatsSchema } from '../../shared/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/api';
+import api from '../config/api';
 import { auth } from '../config/firebase';
 import { GUEST_STORAGE_KEY , GUEST_ID } from '../constants/variables';
 
@@ -37,29 +39,13 @@ export const JournalService = {
         const user = auth.currentUser;
         if (!user) throw new Error("User not authenticated.");
 
-        const token = await user.getIdToken();
-
         const finalData = {
           ...entryData,
           createdAt: new Date().toISOString()
         };
 
-        const response = await fetch(`${API_BASE_URL}/api/entries`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(finalData)
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to create entry: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        return result.data.id;
+        const created = await api.post('/api/entries', finalData);
+        return JournalEntrySchema.parse(created).id;
       }
     } catch (error) {
       console.error("Error [addEntry]:", error);
@@ -94,33 +80,46 @@ export const JournalService = {
         const user = auth.currentUser;
         if (!user) throw new Error("User not authenticated.");
 
-        const token = await user.getIdToken();
-
-        let url = `${API_BASE_URL}/api/entries`;
-        if (month) {
-          url += `?month=${month}`;
-        }
-        console.log(`[JournalService] Fetching GET ${url} for userId: ${userId}`);
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        console.log(`[JournalService] Fetching entries for userId: ${userId}${month ? ` (month: ${month})` : ''}`);
+        const result = await api.get('/api/entries', {
+          params: month ? { month } : undefined,
         });
-        console.log(`[JournalService] GET ${url} Response Status:`, response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`[JournalService] GET ${url} Error Text:`, errorText);
-          throw new Error(`Failed to get entries: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log(`[JournalService] GET ${url} Response JSON:`, result);
-        return result.data as JournalEntry[];
+        return z.array(JournalEntrySchema).parse(result);
       }
     } catch (error) {
       console.error("Error [getUserEntries]:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get emotion counts for a month.
+   * - Authenticated: GET /api/entries/stats — the server aggregates, the client displays.
+   * - Guest: counted locally, because guest data never reaches the backend at all.
+   */
+  getEntryStats: async (userId: string, month: string): Promise<EntryStats> => {
+    try {
+      if (userId === GUEST_ID) {
+        // --- LOCAL STORAGE ---
+        const entries = await JournalService.getUserEntries(userId, month);
+        return entries.reduce<EntryStats>((counts, entry) => {
+          entry.emotions?.forEach(emotion => {
+            counts[emotion.id] = (counts[emotion.id] || 0) + 1;
+          });
+          return counts;
+        }, {});
+
+      } else {
+        // --- API (Authenticated) ---
+        const user = auth.currentUser;
+        if (!user) throw new Error("User not authenticated.");
+
+        console.log(`[JournalService] Fetching entry stats (month: ${month})`);
+        const result = await api.get('/api/entries/stats', { params: { month } });
+        return EntryStatsSchema.parse(result);
+      }
+    } catch (error) {
+      console.error("Error [getEntryStats]:", error);
       throw error;
     }
   },

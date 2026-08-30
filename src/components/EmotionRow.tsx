@@ -13,10 +13,6 @@ export interface EmotionRowProps {
 
 const SCALE_POINTS = [1, 2, 3, 4, 5];
 
-const getImageSource = (key: string) => {
-    return MOOD_IMAGES[key] || MOOD_IMAGES['happy']; // Fallback
-};
-
 export const EmotionRow: React.FC<EmotionRowProps> = React.memo(({
     id, label, imageKey, currentScale, onScaleChange
 }) => {
@@ -31,7 +27,7 @@ export const EmotionRow: React.FC<EmotionRowProps> = React.memo(({
             {/* Left: Image & Label */}
             <View style={styles.emotionInfo}>
                 <Image
-                    source={getImageSource(imageKey)}
+                    source={MOOD_IMAGES[imageKey]}
                     style={styles.emotionImage}
                     resizeMode="contain"
                 />
@@ -70,6 +66,8 @@ export const EmotionRow: React.FC<EmotionRowProps> = React.memo(({
         </View>
     );
 });
+
+EmotionRow.displayName = 'EmotionRow';
 
 const styles = StyleSheet.create({
     emotionRow: {

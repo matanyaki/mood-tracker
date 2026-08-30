@@ -53,6 +53,8 @@ export const FilterRow = React.memo(function FilterRow({
     );
 });
 
+FilterRow.displayName = 'FilterRow';
+
 export default FilterRow;
 
 const styles = StyleSheet.create({

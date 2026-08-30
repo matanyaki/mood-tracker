@@ -3,23 +3,11 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image } from 'reac
 import { Check } from 'lucide-react-native';
 import Card from './Card';
 import { MOOD_IMAGES } from '../constants/images';
-
-// Helper to get image from constants
-const getEmotionImage = (id: string) => {
-    // Ensure case-insensitive match or fallback
-    const key = id.toLowerCase();
-    // 'worry' maps to 'bad' in current images.ts, handle mapping if needed or rely on ID match
-    // IDs in app: happy, sad, worry, fear, angry
-    // Images: happy, sad, angry, disgusted, fearful, bad, surprised
-    if (key === 'worry') return MOOD_IMAGES['bad'];
-    if (key === 'fear') return MOOD_IMAGES['fearful'];
-
-    return MOOD_IMAGES[key] || MOOD_IMAGES['happy'];
-};
+import { getEmotionImageKey, type EmotionId } from '../../shared/types/emotions';
 
 interface ReflectionCardProps {
     label: string;
-    rootEmotionId: string;
+    rootEmotionId: EmotionId;
     note: string;
     onChangeText: (id: string, text: string) => void;
     isLast: boolean; // Optional: Determine if we show save button here or externally
@@ -40,7 +28,7 @@ const ReflectionCard: React.FC<ReflectionCardProps> = React.memo(({
         <Card style={styles.card} padding={24} borderRadius={24}>
             <View style={styles.cardHeader}>
                 <Image
-                    source={getEmotionImage(rootEmotionId)}
+                    source={MOOD_IMAGES[getEmotionImageKey(rootEmotionId)]}
                     style={styles.emotionImage}
                     resizeMode="contain"
                 />
@@ -60,6 +48,8 @@ const ReflectionCard: React.FC<ReflectionCardProps> = React.memo(({
         </Card>
     );
 });
+
+ReflectionCard.displayName = 'ReflectionCard';
 
 const styles = StyleSheet.create({
     card: {

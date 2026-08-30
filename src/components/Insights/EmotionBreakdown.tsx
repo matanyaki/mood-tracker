@@ -16,13 +16,6 @@ interface EmotionBreakdownProps {
 }
 
 /**
- * Resolves standard required image source from MOOD_IMAGES.
- */
-const getImageSource = (key: string) => {
-    return MOOD_IMAGES[key] || MOOD_IMAGES['happy'];
-};
-
-/**
  * Helper to compute an opacity-reduced background color and a heavily darkened text
  * color from the base emotion color hex for contrast and readability.
  */
@@ -62,11 +55,11 @@ const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: 
         }).start();
     }, [animatedValue]);
 
-    // Look up emotion imageKey from EMOTIONS_CONFIG using its label matching config
-    const emotionConfig = EMOTIONS_CONFIG.find(
-        (e) => e.label.trim().toLowerCase() === item.label.trim().toLowerCase()
-    );
-    const imageKey = emotionConfig?.imageKey || 'happy';
+    // EmotionStat carries a label rather than an id, so the registry entry is
+    // located by label; its imageKey is still the registry's.
+    const imageKey = EMOTIONS_CONFIG.find(
+        (e) => e.label === item.label
+    )!.imageKey;
 
     const { bg: badgeBg, text: badgeText } = getContrastColorStyle(item.color);
 
@@ -82,7 +75,7 @@ const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: 
                 {/* Left Side: Image Asset and Label */}
                 <View style={styles.leftGroup}>
                     <Image
-                        source={getImageSource(imageKey)}
+                        source={MOOD_IMAGES[imageKey]}
                         style={styles.emotionImage}
                         resizeMode="contain"
                     />

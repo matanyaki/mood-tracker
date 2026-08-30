@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { ScreenContainer, AppHeader, LoadingState } from '../components';
+import { ScreenContainer, AppHeader } from '../components';
+import { InsightsStatsSkeleton } from '../components/Skeleton';
 import { useInsightsController } from '../controllers/useInsightsController';
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { getEmotionColor } from '../constants/colors';
@@ -19,7 +20,7 @@ export default function InsightsScreen({ navigation }: any) {
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
 
   const monthParam = `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
-  const { loading, isFetching, entries, aggregatedEntries, refreshStats } = useInsightsController(monthParam);
+  const { loading, isFetching, entries, aggregatedEntries, emotionCounts, refreshStats } = useInsightsController(monthParam);
 
   // Tooltip Modal State
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -76,7 +77,7 @@ export default function InsightsScreen({ navigation }: any) {
 
       if (entry.emotions && dayIndex >= 0 && dayIndex < daysInMonth) {
         entry.emotions.forEach((eItem: any) => {
-          const key = (eItem.id || eItem.label || 'unknown').toLowerCase();
+          const key = eItem.id;
           if (emotionDataMap[key]) {
             emotionDataMap[key][dayIndex] = {
               scale: eItem.scale,
@@ -87,27 +88,17 @@ export default function InsightsScreen({ navigation }: any) {
       }
     });
 
-    // Calculate local Summary and Breakdown stats for the filtered month using raw entries
-    const localCounts: Record<string, number> = {};
-    let totalLocalEmotions = 0;
-
-    filteredRaw.forEach((entry: any) => {
-      if (entry.emotions && entry.emotions.length > 0) {
-        entry.emotions.forEach((eItem: any) => {
-          const key = (eItem.id || eItem.label || 'unknown').toLowerCase();
-          localCounts[key] = (localCounts[key] || 0) + 1;
-          totalLocalEmotions++;
-        });
-      }
-    });
+    // Counts come from GET /api/entries/stats — this only shapes them for display
+    // (label, color, share of the month). Nothing is counted on device.
+    const totalEmotions = Object.values(emotionCounts).reduce((sum, n) => sum + n, 0);
 
     const stats = EMOTIONS_CONFIG.map(emotion => {
-      const count = localCounts[emotion.id] || 0;
+      const count = emotionCounts[emotion.id] || 0;
       return {
         label: emotion.label,
         count: count,
         color: getEmotionColor(emotion.id),
-        percentage: totalLocalEmotions > 0 ? (count / totalLocalEmotions) * 100 : 0
+        percentage: totalEmotions > 0 ? (count / totalEmotions) * 100 : 0
       };
     }).filter(item => item.count > 0).sort((a, b) => b.count - a.count);
 
@@ -134,7 +125,7 @@ export default function InsightsScreen({ navigation }: any) {
       filteredStats: stats,
       filteredTotalEntries: filteredTotal
     };
-  }, [entries, aggregatedEntries, selectedMonth, selectedYear]);
+  }, [entries, aggregatedEntries, emotionCounts, selectedMonth, selectedYear]);
 
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -189,7 +180,7 @@ export default function InsightsScreen({ navigation }: any) {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={() => refreshStats(true)} />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refreshStats} />}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -201,16 +192,22 @@ export default function InsightsScreen({ navigation }: any) {
           years={years}
         />
 
-        <EmotionWavesChart
-          chartData={chartData}
-          handleDataPointClick={handleDataPointClick}
-          isFetching={isFetching}
-          hasData={filteredTotalEntries > 0}
-        />
+        {loading ? (
+          <InsightsStatsSkeleton />
+        ) : (
+          <>
+            <EmotionWavesChart
+              chartData={chartData}
+              handleDataPointClick={handleDataPointClick}
+              isFetching={isFetching}
+              hasData={filteredTotalEntries > 0}
+            />
 
-        <SummaryCards filteredTotalEntries={filteredTotalEntries} />
+            <SummaryCards filteredTotalEntries={filteredTotalEntries} />
 
-        <EmotionBreakdown stats={filteredStats} />
+            <EmotionBreakdown stats={filteredStats} />
+          </>
+        )}
 
       </ScrollView>
 

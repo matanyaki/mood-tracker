@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { LogOut, User, Shield, ChevronRight, CloudOff } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, Card } from '../components';
+import { ProfileScreenSkeleton, SkeletonBox } from '../components/Skeleton';
 import { useAuth } from '../context/AuthContext';
 
 const MenuRow = ({ icon: Icon, label, color = '#4A4A4A', onPress }: any) => (
@@ -15,7 +16,7 @@ const MenuRow = ({ icon: Icon, label, color = '#4A4A4A', onPress }: any) => (
 );
 
 export default function ProfileScreen() {
-    const { user, isGuest, logout, login, signup } = useAuth();
+    const { user, isGuest, isLoading, logout, login, signup } = useAuth();
 
     // Auth Form State
     const [email, setEmail] = useState('');
@@ -73,6 +74,12 @@ export default function ProfileScreen() {
         );
     }, [logout]);
 
+    // Auth is still resolving — RootNavigator normally gates this, but the
+    // skeleton keeps the screen from flashing empty if that gate ever moves.
+    if (isLoading) {
+        return <ProfileScreenSkeleton />;
+    }
+
     // --- RENDER GUEST / LOGIN VIEW ---
     if (!user) {
         return (
@@ -128,7 +135,7 @@ export default function ProfileScreen() {
                             />
 
                             {authLoading ? (
-                                <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
+                                <SkeletonBox height={56} borderRadius={12} style={{ marginTop: 8 }} />
                             ) : (
                                 <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
                                     <Text style={styles.authButtonText}>

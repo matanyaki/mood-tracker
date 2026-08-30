@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQueryClient } from '@tanstack/react-query';
 import { auth } from '../config/firebase';
 import { UserService } from '../services/userService';
 import { JournalService } from '../services/journalService';
@@ -21,6 +21,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isGuest, setIsGuest] = useState(true); // Default to Guest true initially until proven otherwise (or loading finishes)
     const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         console.log("[AuthContext] Mounting...");
@@ -171,15 +172,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await firebaseSignOut(auth);
 
         // Clear this user's cached data so the next user to log in doesn't see it.
+        // Entries and greetings are cached by TanStack Query now, not AsyncStorage, so
+        // dropping the query cache is what replaces the old @journal_month_* sweep.
         // Guest device keys (@guest_journal_entries, @guest_greetings) are left intact.
-        try {
-            const allKeys = await AsyncStorage.getAllKeys();
-            const keysToClear = allKeys.filter(key => key.startsWith('@journal_month_'));
-            keysToClear.push('@greetings_cache');
-            await AsyncStorage.multiRemove(keysToClear);
-        } catch (e) {
-            console.error("[AuthContext] Failed to clear cache on logout:", e);
-        }
+        queryClient.clear();
 
         setUser(null);
         setIsGuest(true); // Fallback to guest mode

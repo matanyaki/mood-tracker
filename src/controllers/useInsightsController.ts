@@ -1,18 +1,21 @@
 import { useCallback, useMemo } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import { useInsightsQuery } from '../hooks/useInsightsQuery';
+import type { JournalEntry, EntryStats } from '@shared/types';
+import { useEntriesQuery } from '../hooks/useEntriesQuery';
+import { useEntryStatsQuery } from '../hooks/useEntryStatsQuery';
+
+const NO_ENTRIES: JournalEntry[] = [];
+const NO_STATS: EntryStats = {};
 
 export const useInsightsController = (month?: string) => {
-    const { data: rawEntries, isLoading, isFetching, refetch } = useInsightsQuery(month);
+    // Full entry docs for the waves chart; counts straight from the server.
+    const entriesQuery = useEntriesQuery(month);
+    const statsQuery = useEntryStatsQuery(month);
 
-    // Refresh stats when the screen is focused
-    useFocusEffect(
-        useCallback(() => {
-            refetch();
-        }, [refetch])
-    );
+    const rawEntries = entriesQuery.data ?? NO_ENTRIES;
 
-    // Aggregate entries by date: average scale per unique emotion id per day
+    // The one aggregation the stats endpoint does not cover: collapse a day's entries
+    // into a single point per emotion so EmotionWavesChart has one value per day.
+    // Emotion *counts* are not computed here — those come from emotionCounts below.
     const aggregatedEntries = useMemo(() => {
         if (!rawEntries || rawEntries.length === 0) return [];
 
@@ -40,12 +43,12 @@ export const useInsightsController = (month?: string) => {
             group.forEach(entry => {
                 if (entry.emotions) {
                     entry.emotions.forEach((e: any) => {
-                        const id = (e.id || e.label || 'unknown').toLowerCase();
+                        const id = e.id;
                         if (!emotionSum[id]) {
                             emotionSum[id] = {
                                 scaleSum: 0,
                                 count: 0,
-                                label: e.label || e.id || 'unknown',
+                                label: e.label,
                                 notes: []
                             };
                         }
@@ -79,14 +82,19 @@ export const useInsightsController = (month?: string) => {
         });
     }, [rawEntries]);
 
-    const totalEntries = useMemo(() => rawEntries.length, [rawEntries]);
+    // Pull-to-refresh: force both windows past their staleTime.
+    const refreshStats = useCallback(() => {
+        entriesQuery.refetch();
+        statsQuery.refetch();
+    }, [entriesQuery.refetch, statsQuery.refetch]);
 
     return {
-        loading: isLoading,
-        isFetching,
-        totalEntries,
+        loading: entriesQuery.isLoading || statsQuery.isLoading,
+        isFetching: entriesQuery.isFetching || statsQuery.isFetching,
+        totalEntries: rawEntries.length,
         entries: rawEntries,
         aggregatedEntries,
-        refreshStats: refetch
+        emotionCounts: statsQuery.data ?? NO_STATS,
+        refreshStats
     };
-};
+};

@@ -2,14 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { MOOD_IMAGES } from '../constants/images';
 import { getEmotionColor } from '../constants/colors';
+import { getEmotionImageKey, type EmotionId } from '../../shared/types/emotions';
 
 interface Emotion {
-    id: string;      // New standard
-    label?: string;  // New standard
-    scale?: number;  // New standard
-    name?: string;   // Legacy fallback
-    note?: string;   // Legacy/New
-    [key: string]: any;
+    id: EmotionId;
+    label: string;
+    scale: number;
+    note?: string;
 }
 
 interface EntryEmotionsListProps {
@@ -22,15 +21,10 @@ export default function EntryEmotionsList({ emotions }: EntryEmotionsListProps) 
     return (
         <View style={styles.container}>
             {emotions.map((emotion, index) => {
-                // Handle new vs legacy data
-                const id = emotion.id || emotion.name?.toLowerCase() || 'happy';
-                const label = emotion.label || emotion.name || 'Emotion';
-                const scale = emotion.scale;
+                const { id, label, scale } = emotion;
 
                 const color = getEmotionColor(id);
-                // "worry" maps to "bad" image based on previous checks
-                const imageKey = id === 'worry' ? 'bad' : id;
-                const imageSource = MOOD_IMAGES[imageKey] || MOOD_IMAGES['happy'];
+                const imageSource = MOOD_IMAGES[getEmotionImageKey(id)];
 
                 const isLast = index === emotions.length - 1;
 

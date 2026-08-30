@@ -4,7 +4,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
 import { Calendar } from 'react-native-calendars';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, Card, LoadingState, EmptyState, DayEntryModal } from '../components';
+import { ScreenContainer, AppHeader, Card, EmptyState, DayEntryModal } from '../components';
+import { CalendarSkeleton } from '../components/Skeleton';
 import { useDiaryController } from '../controllers/useDiaryController';
 
 const CALENDAR_THEME = {
@@ -95,7 +96,6 @@ export default function DiaryScreen({ navigation }: any) {
     </View>
   ), []);
 
-
   return (
     <ScreenContainer variant="calm">
       <AppHeader
@@ -104,19 +104,23 @@ export default function DiaryScreen({ navigation }: any) {
       />
 
       <Card style={styles.calendarContainer} padding={16} elevation={4} borderRadius={24}>
-        <Calendar
-          current={currentMonth}
-          onDayPress={handleDayPress}
-          onMonthChange={handleMonthChange}
-          markingType="multi-dot"
-          markedDates={markedDates}
-          renderHeader={renderCalendarHeader}
-          theme={CALENDAR_THEME as any}
-          renderArrow={renderCalendarArrow}
-          enableSwipeMonths={true}
-          hideExtraDays={false}
-          firstDay={0}
-        />
+        {loading ? (
+          <CalendarSkeleton />
+        ) : (
+          <Calendar
+            initialDate={currentMonth}
+            onDayPress={handleDayPress}
+            onMonthChange={handleMonthChange}
+            markingType="multi-dot"
+            markedDates={markedDates}
+            renderHeader={renderCalendarHeader}
+            theme={CALENDAR_THEME as any}
+            renderArrow={renderCalendarArrow}
+            enableSwipeMonths={true}
+            hideExtraDays={false}
+            firstDay={0}
+          />
+        )}
 
         <View style={styles.legend}>
           <View style={styles.legendItem}>

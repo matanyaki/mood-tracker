@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { GreetingService } from '../services/greetingService';
-import { GUEST_ID } from '../services/journalService';
+import { GUEST_ID } from '../constants/variables';
 import { useAuth } from '../context/AuthContext';
 
 export const useGreetingController = () => {

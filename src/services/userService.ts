@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/api';
+import api from '../config/api';
 import { JournalEntry, Greeting } from '@shared/types';
 import { GUEST_STORAGE_KEY , GUEST_GREETINGS_KEY } from '../constants/variables';
 
@@ -10,18 +10,8 @@ export const UserService = {
     syncUser: async (user: any) => {
         try {
             if (!user || !user.uid) return;
-            // The user must be authenticated, we'll wait for the token to be available
-            // Note: If calling this right upon signup, might take a second for token.
-            const token = await user.getIdToken();
-
-            await fetch(`${API_BASE_URL}/api/users/sync`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ user })
-            });
+            // The request interceptor attaches a fresh Firebase ID token automatically.
+            await api.post('/api/users/sync', { user });
         } catch (error) {
             console.error("Error syncing user profile:", error);
             // We swallow the error so it doesn't block the app flow/migration

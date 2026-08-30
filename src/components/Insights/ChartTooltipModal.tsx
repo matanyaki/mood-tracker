@@ -37,7 +37,7 @@ export default function ChartTooltipModal({ visible, data, onClose }: ChartToolt
                     
                     <View style={styles.modalBody}>
                         {data.emotions.sort((a, b) => b.scale - a.scale).map((eItem, idx) => {
-                            const emotionColor = getEmotionColor(eItem.emotionKey || eItem.emotion.toLowerCase());
+                            const emotionColor = getEmotionColor(eItem.emotionKey);
                             return (
                                 <View key={idx} style={styles.emotionItem}>
                                     <View style={styles.emotionRow}>
