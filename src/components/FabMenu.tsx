@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, TouchableWithoutFeedback, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Platform } from 'react-native';
 import { Plus } from 'lucide-react-native';
 
 export interface FabAction {
@@ -22,6 +22,7 @@ const SHADOW_OFFSET = 4;
 
 const FAB_SIZE = 60;
 const MINI_FAB_SIZE = 56;
+const ROW_SPACING = 60; // Vertical distance between fanned-out rows
 
 export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -30,10 +31,17 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
     const toggleMenu = () => {
         const toValue = isOpen ? 0 : 1;
 
-        Animated.spring(animation, {
+        // A bouncy spring kept the rows drifting for a few hundred ms after they looked
+        // settled, so a tap landing mid-wobble got cancelled (the button moved out from
+        // under the finger between press-down and release). A short, non-overshooting
+        // timing curve settles deterministically instead.
+        // useNativeDriver is off on purpose: the native driver leaves the JS-side layout
+        // stale, so press hit-rects were measured against stale positions.
+        Animated.timing(animation, {
             toValue,
-            friction: 5,
-            useNativeDriver: true,
+            duration: 180,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: false,
         }).start();
 
         setIsOpen(!isOpen);
@@ -53,7 +61,7 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
     const getStyleForIndex = (index: number) => {
         const translateY = animation.interpolate({
             inputRange: [0, 1],
-            outputRange: [0, -60 * (index + 1)],
+            outputRange: [0, -ROW_SPACING * (index + 1)],
         });
 
         const opacity = animation.interpolate({
@@ -68,20 +76,30 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
     };
 
     return (
-        <View style={styles.container}>
-            {/* Backdrop to close menu when clicking outside */}
-            {isOpen && (
-                <TouchableWithoutFeedback onPress={toggleMenu}>
-                    <View style={styles.backdrop} />
-                </TouchableWithoutFeedback>
-            )}
+        // Full-screen host: Android drops touches on children rendered outside their parent's
+        // bounds, and the fanned-out rows sit well above the FAB. `box-none` keeps this
+        // overlay from swallowing taps meant for the screen underneath.
+        <View style={styles.container} pointerEvents="box-none">
+            {/* Dimmed backdrop -- visual only, so it can never win a tap over the buttons. */}
+            {isOpen && <View style={styles.backdrop} pointerEvents="none" />}
 
             {/* Action Buttons */}
-            <View style={styles.actionsContainer}>
-                {actions.map((action, index) => (
-                    <Animated.View
-                        key={index}
-                        style={[styles.actionWrapper, getStyleForIndex(index)]}
+            {actions.map((action, index) => (
+                <Animated.View
+                    key={index}
+                    style={[styles.actionWrapper, getStyleForIndex(index)]}
+                    pointerEvents={isOpen ? 'auto' : 'none'}
+                >
+                    {/* The whole row is one target -- tapping the label used to do nothing.
+                        Fires on press-in so a press can't be cancelled between down and up. */}
+                    <TouchableOpacity
+                        style={styles.actionRow}
+                        onPressIn={() => {
+                            action.onPress();
+                            toggleMenu();
+                        }}
+                        activeOpacity={0.8}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                         <View style={styles.labelWrapper}>
                             <View style={styles.labelShadow} pointerEvents="none" />
@@ -92,23 +110,18 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
 
                         <View style={styles.miniFabWrapper}>
                             <View style={styles.miniFabShadow} pointerEvents="none" />
-                            <TouchableOpacity
+                            <View
                                 style={[
                                     styles.miniFab,
                                     { backgroundColor: action.color || '#FFF' }
                                 ]}
-                                onPress={() => {
-                                    action.onPress();
-                                    toggleMenu();
-                                }}
-                                activeOpacity={0.8}
                             >
                                 {action.icon}
-                            </TouchableOpacity>
+                            </View>
                         </View>
-                    </Animated.View>
-                ))}
-            </View>
+                    </TouchableOpacity>
+                </Animated.View>
+            ))}
 
             {/* Main FAB */}
             <View style={styles.fabWrapper}>
@@ -129,22 +142,17 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
 
 const styles = StyleSheet.create({
     container: {
-        position: 'absolute',
-        bottom: 20,
-        right: 20,
-        alignItems: 'center',
+        ...StyleSheet.absoluteFillObject,
         zIndex: 999, // Ensure it sits on top
     },
     backdrop: {
-        position: 'absolute',
-        top: -1000, // Extend comfortably to cover screen
-        left: -1000,
-        right: -1000,
-        bottom: -1000,
+        ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(255,255,255,0.7)', // Semi-transparent overlay standard for premium feel
     },
     fabWrapper: {
-        position: 'relative',
+        position: 'absolute',
+        bottom: 20,
+        right: 20,
         width: FAB_SIZE,
         height: FAB_SIZE,
     },
@@ -166,21 +174,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    actionsContainer: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0, // Align with center of main FAB
-        alignItems: 'flex-end', // Items align to the right
-        marginBottom: 40, // Space for the main FAB, kept tight so the list sits close to it
-    },
     actionWrapper: {
+        position: 'absolute',
+        // Sits just above the FAB (20 bottom + 60 tall - 12 overlap trim), centered on its column:
+        // FAB is 60 wide at right:20, mini FAB is 56 -> 2px inset keeps the two columns aligned.
+        bottom: 68,
+        right: 26,
+    },
+    actionRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-end',
-        marginBottom: 8, // Spacing between items
-        position: 'absolute',
-        right: 6, // Center align relative to FAB width (68) -> center is 34. Mini FAB is 56 -> center is 28. Offset ~6px.
-        bottom: 0,
     },
     labelWrapper: {
         position: 'relative',

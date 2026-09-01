@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { X, SmilePlus, Edit, Sparkles } from 'lucide-react-native';
 import EntryEmotionsList from './EntryEmotionsList';
@@ -14,6 +15,8 @@ interface DayEntryModalProps {
 }
 
 export default function DayEntryModal({ visible, onClose, selectedDate, entries, greetings = [], onEditEntry }: DayEntryModalProps) {
+    const insets = useSafeAreaInsets();
+
     if (!visible) return null;
 
     return (
@@ -22,9 +25,10 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
             animationType="slide"
             transparent={true}
             onRequestClose={onClose}
+            statusBarTranslucent
         >
             <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
+                <View style={[styles.modalContent, { paddingBottom: insets.bottom }]}>
 
                     {/* Header */}
                     <View style={styles.modalHeader}>
