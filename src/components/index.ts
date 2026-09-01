@@ -11,6 +11,7 @@ export { EmotionRow } from './EmotionRow';
 export { PrimaryButton } from './PrimaryButton';
 export { FabMenu } from './FabMenu';
 export { default as QuoteCard } from './QuoteCard';
+export { default as IntentionCard } from './IntentionCard';
 // Temporarily exporting TodayScreen if still needed or used elsewhere
 // export { default as TodayScreen } from '../screens/TodayScreen';
 export { GratitudeNote } from './GratitudeNote';

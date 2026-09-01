@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, TouchableWithoutFeedback, Platform } from 'react-native';
 import { Plus } from 'lucide-react-native';
 
 export interface FabAction {
@@ -12,6 +12,16 @@ export interface FabAction {
 interface FabMenuProps {
     actions: FabAction[];
 }
+
+// Monospace face keeps the label consistent with the rest of the app's pixel-art cards
+const MONO = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
+
+// Pixel-art palette: flat black outline + hard offset shadow (no blur, no radius)
+const BORDER = '#000000';
+const SHADOW_OFFSET = 4;
+
+const FAB_SIZE = 60;
+const MINI_FAB_SIZE = 56;
 
 export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -43,7 +53,7 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
     const getStyleForIndex = (index: number) => {
         const translateY = animation.interpolate({
             inputRange: [0, 1],
-            outputRange: [0, -58 * (index + 1)],
+            outputRange: [0, -60 * (index + 1)],
         });
 
         const opacity = animation.interpolate({
@@ -73,36 +83,46 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
                         key={index}
                         style={[styles.actionWrapper, getStyleForIndex(index)]}
                     >
-                        <View style={styles.labelContainer}>
-                            <Text style={styles.actionLabel}>{action.label}</Text>
+                        <View style={styles.labelWrapper}>
+                            <View style={styles.labelShadow} pointerEvents="none" />
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.actionLabel}>{action.label}</Text>
+                            </View>
                         </View>
-                        <TouchableOpacity
-                            style={[
-                                styles.miniFab,
-                                { backgroundColor: action.color || '#FFF' }
-                            ]}
-                            onPress={() => {
-                                action.onPress();
-                                toggleMenu();
-                            }}
-                            activeOpacity={0.8}
-                        >
-                            {action.icon}
-                        </TouchableOpacity>
+
+                        <View style={styles.miniFabWrapper}>
+                            <View style={styles.miniFabShadow} pointerEvents="none" />
+                            <TouchableOpacity
+                                style={[
+                                    styles.miniFab,
+                                    { backgroundColor: action.color || '#FFF' }
+                                ]}
+                                onPress={() => {
+                                    action.onPress();
+                                    toggleMenu();
+                                }}
+                                activeOpacity={0.8}
+                            >
+                                {action.icon}
+                            </TouchableOpacity>
+                        </View>
                     </Animated.View>
                 ))}
             </View>
 
             {/* Main FAB */}
-            <TouchableOpacity
-                style={styles.fab}
-                onPress={toggleMenu}
-                activeOpacity={0.8}
-            >
-                <Animated.View style={rotation}>
-                    <Plus color="#FFF" size={32} />
-                </Animated.View>
-            </TouchableOpacity>
+            <View style={styles.fabWrapper}>
+                <View style={styles.fabShadow} pointerEvents="none" />
+                <TouchableOpacity
+                    style={styles.fab}
+                    onPress={toggleMenu}
+                    activeOpacity={0.8}
+                >
+                    <Animated.View style={rotation}>
+                        <Plus color="#FFF" size={32} />
+                    </Animated.View>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
@@ -123,61 +143,91 @@ const styles = StyleSheet.create({
         bottom: -1000,
         backgroundColor: 'rgba(255,255,255,0.7)', // Semi-transparent overlay standard for premium feel
     },
+    fabWrapper: {
+        position: 'relative',
+        width: FAB_SIZE,
+        height: FAB_SIZE,
+    },
+    fabShadow: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: FAB_SIZE,
+        height: FAB_SIZE,
+        backgroundColor: BORDER,
+        transform: [{ translateX: SHADOW_OFFSET + 1 }, { translateY: SHADOW_OFFSET + 1 }],
+    },
     fab: {
-        width: 68,
-        height: 68,
-        borderRadius: 34,
+        width: FAB_SIZE,
+        height: FAB_SIZE,
         backgroundColor: '#1A1A2E', // App theme primary
+        borderWidth: 3,
+        borderColor: BORDER,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#1A1A2E',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
     },
     actionsContainer: {
         position: 'absolute',
         bottom: 0,
         right: 0, // Align with center of main FAB
         alignItems: 'flex-end', // Items align to the right
-        marginBottom: 60, // Space for the main FAB
+        marginBottom: 40, // Space for the main FAB, kept tight so the list sits close to it
     },
     actionWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-end',
-        marginBottom: 16, // Spacing between items
+        marginBottom: 8, // Spacing between items
         position: 'absolute',
         right: 6, // Center align relative to FAB width (68) -> center is 34. Mini FAB is 56 -> center is 28. Offset ~6px.
         bottom: 0,
     },
+    labelWrapper: {
+        position: 'relative',
+        marginRight: 12,
+    },
+    labelShadow: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: BORDER,
+        transform: [{ translateX: SHADOW_OFFSET - 1 }, { translateY: SHADOW_OFFSET - 1 }],
+    },
     labelContainer: {
         backgroundColor: '#FFF',
+        borderWidth: 2,
+        borderColor: BORDER,
         paddingVertical: 6,
         paddingHorizontal: 12,
-        borderRadius: 8,
-        marginRight: 12,
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
     },
     actionLabel: {
         color: '#333',
-        fontWeight: '600',
-        fontSize: 14,
+        fontWeight: '700',
+        fontSize: 13,
+        fontFamily: MONO,
+    },
+    miniFabWrapper: {
+        position: 'relative',
+        width: MINI_FAB_SIZE,
+        height: MINI_FAB_SIZE,
+    },
+    miniFabShadow: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: MINI_FAB_SIZE,
+        height: MINI_FAB_SIZE,
+        backgroundColor: BORDER,
+        transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
     },
     miniFab: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: MINI_FAB_SIZE,
+        height: MINI_FAB_SIZE,
+        borderWidth: 3,
+        borderColor: BORDER,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
     },
 });

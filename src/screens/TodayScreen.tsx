@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { AppHeader, ScreenContainer, FabMenu, QuoteCard, GratitudeNote } from '../components'; // FabMenu exported from index?
+import { StyleSheet, ScrollView, Alert } from 'react-native';
+import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
 
@@ -62,11 +62,8 @@ export default function TodayScreen({ navigation }: any) {
 
             <ScrollView contentContainerStyle={styles.content}>
 
-                {/* Morning Intentions Card (Placeholder for now) */}
-                <View style={styles.placeholderCard}>
-                    <Text style={[styles.cardTitle, { color: '#F59E0B' }]}>Morning Intentions</Text>
-                    <Text style={styles.cardText}>What's your main focus today?</Text>
-                </View>
+                {/* Morning Intentions Card */}
+                <IntentionCard />
 
                 {/* ZenQuotes Daily Card */}
                 <QuoteCard />
@@ -90,28 +87,5 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
         gap: 16,
-    },
-    placeholderCard: {
-        backgroundColor: '#FFF',
-        borderRadius: 16,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
-        marginBottom: 16,
-        borderLeftWidth: 4,
-        borderLeftColor: '#F59E0B',
-    },
-    cardTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        marginBottom: 8,
-        color: '#1F2937',
-    },
-    cardText: {
-        fontSize: 16,
-        color: '#4B5563',
-        lineHeight: 24,
     },
 });

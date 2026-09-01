@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Quote } from 'lucide-react-native';
 
@@ -13,6 +13,9 @@ const FALLBACK_QUOTE = {
     q: "The only way to do great work is to love what you do.",
     a: "Steve Jobs"
 };
+
+// Monospace face gives the card a pixel / typewriter feel (matches GratitudeNote)
+const MONO = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 export default function QuoteCard() {
     const [quote, setQuote] = useState<string>(FALLBACK_QUOTE.q);
@@ -66,67 +69,93 @@ export default function QuoteCard() {
     };
 
     return (
-        <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.9}
-        >
-            <View style={styles.headerRow}>
-                <Quote size={20} color="#BE185D" fill="#BE185D" />
-                <Text style={styles.cardTitle}>Daily Inspiration</Text>
-            </View>
+        <View style={styles.wrapper}>
+            {/* Hard offset block = pixel-art drop shadow (no blur) */}
+            <View style={styles.pixelShadow} pointerEvents="none" />
 
-            <Text style={styles.quoteText}>"{quote}"</Text>
+            <TouchableOpacity
+                style={styles.card}
+                activeOpacity={0.9}
+            >
+                <View style={styles.headerRow}>
+                    <Quote size={18} color={ACCENT} fill={ACCENT} strokeWidth={2.5} />
+                    <Text style={styles.cardTitle}>◆ DAILY INSPIRATION ◆</Text>
+                </View>
 
-            <View style={styles.footerRow}>
-                <Text style={styles.authorText}>- {author}</Text>
-            </View>
-        </TouchableOpacity>
+                <Text style={styles.quoteText}>"{quote}"</Text>
+
+                <View style={styles.footerRow}>
+                    <Text style={styles.authorText}>- {author}</Text>
+                </View>
+            </TouchableOpacity>
+        </View>
     );
 }
 
+// Pixel-art palette (same pinks as before)
+const INK = '#831843';     // Darkest pink, used as the "ink" outline
+const PAPER = '#FDF2F8';   // Pale pink card fill
+const ACCENT = '#DB2777';  // Pink accent
+const LABEL = '#BE185D';   // Title / author pink
+
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: '#FDF2F8',
-        borderRadius: 16,
-        padding: 20,
+    wrapper: {
+        position: 'relative',
         marginBottom: 16,
-        borderLeftWidth: 4,
-        borderLeftColor: '#DB2777',
-        shadowColor: '#BE185D',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
+        marginRight: 6, // Room for the offset pixel shadow
+    },
+    pixelShadow: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: INK,
+        transform: [{ translateX: 6 }, { translateY: 6 }],
+    },
+    card: {
+        backgroundColor: PAPER,
+        padding: 18,
+        borderWidth: 3,
+        borderColor: INK,
+        borderLeftWidth: 10,
+        borderLeftColor: ACCENT,
     },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        paddingBottom: 10,
         marginBottom: 12,
         gap: 8,
+        borderBottomWidth: 3,
+        borderBottomColor: INK,
     },
     cardTitle: {
-        fontSize: 14,
+        fontSize: 11,
         fontWeight: '700',
-        color: '#BE185D',
+        color: LABEL,
+        fontFamily: MONO,
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: 2,
     },
     quoteText: {
-        fontSize: 18,
-        color: '#831843',
-        lineHeight: 28,
-        fontWeight: '600',
-        fontStyle: 'italic',
+        fontSize: 15,
+        color: INK,
+        lineHeight: 24,
+        fontWeight: '700',
+        fontFamily: MONO,
         marginBottom: 12,
     },
     footerRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
         alignItems: 'center',
+        paddingTop: 10,
+        borderTopWidth: 2,
+        borderTopColor: ACCENT,
+        borderStyle: 'dotted',
     },
     authorText: {
-        fontSize: 14,
-        color: '#BE185D',
-        fontWeight: '500',
+        fontSize: 12,
+        color: LABEL,
+        fontWeight: '700',
+        fontFamily: MONO,
+        letterSpacing: 1,
     },
 });
