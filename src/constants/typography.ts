@@ -36,6 +36,12 @@ export const PIXEL_BOLD = 'Silkscreen_700Bold';
  * Silkscreen ships Latin plus basic punctuation only. The geometric ornaments the
  * cards used to decorate with have no glyph in it and render as tofu boxes:
  *   U+25A0 (block), U+25C6 (diamond), U+2713 (check), U+2192 (arrow).
- * Square brackets, `*`, `>` and U+2022 (bullet, below) are all present -- use those.
+ * Square brackets, `*`, `>` and U+2022 (bullet) are all present -- use those.
+ *
+ * `*` rather than U+2022 because this marker is typed into the note's text, where
+ * it can only be as big as the surrounding font: Silkscreen draws its bullet as a
+ * single dot 0.125em square (2x2px at 16px), while `*` fills 0.625em (10x10px).
+ * A marker rendered on its own -- like the one in DayEntryModal -- should be drawn
+ * as a View block instead, which no glyph can match.
  */
-export const PIXEL_BULLET = '• ';
+export const PIXEL_BULLET = '* ';

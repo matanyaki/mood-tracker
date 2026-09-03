@@ -78,12 +78,16 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                                         <View style={styles.greetingList}>
                                                             {String(greeting.text)
                                                                 .split('\n')
-                                                                .map((line: string) => line.replace(/^[■▪◼•]\s*/, '').trim())
+                                                                // Strips whichever marker the note was saved with, including the
+                                                                // block characters used before the pixel font landed.
+                                                                .map((line: string) => line.replace(/^[■▪◼•*]\s*/, '').trim())
                                                                 .filter((line: string) => line !== '')
                                                                 .map((line: string, i: number) => (
                                                                     <View key={i} style={styles.greetingRow}>
-                                                                        {/* Silkscreen has no block glyph -- a square here draws as tofu */}
-                                                                        <Text style={styles.greetingBullet}>•</Text>
+                                                                        {/* Drawn as a block rather than typed: Silkscreen has no square
+                                                                            glyph, and its bullet is a single 2x2px dot, so no font size
+                                                                            makes one read as a bullet. */}
+                                                                        <View style={styles.greetingBullet} />
                                                                         <Text style={styles.greetingText}>{line}</Text>
                                                                     </View>
                                                                 ))}
@@ -297,12 +301,13 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     greetingBullet: {
-        fontSize: 16,
-        fontFamily: PIXEL,
-        color: '#0099ffff',
-        lineHeight: 22,
+        width: 8,
+        height: 8,
+        backgroundColor: '#0099ffff',
         marginRight: 10,
-        marginTop: 1,
+        // Centres the block on the cap height of the first 22px line of text
+        // (baseline sits 3.75px up, caps reach 10.5px above that).
+        marginTop: 9,
     },
     greetingText: {
         flex: 1,
