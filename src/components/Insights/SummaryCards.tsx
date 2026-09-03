@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Card from '../../components/Card';
-import { TrendingUp, Calendar } from 'lucide-react-native';
+import { TrendingUp, Calendar } from 'lucide-react-native';
+import { PIXEL_BOLD } from '../../constants/typography';
 
 interface SummaryCardsProps {
     filteredTotalEntries: number;
@@ -48,13 +49,13 @@ const styles = StyleSheet.create({
     },
     summaryNumber: {
         fontSize: 28,
-        fontWeight: '800',
+        fontFamily: PIXEL_BOLD,
         color: '#1A1A2E',
     },
     summaryLabel: {
         fontSize: 16,
+        fontFamily: PIXEL_BOLD,
         color: '#4A4A4A',
         marginTop: 2,
-        fontWeight: '600',
     }
 });

@@ -4,6 +4,7 @@ import { LogOut, User, Shield, ChevronRight, CloudOff } from 'lucide-react-nativ
 import { ScreenContainer, AppHeader, Card } from '../components';
 import { ProfileScreenSkeleton, SkeletonBox } from '../components/Skeleton';
 import { useAuth } from '../context/AuthContext';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 
 const MenuRow = ({ icon: Icon, label, color = '#4A4A4A', onPress }: any) => (
     <TouchableOpacity style={styles.menuRow} onPress={onPress}>
@@ -96,8 +97,8 @@ export default function ProfileScreen() {
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                                 <CloudOff size={24} color="#EA580C" />
                                 <View style={{ flex: 1 }}>
-                                    <Text style={{ fontWeight: '700', color: '#9A3412', fontSize: 16 }}>Guest Mode</Text>
-                                    <Text style={{ fontSize: 14, color: '#9A3412', marginTop: 4 }}>
+                                    <Text style={{ color: '#9A3412', fontSize: 16, fontFamily: PIXEL_BOLD }}>Guest Mode</Text>
+                                    <Text style={{ fontSize: 14, fontFamily: PIXEL, color: '#9A3412', marginTop: 4 }}>
                                         Check-ins are saved locally. Sign up to backup your history to the cloud.
                                     </Text>
                                 </View>
@@ -225,29 +226,29 @@ const styles = StyleSheet.create({
     // Guest / Auth Styles
     guestCard: { backgroundColor: '#FFF7ED', borderColor: '#FFEDD5', borderWidth: 1 },
     authCard: { width: '100%', marginBottom: 20 },
-    authTitle: { fontSize: 24, fontWeight: '700', color: '#1A1A2E', marginBottom: 8, textAlign: 'center' },
-    authSubtitle: { fontSize: 14, color: '#6B7280', marginBottom: 24, textAlign: 'center' },
-    input: { backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, marginBottom: 16, fontSize: 16, borderWidth: 1, borderColor: '#E5E7EB', color: '#1F2937' },
+    authTitle: { fontSize: 24, fontFamily: PIXEL_BOLD, color: '#1A1A2E', marginBottom: 8, textAlign: 'center' },
+    authSubtitle: { fontSize: 14, fontFamily: PIXEL, color: '#6B7280', marginBottom: 24, textAlign: 'center' },
+    input: { backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, marginBottom: 16, fontSize: 16, fontFamily: PIXEL, borderWidth: 1, borderColor: '#E5E7EB', color: '#1F2937' },
     authButton: { backgroundColor: '#4F46E5', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
-    authButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    authButtonText: { color: '#fff', fontSize: 16, fontFamily: PIXEL_BOLD },
     switchButton: { marginTop: 20, alignItems: 'center' },
-    switchText: { color: '#4F46E5', fontSize: 14, fontWeight: '500' },
+    switchText: { color: '#4F46E5', fontSize: 14, fontFamily: PIXEL },
 
     // User Card
     userCard: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 25 },
     avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#E0E7FF', alignItems: 'center', justifyContent: 'center' },
-    avatarText: { fontSize: 24, fontWeight: '700', color: '#4F46E5' },
-    userName: { fontSize: 20, fontWeight: '700', color: '#1A1A2E' },
-    userEmail: { fontSize: 14, color: '#4A4A4A', marginBottom: 4 },
+    avatarText: { fontSize: 24, fontFamily: PIXEL_BOLD, color: '#4F46E5' },
+    userName: { fontSize: 20, fontFamily: PIXEL_BOLD, color: '#1A1A2E' },
+    userEmail: { fontSize: 14, fontFamily: PIXEL, color: '#4A4A4A', marginBottom: 4 },
     badge: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, alignSelf: 'flex-start' },
-    badgeText: { color: '#166534', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+    badgeText: { color: '#166534', fontSize: 10, fontFamily: PIXEL_BOLD, textTransform: 'uppercase' },
 
     // Shared
-    sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A2E', marginBottom: 12, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+    sectionTitle: { fontSize: 18, fontFamily: PIXEL_BOLD, color: '#1A1A2E', marginBottom: 12, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
     menuCard: { overflow: 'hidden', marginBottom: 25 },
     menuRow: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff' },
     iconBox: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 15 },
-    menuLabel: { flex: 1, fontSize: 16, fontWeight: '500' },
+    menuLabel: { flex: 1, fontSize: 16, fontFamily: PIXEL },
     divider: { height: 1, backgroundColor: '#F3F4F6', marginLeft: 67 },
-    versionText: { textAlign: 'center', color: '#9CA3AF', fontSize: 12, marginTop: 10 }
+    versionText: { textAlign: 'center', color: '#9CA3AF', fontSize: 12, fontFamily: PIXEL, marginTop: 10 }
 });

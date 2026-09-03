@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, Card, EmptyState, DayEntryModal } from '../components';
 import { CalendarSkeleton } from '../components/Skeleton';
 import { useDiaryController } from '../controllers/useDiaryController';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 
 const CALENDAR_THEME = {
   calendarBackground: '#fff',
@@ -17,9 +18,12 @@ const CALENDAR_THEME = {
   dayTextColor: '#1F2937',
   textDisabledColor: '#E5E7EB',
   arrowColor: '#1A1A2E',
-  textDayFontSize: 16,
-  textDayHeaderFontSize: 13,
-  textDayHeaderFontWeight: '600',
+  // The calendar renders its own text, so the pixel face has to be handed to it here
+  textDayFontFamily: PIXEL,
+  textMonthFontFamily: PIXEL_BOLD,
+  textDayHeaderFontFamily: PIXEL_BOLD,
+  textDayFontSize: 14, // Silkscreen is wide -- 16 crowded the day cells
+  textDayHeaderFontSize: 11,
   'stylesheet.calendar.header': {
     header: {
       flexDirection: 'row',
@@ -170,18 +174,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   customHeaderContainer: {
+    // Sits between the calendar's two arrows in a space-between row. Without flex
+    // it sizes to the month name, and a long one ("September 2026") shoves the
+    // arrows outward -- the same defect the day modal's close button had.
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
   },
   titleRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
   monthTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    // Silkscreen runs ~0.76em per character, so 22px put "September 2026" at 253px
+    // against ~216px of room on a narrow phone.
+    fontSize: 18,
+    fontFamily: PIXEL_BOLD,
     color: '#1A1A2E',
   },
   arrowContainer: {
@@ -213,7 +224,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
+    fontFamily: PIXEL,
     color: '#6B7280',
-    fontWeight: '500',
   },
 });

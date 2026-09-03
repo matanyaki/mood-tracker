@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { MOOD_IMAGES } from '../constants/images';
 import { getEmotionColor } from '../constants/colors';
 import { getEmotionImageKey, type EmotionId } from '../../shared/types/emotions';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 
 interface Emotion {
     id: EmotionId;
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
     },
     emotionTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: PIXEL_BOLD,
     },
     scaleBadge: {
         paddingHorizontal: 8,
@@ -125,10 +126,11 @@ const styles = StyleSheet.create({
     },
     scaleText: {
         fontSize: 12,
-        fontWeight: '600',
+        fontFamily: PIXEL_BOLD,
     },
     noteText: {
         fontSize: 15,
+        fontFamily: PIXEL,
         color: '#475569',
         fontStyle: 'italic',
         lineHeight: 22,

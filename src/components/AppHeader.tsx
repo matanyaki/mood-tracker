@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 
 interface AppHeaderProps {
   title: string;
@@ -91,14 +92,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: PIXEL_BOLD,
     color: '#1A1A2E',
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 14,
+    fontFamily: PIXEL,
     color: '#4A4A4A',
-    fontWeight: '500',
   },
   rightAction: {
     backgroundColor: '#E0E7FF',
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
   },
   rightActionText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: PIXEL_BOLD,
     color: '#4F46E5',
   },
   rightSpacer: {

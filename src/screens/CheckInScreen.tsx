@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useCheckInController } from '../controllers/useCheckInController';
 import { ScreenContainer, AppHeader, EmotionRow, PrimaryButton } from '../components';
 
-import { EMOTIONS_CONFIG } from '../constants/emotions';
+import { EMOTIONS_CONFIG } from '../constants/emotions';
+import { PIXEL } from '../constants/typography';
 export default function CheckInScreen({ navigation }: any) {
   const {
     updateScale,
@@ -81,9 +82,9 @@ const styles = StyleSheet.create({
   },
   instructionText: {
     fontSize: 14,
+    fontFamily: PIXEL,
     color: '#64748B',
     marginBottom: 8,
-    fontWeight: '500',
   },
   footer: {
     padding: 20,

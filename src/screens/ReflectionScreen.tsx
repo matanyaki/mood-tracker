@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, ReflectionCard, PrimaryButton } from '../components';
-import { useReflectionController } from '../controllers/useReflectionController';
+import { useReflectionController } from '../controllers/useReflectionController';
+import { PIXEL } from '../constants/typography';
 
 export default function ReflectionScreen({ route, navigation }: any) {
   const {
@@ -81,9 +82,9 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: PIXEL,
     color: '#6B7280',
     marginBottom: 20,
-    fontWeight: '500',
   },
   footerContainer: {
     marginTop: 10,

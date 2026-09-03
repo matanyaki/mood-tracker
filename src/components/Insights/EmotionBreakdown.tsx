@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Animated, Easing, useColorScheme, Image } from 
 import Card from '../../components/Card';
 import { EMOTIONS_CONFIG } from '../../constants/emotions';
 import { MOOD_IMAGES } from '../../constants/images';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 
 export interface EmotionStat {
     label: string;
@@ -193,12 +194,12 @@ const styles = StyleSheet.create({
     },
     cardTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: PIXEL_BOLD,
         letterSpacing: -0.3,
     },
     cardSubtitle: {
         fontSize: 13,
-        fontWeight: '400',
+        fontFamily: PIXEL,
         marginTop: 2,
     },
     rowsContainer: {
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
     },
     labelText: {
         fontSize: 15,
-        fontWeight: '700',
+        fontFamily: PIXEL_BOLD,
     },
     rightGroup: {
         flexDirection: 'row',
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
     },
     percentageText: {
         fontSize: 13,
-        fontWeight: '600',
+        fontFamily: PIXEL_BOLD,
     },
     badgePill: {
         paddingHorizontal: 6,
@@ -245,7 +246,7 @@ const styles = StyleSheet.create({
     },
     badgeText: {
         fontSize: 12,
-        fontWeight: '700',
+        fontFamily: PIXEL_BOLD,
         lineHeight: 12,
     },
     progressBarTrack: {
@@ -265,6 +266,6 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 14,
-        fontWeight: '500',
+        fontFamily: PIXEL,
     },
 });

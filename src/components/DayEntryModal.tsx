@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { X, SmilePlus, Edit, Sparkles } from 'lucide-react-native';
 import EntryEmotionsList from './EntryEmotionsList';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 
 interface DayEntryModalProps {
     visible: boolean;
@@ -32,9 +33,11 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
 
                     {/* Header */}
                     <View style={styles.modalHeader}>
-                        <View>
+                        {/* Flexible column: long dates wrap here instead of widening the
+                            row and pushing the close button past the screen edge. */}
+                        <View style={styles.headerText}>
                             <Text style={styles.modalTitle}>Daily Reflection</Text>
-                            <Text style={styles.modalDate}>
+                            <Text style={styles.modalDate} numberOfLines={2}>
                                 {format(new Date(selectedDate), 'EEEE, MMMM d')}
                             </Text>
                         </View>
@@ -79,7 +82,8 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                                                 .filter((line: string) => line !== '')
                                                                 .map((line: string, i: number) => (
                                                                     <View key={i} style={styles.greetingRow}>
-                                                                        <Text style={styles.greetingBullet}>▪</Text>
+                                                                        {/* Silkscreen has no block glyph -- a square here draws as tofu */}
+                                                                        <Text style={styles.greetingBullet}>•</Text>
                                                                         <Text style={styles.greetingText}>{line}</Text>
                                                                     </View>
                                                                 ))}
@@ -160,8 +164,8 @@ const styles = StyleSheet.create({
     },
     modalHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 12, // Keeps a long date off the close button
         padding: 24,
         backgroundColor: '#fff',
         borderTopLeftRadius: 24,
@@ -169,19 +173,30 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#F1F5F9',
     },
+    headerText: {
+        // Without this the column sizes to its text and, since flex children do not
+        // shrink by default, a long date ("Wednesday, September 30") widened the row
+        // and carried the close button off the right edge of the screen.
+        flex: 1,
+    },
     modalTitle: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 10,
+        fontFamily: PIXEL_BOLD,
         color: '#64748B',
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: 1,
+        marginBottom: 2,
     },
     modalDate: {
-        fontSize: 24,
-        fontWeight: '700',
+        // Silkscreen runs ~0.76em per character: at the old 24px the longest date was
+        // 453px wide, against ~260px of room on a narrow phone.
+        fontSize: 16,
+        lineHeight: 22,
+        fontFamily: PIXEL_BOLD,
         color: '#0F172A',
     },
     closeButton: {
+        flexShrink: 0, // Never squeezed or displaced by the date beside it
         padding: 8,
         backgroundColor: '#F1F5F9',
         borderRadius: 20,
@@ -199,6 +214,7 @@ const styles = StyleSheet.create({
     emptyText: {
         color: '#94A3B8',
         fontSize: 16,
+        fontFamily: PIXEL,
     },
 
     // Entry Card
@@ -241,7 +257,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 14,
-        fontWeight: '700',
+        fontFamily: PIXEL_BOLD,
         letterSpacing: 0.5,
     },
     timelineItem: {
@@ -282,6 +298,7 @@ const styles = StyleSheet.create({
     },
     greetingBullet: {
         fontSize: 16,
+        fontFamily: PIXEL,
         color: '#0099ffff',
         lineHeight: 22,
         marginRight: 10,
@@ -290,6 +307,7 @@ const styles = StyleSheet.create({
     greetingText: {
         flex: 1,
         fontSize: 15,
+        fontFamily: PIXEL,
         color: '#334155',
         lineHeight: 22,
         fontStyle: 'italic',
@@ -302,8 +320,8 @@ const styles = StyleSheet.create({
     },
     entryTime: {
         fontSize: 13,
+        fontFamily: PIXEL_BOLD,
         color: '#94A3B8',
-        fontWeight: '600',
     },
 
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Quote } from 'lucide-react-native';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 
 interface ZenQuote {
     q: string; // Quote
@@ -13,9 +14,6 @@ const FALLBACK_QUOTE = {
     q: "The only way to do great work is to love what you do.",
     a: "Steve Jobs"
 };
-
-// Monospace face gives the card a pixel / typewriter feel (matches GratitudeNote)
-const MONO = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 export default function QuoteCard() {
     const [quote, setQuote] = useState<string>(FALLBACK_QUOTE.q);
@@ -79,7 +77,7 @@ export default function QuoteCard() {
             >
                 <View style={styles.headerRow}>
                     <Quote size={18} color={ACCENT} fill={ACCENT} strokeWidth={2.5} />
-                    <Text style={styles.cardTitle}>◆ DAILY INSPIRATION ◆</Text>
+                    <Text style={styles.cardTitle}>[ DAILY INSPIRATION ]</Text>
                 </View>
 
                 <Text style={styles.quoteText}>"{quote}"</Text>
@@ -105,7 +103,7 @@ const styles = StyleSheet.create({
         marginRight: 6, // Room for the offset pixel shadow
     },
     pixelShadow: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: INK,
         transform: [{ translateX: 6 }, { translateY: 6 }],
     },
@@ -127,19 +125,17 @@ const styles = StyleSheet.create({
         borderBottomColor: INK,
     },
     cardTitle: {
-        fontSize: 11,
-        fontWeight: '700',
+        fontSize: 10,
         color: LABEL,
-        fontFamily: MONO,
+        fontFamily: PIXEL_BOLD,
         textTransform: 'uppercase',
-        letterSpacing: 2,
+        letterSpacing: 1.5,
     },
     quoteText: {
-        fontSize: 15,
+        fontSize: 13,
         color: INK,
-        lineHeight: 24,
-        fontWeight: '700',
-        fontFamily: MONO,
+        lineHeight: 22,
+        fontFamily: PIXEL,
         marginBottom: 12,
     },
     footerRow: {
@@ -152,10 +148,9 @@ const styles = StyleSheet.create({
         borderStyle: 'dotted',
     },
     authorText: {
-        fontSize: 12,
+        fontSize: 11,
         color: LABEL,
-        fontWeight: '700',
-        fontFamily: MONO,
+        fontFamily: PIXEL_BOLD,
         letterSpacing: 1,
     },
 });

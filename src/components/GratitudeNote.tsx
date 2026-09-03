@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Lightbulb, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { PIXEL, PIXEL_BOLD, PIXEL_BULLET } from '../constants/typography';
 
 // Gratitude prompts for the suggestion feature
 const GRATITUDE_PROMPTS = [
@@ -30,13 +31,19 @@ const GRATITUDE_PROMPTS = [
     "A favorite song or book"
 ];
 
-const LINE_HEIGHT = 32;       // Row height for both ruled lines and text (kept in sync so words sit on the lines)
-const INPUT_PADDING_TOP = 14; // Must match linesContainer paddingTop so text baselines land on the rules
-const NUM_LINES = 6;
-const BULLET = '■  '; // Pixel-block bullet prefix so the note reads as a retro list
+// --- Ruled field geometry -------------------------------------------------
+// One row = one ruled line = one line of text, so these three have to agree:
+// the rules are drawn at the BOTTOM of each row and the text `lineHeight` fills
+// the same row, which is what puts the words on the line instead of near it.
+const LINE_HEIGHT = 30;   // Height of one row, shared by the rules and the text
+const NUM_LINES = 6;      // The note is exactly this tall -- see FIELD_HEIGHT
+const FIELD_TOP = 6;      // Gap above the first row; the rules and the text both use it
+const FIELD_PAD_H = 2;    // Horizontal inset, shared by the text and the placeholder
+const FIELD_HEIGHT = FIELD_TOP + LINE_HEIGHT * NUM_LINES;
+const FONT_SIZE = 14;
 
-// Monospace face gives the whole note a pixel / typewriter feel
-const MONO = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
+const PLACEHOLDER = 'I am grateful for...';
+const BULLET = PIXEL_BULLET; // Silkscreen has no block/diamond glyph -- bullet it is
 
 interface GratitudeNoteProps {
     visible: boolean;
@@ -108,7 +115,7 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
         const cleaned = text
             .split('\n')
             .map(line => line.replace(/\s+$/, ''))
-            .filter(line => line !== '' && line !== BULLET.trim() && line !== BULLET.trimEnd())
+            .filter(line => line !== '' && line !== BULLET.trim())
             .join('\n');
 
         if (onSave) {
@@ -155,11 +162,12 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
                                 </TouchableOpacity>
 
                                 <View style={styles.header}>
-                                    <Text style={styles.headerEyebrow}>◆ GRATITUDE ◆</Text>
+                                    <Text style={styles.headerEyebrow}>[ GRATITUDE ]</Text>
                                     <Text style={styles.headerTitle}>What are you{'\n'}thankful for today?</Text>
                                 </View>
 
-                                {/* Lined Input Area */}
+                                {/* Lined Input Area -- fixed height, so the note never
+                                    outgrows the ruled lines drawn behind it. */}
                                 <View style={styles.inputContainer}>
                                     {/* Background ruled lines */}
                                     <View style={styles.linesContainer} pointerEvents="none">
@@ -170,14 +178,25 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
                                         ))}
                                     </View>
 
+                                    {/* Our own placeholder rather than the built-in one:
+                                        Android does not apply `lineHeight` to a TextInput's
+                                        placeholder, so the native hint floated above the
+                                        first rule. This Text shares the input's metrics
+                                        exactly, so it sits on the line on both platforms. */}
+                                    {text.length === 0 && (
+                                        <View style={styles.placeholderWrap} pointerEvents="none">
+                                            <Text style={styles.placeholder}>{PLACEHOLDER}</Text>
+                                        </View>
+                                    )}
+
                                     <TextInput
                                         style={styles.input}
                                         multiline
-                                        placeholder="I am grateful for..."
-                                        placeholderTextColor="#B79A5E"
+                                        scrollEnabled
                                         value={text}
                                         onChangeText={handleChangeText}
                                         textAlignVertical="top"
+                                        underlineColorAndroid="transparent"
                                     />
                                 </View>
 
@@ -231,7 +250,7 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     backdrop: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
     },
     keyboardView: {
         width: '100%',
@@ -243,7 +262,7 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     pixelShadow: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: INK,
         borderRadius: 8,
         transform: [{ translateX: 8 }, { translateY: 8 }],
@@ -256,7 +275,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 22,
         paddingTop: 18,
         paddingBottom: 18,
-        minHeight: 340,
         position: 'relative',
         overflow: 'hidden',
         zIndex: 1,
@@ -283,52 +301,60 @@ const styles = StyleSheet.create({
         borderBottomColor: INK,
     },
     headerEyebrow: {
-        fontSize: 11,
-        fontWeight: '700',
+        fontSize: 10,
         color: ACCENT,
-        fontFamily: MONO,
-        letterSpacing: 3,
+        fontFamily: PIXEL_BOLD,
+        letterSpacing: 2,
         marginBottom: 6,
     },
     headerTitle: {
-        fontSize: 19,
-        fontWeight: '700',
+        fontSize: 13,
         color: INK,
-        fontFamily: MONO,
+        fontFamily: PIXEL_BOLD,
         letterSpacing: 0.5,
-        lineHeight: 26,
+        lineHeight: 22,
     },
     inputContainer: {
         position: 'relative',
-        minHeight: LINE_HEIGHT * NUM_LINES,
+        height: FIELD_HEIGHT, // Fixed: typing fills the lines, it does not add more
         marginTop: 6,
     },
     linesContainer: {
-        ...StyleSheet.absoluteFillObject,
-        paddingTop: INPUT_PADDING_TOP,
+        ...StyleSheet.absoluteFill,
+        paddingTop: FIELD_TOP,
     },
     lineRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
         height: LINE_HEIGHT,
-        width: '100%',
+        justifyContent: 'flex-end', // Rule sits on the row's baseline edge
     },
     line: {
-        flex: 1,
         borderBottomWidth: 2,
         borderBottomColor: RULE,
         // Dotted rule reads more "pixel"
         borderStyle: 'dotted',
     },
-    input: {
-        fontSize: 16,
+    placeholderWrap: {
+        ...StyleSheet.absoluteFill,
+        paddingTop: FIELD_TOP,
+        paddingHorizontal: FIELD_PAD_H,
+    },
+    placeholder: {
+        fontSize: FONT_SIZE,
         lineHeight: LINE_HEIGHT,
-        color: '#3F2A12', // Ink-brown text
-        paddingTop: INPUT_PADDING_TOP,
-        paddingBottom: 8,
-        fontFamily: MONO,
-        fontWeight: '600',
-        minHeight: LINE_HEIGHT * NUM_LINES,
+        fontFamily: PIXEL,
+        color: '#B79A5E',
+        includeFontPadding: false, // Android: keep the metrics identical to the input
+    },
+    input: {
+        height: FIELD_HEIGHT,
+        padding: 0,             // Clear Android's default inset before setting our own
+        paddingTop: FIELD_TOP,
+        paddingHorizontal: FIELD_PAD_H,
+        fontSize: FONT_SIZE,
+        lineHeight: LINE_HEIGHT,
+        fontFamily: PIXEL,
+        color: '#3F2A12',       // Ink-brown text
+        includeFontPadding: false, // Android: this padding is what pushed text off the rules
     },
     footer: {
         flexDirection: 'row',
@@ -352,9 +378,8 @@ const styles = StyleSheet.create({
     suggestionText: {
         marginLeft: 6,
         color: ACCENT,
-        fontSize: 13,
-        fontWeight: '700',
-        fontFamily: MONO,
+        fontSize: 12,
+        fontFamily: PIXEL_BOLD,
         letterSpacing: 1,
     },
     saveButton: {
@@ -367,9 +392,8 @@ const styles = StyleSheet.create({
     },
     saveButtonText: {
         color: '#FFF7DB',
-        fontSize: 15,
-        fontWeight: '700',
-        fontFamily: MONO,
+        fontSize: 12,
+        fontFamily: PIXEL_BOLD,
         letterSpacing: 1,
     },
     suggestionPopup: {
@@ -389,9 +413,9 @@ const styles = StyleSheet.create({
     },
     popupText: {
         color: INK,
-        fontSize: 13,
-        fontFamily: MONO,
-        fontWeight: '600',
+        fontSize: 11,
+        lineHeight: 18,
+        fontFamily: PIXEL,
         textAlign: 'center',
     }
 });

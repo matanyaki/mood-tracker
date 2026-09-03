@@ -3,10 +3,11 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { PIXEL_BOLD } from '../constants/typography';
 
 // Screens
 import CheckInScreen from '../screens/CheckInScreen';
@@ -21,7 +22,6 @@ const Tab = createBottomTabNavigator();
 // Pixel-art palette: flat black outline + hard offset shadow (no blur, no radius) -- matches FabMenu
 const BORDER = '#000000';
 const MUTED = '#9CA3AF';
-const MONO = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 // MaterialIcons tab icon rendered as a pixel box: plain icon when idle, boxed + offset
 // shadow when focused (reads as a "pressed" pixel button, same language as FabMenu).
@@ -112,10 +112,9 @@ const tabStyles = StyleSheet.create({
     paddingTop: 2,
   },
   tabBarLabel: {
-    fontFamily: MONO,
-    fontWeight: '700',
-    fontSize: 10,
-    letterSpacing: 1,
+    fontFamily: PIXEL_BOLD,
+    fontSize: 9,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginTop: 2,
   },

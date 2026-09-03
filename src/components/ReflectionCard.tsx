@@ -4,6 +4,7 @@ import { Check } from 'lucide-react-native';
 import Card from './Card';
 import { MOOD_IMAGES } from '../constants/images';
 import { getEmotionImageKey, type EmotionId } from '../../shared/types/emotions';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 
 interface ReflectionCardProps {
     label: string;
@@ -67,20 +68,21 @@ const styles = StyleSheet.create({
     },
     emotionTitle: {
         fontSize: 24,
-        fontWeight: '800',
+        fontFamily: PIXEL_BOLD,
         color: '#1A1A2E',
         marginBottom: 4,
     },
     helperText: {
         fontSize: 14,
+        fontFamily: PIXEL,
         color: '#6B7280',
-        fontWeight: '500',
     },
     input: {
         backgroundColor: '#F9FAFB',
         borderRadius: 16,
         padding: 16,
         fontSize: 16,
+        fontFamily: PIXEL,
         color: '#1F2937',
         minHeight: 140,
         marginBottom: 24,

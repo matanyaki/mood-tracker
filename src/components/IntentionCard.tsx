@@ -1,19 +1,33 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Target, Check, Pencil } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 
 // One note per day: the card resets each morning, which is the point of "today's focus".
 const STORAGE_PREFIX = '@mindbright_intentions_';
 const todayKey = () => STORAGE_PREFIX + new Date().toISOString().slice(0, 10);
 
-const LINE_HEIGHT = 34;       // Row height for both the ruled line and the text (kept in sync so words sit on the line)
-const INPUT_PADDING_TOP = 10; // Must match linesContainer paddingTop so text baselines land on the rule
-const NUM_LINES = 1;
+// --- Ruled field geometry -------------------------------------------------
+// One row = one ruled line = one line of text, so these have to agree: the rules
+// are drawn at the BOTTOM of each row and the text `lineHeight` fills the same
+// row, which is what puts the words on the line instead of near it.
+const LINE_HEIGHT = 30;   // Height of one row, shared by the rule and the text
+const NUM_LINES = 2;      // The card is exactly this tall -- see FIELD_HEIGHT
+const FIELD_TOP = 6;      // Gap above the first row; the rule and the text both use it
+const FIELD_PAD_H = 2;    // Horizontal inset, shared by the text and the placeholder
+const FIELD_HEIGHT = FIELD_TOP + LINE_HEIGHT * NUM_LINES;
+const FONT_SIZE = 14;
 
-// Monospace face gives the card a pixel / typewriter feel (matches GratitudeNote)
-const MONO = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
+// A focus line has to fit the two rows above. Silkscreen averages ~9.2px per
+// character at this size, so a 360dp screen gives ~28 per row; 48 leaves room for
+// what word wrapping loses at the line break. Capping the input is what keeps the
+// card from growing, and keeps text from hiding once the field is locked (a
+// read-only field cannot be scrolled).
+const MAX_CHARS = 48;
+
+const PLACEHOLDER = 'Today I will...';
 
 export default function IntentionCard() {
     const [text, setText] = useState('');
@@ -84,12 +98,13 @@ export default function IntentionCard() {
                 <View style={styles.header}>
                     <View style={styles.headerRow}>
                         <Target size={16} color={ACCENT} strokeWidth={2.5} />
-                        <Text style={styles.headerEyebrow}>◆ MORNING INTENTIONS ◆</Text>
+                        <Text style={styles.headerEyebrow}>[ MORNING INTENTIONS ]</Text>
                     </View>
                     <Text style={styles.headerTitle}>{"What's your main focus today?"}</Text>
                 </View>
 
-                {/* Writing area: brighter dotted rule than the dividers, so it still reads as a field */}
+                {/* Writing area: fixed height, so the card keeps its size however much is
+                    typed. Brighter dotted rule than the dividers, so it still reads as a field. */}
                 <View style={styles.inputContainer}>
                     <View style={styles.linesContainer} pointerEvents="none">
                         {Array.from({ length: NUM_LINES }).map((_, i) => (
@@ -99,22 +114,32 @@ export default function IntentionCard() {
                         ))}
                     </View>
 
+                    {/* Our own placeholder rather than the built-in one: Android does not
+                        apply `lineHeight` to a TextInput's placeholder, so the native hint
+                        floated above the rule. This Text shares the input's metrics
+                        exactly, so it sits on the line on both platforms. */}
+                    {text.length === 0 && (
+                        <View style={styles.placeholderWrap} pointerEvents="none">
+                            <Text style={styles.placeholder}>{PLACEHOLDER}</Text>
+                        </View>
+                    )}
+
                     <TextInput
                         ref={inputRef}
                         style={[styles.input, !isEditing && styles.inputLocked]}
                         multiline
-                        placeholder="Today I will..."
-                        placeholderTextColor="#C4A97A"
+                        maxLength={MAX_CHARS}
                         value={text}
                         onChangeText={setText}
                         editable={isEditing}
                         textAlignVertical="top"
+                        underlineColorAndroid="transparent"
                     />
                 </View>
 
                 <View style={styles.footer}>
                     <Text style={styles.footerHint}>
-                        {savedFlash ? '✓ SAVED' : isDirty ? 'UNSAVED CHANGES' : 'SAVED ON THIS DEVICE'}
+                        {savedFlash ? '[ SAVED ]' : isDirty ? 'UNSAVED CHANGES' : 'SAVED ON DEVICE'}
                     </Text>
 
                     {isEditing ? (
@@ -157,7 +182,7 @@ const styles = StyleSheet.create({
         marginRight: 6, // Room for the offset pixel shadow
     },
     pixelShadow: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: INK,
         transform: [{ translateX: 6 }, { translateY: 6 }],
     },
@@ -182,37 +207,32 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     headerEyebrow: {
-        fontSize: 11,
-        fontWeight: '700',
+        fontSize: 10,
         color: '#B45309',
-        fontFamily: MONO,
-        letterSpacing: 2,
+        fontFamily: PIXEL_BOLD,
+        letterSpacing: 1,
     },
     headerTitle: {
-        fontSize: 16,
-        fontWeight: '700',
+        fontSize: 13,
         color: INK,
-        fontFamily: MONO,
+        fontFamily: PIXEL_BOLD,
         letterSpacing: 0.5,
-        lineHeight: 24,
+        lineHeight: 22,
     },
     inputContainer: {
         position: 'relative',
-        minHeight: LINE_HEIGHT * NUM_LINES,
+        height: FIELD_HEIGHT, // Fixed: typing fills the lines, it does not add more
         marginTop: 8,
     },
     linesContainer: {
-        ...StyleSheet.absoluteFillObject,
-        paddingTop: INPUT_PADDING_TOP,
+        ...StyleSheet.absoluteFill,
+        paddingTop: FIELD_TOP,
     },
     lineRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
         height: LINE_HEIGHT,
-        width: '100%',
+        justifyContent: 'flex-end', // Rule sits on the row's baseline edge
     },
     line: {
-        flex: 1,
         borderBottomWidth: 2,
         borderBottomColor: BRIGHT,
         borderStyle: 'dotted',
@@ -222,17 +242,28 @@ const styles = StyleSheet.create({
         borderBottomWidth: 2,
         borderBottomColor: RULE,
     },
-    input: {
-        fontSize: 17,
+    placeholderWrap: {
+        ...StyleSheet.absoluteFill,
+        paddingTop: FIELD_TOP,
+        paddingHorizontal: FIELD_PAD_H,
+    },
+    placeholder: {
+        fontSize: FONT_SIZE,
         lineHeight: LINE_HEIGHT,
-        color: '#3F2A12', // Ink-brown text
-        paddingTop: INPUT_PADDING_TOP,
-        paddingBottom: 6,
-        paddingHorizontal: 2,
-        fontFamily: MONO,
-        fontWeight: '700',
-        letterSpacing: 0.4,
-        minHeight: LINE_HEIGHT * NUM_LINES,
+        fontFamily: PIXEL,
+        color: '#C4A97A',
+        includeFontPadding: false, // Android: keep the metrics identical to the input
+    },
+    input: {
+        height: FIELD_HEIGHT,
+        padding: 0,             // Clear Android's default inset before setting our own
+        paddingTop: FIELD_TOP,
+        paddingHorizontal: FIELD_PAD_H,
+        fontSize: FONT_SIZE,
+        lineHeight: LINE_HEIGHT,
+        fontFamily: PIXEL,
+        color: '#3F2A12',       // Ink-brown text
+        includeFontPadding: false, // Android: this padding is what pushed text off the rule
     },
     inputLocked: {
         color: INK,
@@ -252,8 +283,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 10,
         color: '#B79A5E',
-        fontFamily: MONO,
-        fontWeight: '700',
+        fontFamily: PIXEL,
         letterSpacing: 1,
     },
     button: {
@@ -273,9 +303,8 @@ const styles = StyleSheet.create({
     },
     saveButtonText: {
         color: PAPER,
-        fontSize: 13,
-        fontWeight: '700',
-        fontFamily: MONO,
+        fontSize: 12,
+        fontFamily: PIXEL_BOLD,
         letterSpacing: 1,
     },
     editButton: {
@@ -283,9 +312,8 @@ const styles = StyleSheet.create({
     },
     editButtonText: {
         color: INK,
-        fontSize: 13,
-        fontWeight: '700',
-        fontFamily: MONO,
+        fontSize: 12,
+        fontFamily: PIXEL_BOLD,
         letterSpacing: 1,
     },
 });

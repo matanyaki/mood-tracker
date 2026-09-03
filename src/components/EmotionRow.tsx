@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { getEmotionColor } from '../constants/colors';
 import { MOOD_IMAGES } from '../constants/images';
+import { PIXEL_BOLD } from '../constants/typography';
 
 export interface EmotionRowProps {
     id: string;
@@ -33,7 +34,7 @@ export const EmotionRow: React.FC<EmotionRowProps> = React.memo(({
                 />
                 <Text style={[
                     styles.emotionLabel,
-                    isSelected && { color: color, fontWeight: '700' }
+                    isSelected && { fontFamily: PIXEL_BOLD, color: color }
                 ]}>
                     {label}
                 </Text>
@@ -55,7 +56,7 @@ export const EmotionRow: React.FC<EmotionRowProps> = React.memo(({
                         >
                             <Text style={[
                                 styles.scaleText,
-                                isActive && { color: '#FFFFFF', fontWeight: 'bold' }
+                                isActive && { fontFamily: PIXEL_BOLD, color: '#FFFFFF' }
                             ]}>
                                 {point}
                             </Text>
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
     },
     emotionLabel: {
         fontSize: 18,
-        fontWeight: '600',
+        fontFamily: PIXEL_BOLD,
         color: '#334155',
     },
     scaleContainer: {
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
     },
     scaleText: {
         fontSize: 16,
-        fontWeight: '600',
+        fontFamily: PIXEL_BOLD,
         color: '#64748B',
     },
 });

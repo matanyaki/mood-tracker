@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 
 interface EmptyStateProps {
   emoji?: string;
@@ -55,13 +56,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: PIXEL_BOLD,
     color: '#1A1A2E',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: PIXEL,
     color: '#4A4A4A',
     textAlign: 'center',
     lineHeight: 22,
@@ -75,7 +77,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: PIXEL_BOLD,
     color: '#fff',
   },
 });

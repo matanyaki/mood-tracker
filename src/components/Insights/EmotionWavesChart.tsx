@@ -5,6 +5,7 @@ import { Droplets } from 'lucide-react-native';
 import Card from '../../components/Card';
 import { EMOTIONS_CONFIG } from '../../constants/emotions';
 import { getEmotionColor } from '../../constants/colors';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -14,7 +15,7 @@ export interface ChartDataset {
     color?: (opacity?: number) => string;
     data: number[];
     strokeWidth?: number;
-    meta?: Array<{ scale: number; note: string }>;
+    meta?: { scale: number; note: string }[];
     withDots?: boolean;
 }
 
@@ -179,6 +180,12 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                             strokeWidth: 1,
                             stroke: "rgba(200, 200, 200, 0.25)"
                         },
+                        // The chart draws its axis labels as SVG text, so the pixel
+                        // face has to be passed in here rather than via a style.
+                        propsForLabels: {
+                            fontFamily: PIXEL,
+                            fontSize: 9, // Silkscreen is wide -- the default crowds the axis
+                        },
                         style: {
                             borderRadius: 16
                         }
@@ -244,18 +251,20 @@ const styles = StyleSheet.create({
     },
     chartTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: PIXEL_BOLD,
         color: '#1A1A2E',
         marginTop: 5,
         marginBottom: 2
     },
     chartSubtitle: {
         fontSize: 12,
+        fontFamily: PIXEL,
         color: '#6B7280',
         marginBottom: 10
     },
     singleEntryHint: {
         fontSize: 12,
+        fontFamily: PIXEL,
         color: '#9CA3AF',
         fontStyle: 'italic',
         marginBottom: 8,
@@ -282,8 +291,8 @@ const styles = StyleSheet.create({
     },
     legendText: {
         fontSize: 13,
+        fontFamily: PIXEL,
         color: '#4B5563',
-        fontWeight: '500',
     },
     emptyCard: {
         alignItems: 'center',
@@ -296,13 +305,14 @@ const styles = StyleSheet.create({
     },
     emptyTitle: {
         fontSize: 17,
-        fontWeight: '600',
+        fontFamily: PIXEL_BOLD,
         color: '#374151',
         marginTop: 12,
         marginBottom: 8
     },
     emptyText: {
         fontSize: 14,
+        fontFamily: PIXEL,
         color: '#9CA3AF',
         textAlign: 'center',
         lineHeight: 22,

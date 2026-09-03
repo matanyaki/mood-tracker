@@ -21,10 +21,23 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.emotiontracker"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-status-bar",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "node_modules/@expo-google-fonts/silkscreen/400Regular/Silkscreen_400Regular.ttf",
+            "node_modules/@expo-google-fonts/silkscreen/700Bold/Silkscreen_700Bold.ttf"
+          ]
+        }
+      ]
+    ]
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Plus } from 'lucide-react-native';
+import { PIXEL_BOLD } from '../constants/typography';
 
 export interface FabAction {
     label: string;
@@ -12,9 +13,6 @@ export interface FabAction {
 interface FabMenuProps {
     actions: FabAction[];
 }
-
-// Monospace face keeps the label consistent with the rest of the app's pixel-art cards
-const MONO = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 // Pixel-art palette: flat black outline + hard offset shadow (no blur, no radius)
 const BORDER = '#000000';
@@ -142,11 +140,11 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
 
 const styles = StyleSheet.create({
     container: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         zIndex: 999, // Ensure it sits on top
     },
     backdrop: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: 'rgba(255,255,255,0.7)', // Semi-transparent overlay standard for premium feel
     },
     fabWrapper: {
@@ -208,9 +206,8 @@ const styles = StyleSheet.create({
     },
     actionLabel: {
         color: '#333',
-        fontWeight: '700',
-        fontSize: 13,
-        fontFamily: MONO,
+        fontSize: 12,
+        fontFamily: PIXEL_BOLD,
     },
     miniFabWrapper: {
         position: 'relative',

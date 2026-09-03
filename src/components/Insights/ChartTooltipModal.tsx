@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
 import { EMOTIONS_CONFIG } from '../../constants/emotions';
 import { getEmotionColor } from '../../constants/colors';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -93,14 +94,14 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 22,
-        fontWeight: 'bold',
+        fontFamily: PIXEL_BOLD,
         color: '#111827',
         marginBottom: 4
     },
     modalSubtitle: {
         fontSize: 14,
+        fontFamily: PIXEL,
         color: '#6B7280',
-        fontWeight: '500'
     },
     modalBody: {
         gap: 12
@@ -116,11 +117,11 @@ const styles = StyleSheet.create({
     },
     emotionName: {
         fontSize: 16,
-        fontWeight: '700',
+        fontFamily: PIXEL_BOLD,
     },
     scaleText: {
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: PIXEL_BOLD,
         color: '#4B5563'
     },
     barContainer: {
@@ -136,6 +137,7 @@ const styles = StyleSheet.create({
     },
     noteText: {
         fontSize: 14,
+        fontFamily: PIXEL,
         color: '#6B7280',
         fontStyle: 'italic',
         marginTop: 2,

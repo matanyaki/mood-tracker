@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { PIXEL_BOLD } from '../constants/typography';
 
 interface PrimaryButtonProps {
     onPress: () => void;
@@ -70,6 +71,6 @@ const styles = StyleSheet.create({
     text: {
         color: '#FFF',
         fontSize: 16,
-        fontWeight: '700',
+        fontFamily: PIXEL_BOLD,
     },
 });
