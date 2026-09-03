@@ -34,6 +34,16 @@ const CALENDAR_THEME = {
       alignItems: 'center',
       marginBottom: 10,
     },
+    // The library wraps renderHeader() in this view and ships it without a flex,
+    // so it sized to the month name and carried the right arrow out of the row --
+    // "September 2026" alone is wider than the space between the two arrows.
+    // flex:1 pins it to the middle third; since both arrows are the same width,
+    // that region is exactly centered, which is what centers the title.
+    headerContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+    },
     week: {
       marginTop: 5,
       flexDirection: 'row',
@@ -174,29 +184,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   customHeaderContainer: {
-    // Sits between the calendar's two arrows in a space-between row. Without flex
-    // it sizes to the month name, and a long one ("September 2026") shoves the
-    // arrows outward -- the same defect the day modal's close button had.
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 4,
   },
   titleRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
   },
   monthTitle: {
-    // Silkscreen runs ~0.76em per character, so 22px put "September 2026" at 253px
-    // against ~216px of room on a narrow phone.
-    fontSize: 18,
+    // Silkscreen runs ~0.76em per character. The gap between the two arrows is
+    // ~188px on a narrow phone, and "September 2026" is the widest month label:
+    // 173px at this size, 207px at 18.
+    fontSize: 15,
     fontFamily: PIXEL_BOLD,
     color: '#1A1A2E',
+    textAlign: 'center',
   },
   arrowContainer: {
-    padding: 4,
+    // No padding of our own: the library already wraps each arrow in a
+    // TouchableOpacity with padding:10 and a 20px hitSlop, and those 8px were
+    // coming straight out of the month title's room.
+    padding: 0,
   },
   legend: {
     marginTop: 24,
