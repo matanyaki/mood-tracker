@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, useColorScheme, Image } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import Card from '../../components/Card';
 import { EMOTIONS_CONFIG } from '../../constants/emotions';
 import { MOOD_IMAGES } from '../../constants/images';
@@ -45,16 +46,37 @@ const getContrastColorStyle = (hexColor: string) => {
  * Individual emotion row displaying text, count, percentage, and an animated progress bar.
  */
 const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: React.Key }) => {
-    const animatedValue = useRef(new Animated.Value(0)).current;
+    const reduceMotion = useReducedMotion();
+
+    // The fill is laid out at full width and squashed horizontally, so the animated
+    // value IS the fraction of the track to cover -- animating it re-targets from
+    // wherever the bar currently sits, which is what makes a filter change slide
+    // rather than jump.
+    const fraction = Math.max(0, Math.min(item.percentage, 100)) / 100;
+    const scaleX = useRef(new Animated.Value(0)).current;
+    const fadeIn = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        Animated.timing(animatedValue, {
-            toValue: 1,
+        // Reduced motion: the bar takes its length immediately and fades in instead
+        // of sweeping across the row -- travel distance 0, but still an animation.
+        if (reduceMotion) {
+            scaleX.setValue(fraction);
+            Animated.timing(fadeIn, {
+                toValue: 1,
+                duration: 600,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }).start();
+            return;
+        }
+
+        Animated.timing(scaleX, {
+            toValue: fraction,
             duration: 600,
             easing: Easing.out(Easing.ease),
-            useNativeDriver: false,
+            useNativeDriver: true,
         }).start();
-    }, [animatedValue]);
+    }, [fraction, reduceMotion, scaleX, fadeIn]);
 
     // EmotionStat carries a label rather than an id, so the registry entry is
     // located by label; its imageKey is still the registry's.
@@ -63,11 +85,6 @@ const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: 
     )!.imageKey;
 
     const { bg: badgeBg, text: badgeText } = getContrastColorStyle(item.color);
-
-    const animatedWidth = animatedValue.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0%', `${item.percentage}%`],
-    });
 
     return (
         <View style={styles.rowContainer}>
@@ -104,8 +121,9 @@ const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: 
                     style={[
                         styles.progressBarFill,
                         {
-                            width: animatedWidth,
                             backgroundColor: item.color,
+                            opacity: reduceMotion ? fadeIn : 1,
+                            transform: [{ scaleX }],
                         },
                     ]}
                 />
@@ -257,6 +275,10 @@ const styles = StyleSheet.create({
     },
     progressBarFill: {
         height: '100%',
+        // Full width, squashed from the left edge -- scaleX runs on the native
+        // driver where an animated `width` would relayout on the JS thread.
+        width: '100%',
+        transformOrigin: 'left',
         borderRadius: 2,
     },
     emptyContainer: {

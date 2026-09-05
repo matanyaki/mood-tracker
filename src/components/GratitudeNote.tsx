@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -9,6 +9,7 @@ import {
     Platform,
     Modal,
     Animated,
+    Easing,
     KeyboardAvoidingView,
     TouchableWithoutFeedback,
     Keyboard
@@ -62,6 +63,14 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
     const [showSuggestion, setShowSuggestion] = useState(false);
     const [suggestionText, setSuggestionText] = useState('');
     const [fadeAnim] = useState(new Animated.Value(0));
+    const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // A pending auto-hide must not fire after the note is gone.
+    useEffect(() => () => {
+        if (hintTimer.current) {
+            clearTimeout(hintTimer.current);
+        }
+    }, []);
 
     const handleSuggestionPress = () => {
         // Haptic feedback
@@ -76,11 +85,16 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
         Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 300,
+            easing: Easing.bezier(0.23, 1, 0.32, 1),
             useNativeDriver: true,
         }).start();
 
-        // Auto-hide after a few seconds
-        setTimeout(() => {
+        // Auto-hide after a few seconds. Tapping HINT again restarts the countdown
+        // instead of stacking a second timer on top of the first.
+        if (hintTimer.current) {
+            clearTimeout(hintTimer.current);
+        }
+        hintTimer.current = setTimeout(() => {
             closeSuggestion();
         }, 4000);
     };
@@ -222,7 +236,26 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
 
                                 {/* Suggestion Popup Overlay */}
                                 {showSuggestion && (
-                                    <Animated.View style={[styles.suggestionPopup, { opacity: fadeAnim }]}>
+                                    // The tilt rides in the animated array on purpose: an
+                                    // inline `transform` replaces the stylesheet's whole
+                                    // array, so a rotate left behind there would be dropped.
+                                    <Animated.View
+                                        style={[
+                                            styles.suggestionPopup,
+                                            {
+                                                opacity: fadeAnim,
+                                                transform: [
+                                                    { rotate: '-2deg' },
+                                                    {
+                                                        translateY: fadeAnim.interpolate({
+                                                            inputRange: [0, 1],
+                                                            outputRange: [6, 0],
+                                                        }),
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    >
                                         <Text style={styles.popupText}>{suggestionText}</Text>
                                     </Animated.View>
                                 )}
@@ -409,7 +442,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         maxWidth: 220,
-        transform: [{ rotate: '-2deg' }],
     },
     popupText: {
         color: INK,

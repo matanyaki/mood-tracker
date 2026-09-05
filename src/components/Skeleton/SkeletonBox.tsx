@@ -6,6 +6,7 @@ import Animated, {
     withRepeat,
     withTiming,
     Easing,
+    ReduceMotion,
 } from 'react-native-reanimated';
 
 export interface SkeletonBoxProps {
@@ -33,7 +34,12 @@ export default function SkeletonBox({
         opacity.value = withRepeat(
             withTiming(0.3, { duration: 800, easing: Easing.inOut(Easing.ease) }),
             -1,
-            true
+            true,
+            undefined,
+            // On withRepeat rather than the inner timing: this is the parameter that
+            // stops the endless loop and holds the box at full opacity. It cascades
+            // down to the withTiming above.
+            ReduceMotion.System
         );
     }, [opacity]);
 

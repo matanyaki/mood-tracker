@@ -21,6 +21,18 @@ const NO_GREETINGS: NonNullable<ReturnType<typeof useGreetingsQuery>['data']> = 
  */
 const monthStart = (dateStr: string) => `${dateStr.substring(0, 7)}-01`;
 
+/**
+ * Shifts a 'YYYY-MM' string by whole months.
+ *
+ * Kept in string arithmetic for the same timezone reason as monthStart: parsing
+ * to a Date to call setMonth would reintroduce the UTC-midnight off-by-one.
+ */
+const shiftMonth = (month: string, delta: number) => {
+    const [year, monthNo] = month.split('-').map(Number);
+    const absolute = year * 12 + (monthNo - 1) + delta;
+    return `${String(Math.floor(absolute / 12)).padStart(4, '0')}-${String((absolute % 12) + 1).padStart(2, '0')}`;
+};
+
 export const useDiaryController = () => {
     // --- State ---
     const [selectedDate, setSelectedDate] = useState('');
@@ -34,7 +46,23 @@ export const useDiaryController = () => {
     const entriesQuery = useEntriesQuery(monthParam);
     const greetingsQuery = useGreetingsQuery();
 
-    const entries = entriesQuery.data ?? NO_ENTRIES;
+    // hideExtraDays={false} means the grid also shows the tail of the previous
+    // month and the head of the next one. Greetings are fetched unscoped, so those
+    // cells already got greeting dots; entries are scoped to ['entries', month],
+    // so without the neighbours the same cells stayed blank of mood dots.
+    // The extra fetches are also a free prefetch: paging to an adjacent month
+    // finds it already cached.
+    const prevEntriesQuery = useEntriesQuery(shiftMonth(monthParam, -1));
+    const nextEntriesQuery = useEntriesQuery(shiftMonth(monthParam, 1));
+
+    // Neighbour months are additive, so they must not gate the calendar render --
+    // loading stays tied to the month actually being displayed.
+    const entries = useMemo(() => [
+        ...(prevEntriesQuery.data ?? NO_ENTRIES),
+        ...(entriesQuery.data ?? NO_ENTRIES),
+        ...(nextEntriesQuery.data ?? NO_ENTRIES),
+    ], [prevEntriesQuery.data, entriesQuery.data, nextEntriesQuery.data]);
+
     const greetings = greetingsQuery.data ?? NO_GREETINGS;
     const loading = entriesQuery.isLoading || greetingsQuery.isLoading;
 
