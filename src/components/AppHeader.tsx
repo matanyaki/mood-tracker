@@ -10,6 +10,8 @@ interface AppHeaderProps {
     label: string;
     onPress: () => void;
     style?: ViewStyle;
+    /** Optional, so a screen can restyle the label without touching the others. */
+    textStyle?: TextStyle;
   };
   leftAction?: React.ReactNode;
   style?: ViewStyle;
@@ -58,7 +60,7 @@ export default function AppHeader({
           style={[styles.rightAction, rightAction.style]}
           onPress={rightAction.onPress}
         >
-          <Text style={styles.rightActionText}>{rightAction.label}</Text>
+          <Text style={[styles.rightActionText, rightAction.textStyle]}>{rightAction.label}</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.rightSpacer} />

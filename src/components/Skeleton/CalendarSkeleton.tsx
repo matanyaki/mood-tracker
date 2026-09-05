@@ -9,8 +9,11 @@ const WEEK_ROWS = [0, 1, 2, 3];
  * Stands in for the <Calendar> grid on DiaryScreen while entries and greetings
  * load — the month header, the weekday row, and six rows of day cells.
  *
- * Renders bare (no ScreenContainer / Card): DiaryScreen keeps its real
- * AppHeader, calendar Card and legend mounted around it, so only the table
+ * Every box is square and sized to the real cell it replaces, so the grid does
+ * not visibly resize when the calendar swaps in.
+ *
+ * Renders bare (no ScreenContainer / card): DiaryScreen keeps its real
+ * AppHeader, calendar card and legend mounted around it, so only the table
  * itself is replaced.
  */
 export default function CalendarSkeleton() {
@@ -18,15 +21,15 @@ export default function CalendarSkeleton() {
         <View style={styles.container}>
             {/* Calendar header: arrow / month title / arrow */}
             <View style={styles.calendarHeader}>
-                <SkeletonBox width={20} height={20} borderRadius={10} />
-                <SkeletonBox width={150} height={24} borderRadius={6} />
-                <SkeletonBox width={20} height={20} borderRadius={10} />
+                <SkeletonBox width={20} height={20} borderRadius={0} />
+                <SkeletonBox width={150} height={20} borderRadius={0} />
+                <SkeletonBox width={20} height={20} borderRadius={0} />
             </View>
 
             {/* Weekday name row */}
             <View style={styles.weekRow}>
                 {WEEKDAYS.map(i => (
-                    <SkeletonBox key={`wd-${i}`} width={24} height={13} borderRadius={4} />
+                    <SkeletonBox key={`wd-${i}`} width={24} height={13} borderRadius={0} />
                 ))}
             </View>
 
@@ -36,9 +39,9 @@ export default function CalendarSkeleton() {
                     {WEEKDAYS.map(col => (
                         <SkeletonBox
                             key={`day-${row}-${col}`}
-                            width={40}
-                            height={40}
-                            borderRadius={15}
+                            width={34}
+                            height={34}
+                            borderRadius={0}
                         />
                     ))}
                 </View>

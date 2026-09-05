@@ -4,6 +4,7 @@ import { MOOD_IMAGES } from '../constants/images';
 import { getEmotionColor } from '../constants/colors';
 import { getEmotionImageKey, type EmotionId } from '../../shared/types/emotions';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { OUTLINE, PAPER, BORDER_W_INNER } from '../constants/pixel';
 
 interface Emotion {
     id: EmotionId;
@@ -47,12 +48,12 @@ export default function EntryEmotionsList({ emotions }: EntryEmotionsListProps) 
                         <View style={styles.contentColumn}>
                             <View style={styles.headerRow}>
                                 <Text style={[styles.emotionTitle, { color }]}>
-                                    {label}
+                                    {label.toUpperCase()}
                                 </Text>
                                 {scale !== undefined && scale > 0 && (
-                                    <View style={[styles.scaleBadge, { backgroundColor: color + '20' }]}>
+                                    <View style={[styles.scaleBadge, { backgroundColor: color + '20', borderColor: color }]}>
                                         <Text style={[styles.scaleText, { color }]}>
-                                            Intensity: {scale}/5
+                                            [{scale}/5]
                                         </Text>
                                     </View>
                                 )}
@@ -90,7 +91,9 @@ const styles = StyleSheet.create({
         height: 44,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: PAPER,
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
         zIndex: 2,
     },
     moodImage: {
@@ -100,7 +103,7 @@ const styles = StyleSheet.create({
     timelineLine: {
         flex: 1,
         width: 2,
-        backgroundColor: '#E2E8F0',
+        backgroundColor: OUTLINE,
         marginVertical: 4,
     },
     contentColumn: {
@@ -116,23 +119,28 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     emotionTitle: {
-        fontSize: 18,
+        fontSize: 14,
         fontFamily: PIXEL_BOLD,
+        letterSpacing: 2,
     },
     scaleBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        // Square and outlined in the emotion's own colour, so the badge reads as
+        // a drawn chip rather than the soft pill it was.
+        borderWidth: BORDER_W_INNER,
     },
     scaleText: {
-        fontSize: 12,
+        fontSize: 10,
         fontFamily: PIXEL_BOLD,
+        letterSpacing: 1,
     },
     noteText: {
-        fontSize: 15,
+        fontSize: 13,
         fontFamily: PIXEL,
         color: '#475569',
-        fontStyle: 'italic',
+        // No italic: Silkscreen ships one upright face per weight, so RN fakes the
+        // slant by shearing the bitmap, which tears the pixel grid.
         lineHeight: 22,
     },
 });

@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { X, SmilePlus, Edit, Sparkles } from 'lucide-react-native';
 import EntryEmotionsList from './EntryEmotionsList';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER } from '../constants/pixel';
 
 interface DayEntryModalProps {
     visible: boolean;
@@ -42,7 +43,7 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                             </Text>
                         </View>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <X size={24} color="#94A3B8" />
+                            <X size={20} color={INK} strokeWidth={3} />
                         </TouchableOpacity>
                     </View>
 
@@ -156,26 +157,21 @@ const styles = StyleSheet.create({
     },
     modalContent: {
         width: '100%',
-        backgroundColor: '#F8FAFC', // Slightly off-white for the background sheet
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        backgroundColor: '#F1EFE8', // Slightly off-white for the background sheet
         maxHeight: '85%',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 8,
+        // Square corners and a hard top rule instead of a 24px radius over a
+        // blurred shadow -- the outline is what separates the sheet from the page.
+        borderTopWidth: BORDER_W,
+        borderColor: OUTLINE,
     },
     modalHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12, // Keeps a long date off the close button
-        padding: 24,
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        padding: 20,
+        backgroundColor: PAPER,
+        borderBottomWidth: BORDER_W_INNER,
+        borderBottomColor: OUTLINE,
     },
     headerText: {
         // Without this the column sizes to its text and, since flex children do not
@@ -186,10 +182,10 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 10,
         fontFamily: PIXEL_BOLD,
-        color: '#64748B',
+        color: INK_MUTED,
         textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: 2,
+        letterSpacing: 2,
+        marginBottom: 4,
     },
     modalDate: {
         // Silkscreen runs ~0.76em per character: at the old 24px the longest date was
@@ -197,13 +193,17 @@ const styles = StyleSheet.create({
         fontSize: 16,
         lineHeight: 22,
         fontFamily: PIXEL_BOLD,
-        color: '#0F172A',
+        color: INK,
     },
     closeButton: {
         flexShrink: 0, // Never squeezed or displaced by the date beside it
-        padding: 8,
-        backgroundColor: '#F1F5F9',
-        borderRadius: 20,
+        width: 32,
+        height: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: PAPER,
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
     },
     modalScroll: {
         // flex: 1, // Removed to allow auto-height behavior within maxHeight container
@@ -216,35 +216,29 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: {
-        color: '#94A3B8',
-        fontSize: 16,
+        color: INK_MUTED,
+        fontSize: 13,
         fontFamily: PIXEL,
+        letterSpacing: 1,
     },
 
     // Entry Card
     entryCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
+        backgroundColor: PAPER,
+        padding: 18,
         marginBottom: 24,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
-            },
-            android: {
-                elevation: 3,
-            },
-        }),
+        // Outline only, no offset shadow: the card runs the full width of a sheet
+        // that already has its own hard edge, so a second one would just crowd it.
+        borderWidth: BORDER_W,
+        borderColor: OUTLINE,
     },
     innerEntryContainer: {
         marginBottom: 24,
     },
     divider: {
-        height: 1,
-        backgroundColor: '#F1F5F9',
+        borderTopWidth: BORDER_W_INNER,
+        borderTopColor: OUTLINE,
+        borderStyle: 'dotted',
         marginVertical: 16,
     },
     sectionContainer: {
@@ -254,15 +248,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        paddingBottom: 16,
+        paddingBottom: 12,
         marginBottom: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F8FAFC',
+        borderBottomWidth: BORDER_W_INNER,
+        borderBottomColor: OUTLINE,
+        borderStyle: 'dotted',
     },
     sectionTitle: {
-        fontSize: 14,
+        fontSize: 12,
         fontFamily: PIXEL_BOLD,
-        letterSpacing: 0.5,
+        letterSpacing: 2,
     },
     timelineItem: {
         flexDirection: 'row',
@@ -274,17 +269,18 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     iconWrapper: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 40,
+        height: 40,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
         zIndex: 2,
     },
     timelineLine: {
         flex: 1,
         width: 2,
-        backgroundColor: '#E2E8F0',
+        backgroundColor: OUTLINE,
         marginVertical: 4,
     },
     contentColumn: {
@@ -311,11 +307,12 @@ const styles = StyleSheet.create({
     },
     greetingText: {
         flex: 1,
-        fontSize: 15,
+        fontSize: 13,
         fontFamily: PIXEL,
         color: '#334155',
         lineHeight: 22,
-        fontStyle: 'italic',
+        // No italic: Silkscreen ships one upright face per weight, so RN fakes the
+        // slant by shearing the bitmap, which tears the pixel grid.
     },
     cardHeader: {
         flexDirection: 'row',
@@ -324,9 +321,10 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     entryTime: {
-        fontSize: 13,
+        fontSize: 11,
         fontFamily: PIXEL_BOLD,
-        color: '#94A3B8',
+        color: INK_MUTED,
+        letterSpacing: 1,
     },
 
 
