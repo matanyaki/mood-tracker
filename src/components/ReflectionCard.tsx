@@ -1,10 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
-import { Check } from 'lucide-react-native';
-import Card from './Card';
+import { View, Text, StyleSheet, TextInput, Image } from 'react-native';
 import { MOOD_IMAGES } from '../constants/images';
 import { getEmotionImageKey, type EmotionId } from '../../shared/types/emotions';
+import { getEmotionColor } from '../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import {
+    OUTLINE, PAPER, INK,
+    SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W,
+} from '../constants/pixel';
 
 interface ReflectionCardProps {
     label: string;
@@ -16,6 +19,13 @@ interface ReflectionCardProps {
     loading?: boolean;
 }
 
+/**
+ * One emotion's note, drawn as a pixel-art card.
+ *
+ * It no longer wraps <Card>: that component's whole job is a blurred drop shadow
+ * plus a 24px radius, and both are the opposite of what this style needs. The
+ * hard shadow block and square outline are drawn here instead.
+ */
 const ReflectionCard: React.FC<ReflectionCardProps> = React.memo(({
     label,
     rootEmotionId,
@@ -25,41 +35,65 @@ const ReflectionCard: React.FC<ReflectionCardProps> = React.memo(({
     onSave,
     loading = false,
 }) => {
-    return (
-        <Card style={styles.card} padding={24} borderRadius={24}>
-            <View style={styles.cardHeader}>
-                <Image
-                    source={MOOD_IMAGES[getEmotionImageKey(rootEmotionId)]}
-                    style={styles.emotionImage}
-                    resizeMode="contain"
-                />
-                <Text style={styles.emotionTitle}>{label}</Text>
-                <Text style={styles.helperText}>Why do you feel this way?</Text>
-            </View>
+    const color = getEmotionColor(rootEmotionId);
 
-            <TextInput
-                style={styles.input}
-                placeholder={`I feel ${label.toLowerCase()} because...`}
-                placeholderTextColor="#9CA3AF"
-                multiline
-                textAlignVertical="top"
-                value={note}
-                onChangeText={(text) => onChangeText(rootEmotionId, text)}
-            />
-        </Card>
+    return (
+        <View style={styles.wrapper}>
+            <View style={styles.shadow} pointerEvents="none" />
+
+            <View style={[styles.card, { borderLeftColor: color }]}>
+                <View style={styles.cardHeader}>
+                    <Image
+                        source={MOOD_IMAGES[getEmotionImageKey(rootEmotionId)]}
+                        style={styles.emotionImage}
+                        resizeMode="contain"
+                    />
+                    <Text style={[styles.emotionTitle, { color }]}>{label.toUpperCase()}</Text>
+                    <Text style={styles.helperText}>[ WHY DO YOU FEEL THIS WAY? ]</Text>
+                </View>
+
+                <TextInput
+                    style={styles.input}
+                    placeholder={`I feel ${label.toLowerCase()} because...`}
+                    placeholderTextColor="#A8B0BD"
+                    multiline
+                    textAlignVertical="top"
+                    value={note}
+                    onChangeText={(text) => onChangeText(rootEmotionId, text)}
+                    underlineColorAndroid="transparent"
+                />
+            </View>
+        </View>
     );
 });
 
 ReflectionCard.displayName = 'ReflectionCard';
 
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: '#fff',
+    wrapper: {
+        position: 'relative',
         marginBottom: 20,
+        marginRight: SHADOW_OFFSET, // Room for the offset shadow
+    },
+    shadow: {
+        ...StyleSheet.absoluteFill,
+        backgroundColor: OUTLINE,
+        transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
+    },
+    card: {
+        backgroundColor: PAPER,
+        padding: 20,
+        borderWidth: BORDER_W,
+        borderColor: OUTLINE,
+        borderLeftWidth: ACCENT_BAR_W, // Colour bar keyed to the emotion
     },
     cardHeader: {
         alignItems: 'center',
-        marginBottom: 24,
+        paddingBottom: 14,
+        marginBottom: 16,
+        borderBottomWidth: BORDER_W_INNER,
+        borderBottomColor: OUTLINE,
+        borderStyle: 'dotted',
     },
     emotionImage: {
         width: 60,
@@ -67,25 +101,30 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     emotionTitle: {
-        fontSize: 24,
+        // Silkscreen is wide (~0.76em per char bold), so 24px overflowed on the
+        // longer labels once they were uppercased. 18px holds every one of them.
+        fontSize: 18,
         fontFamily: PIXEL_BOLD,
-        color: '#1A1A2E',
-        marginBottom: 4,
+        letterSpacing: 2,
+        marginBottom: 8,
     },
     helperText: {
-        fontSize: 14,
+        fontSize: 10,
         fontFamily: PIXEL,
-        color: '#6B7280',
+        color: '#7C8698',
+        letterSpacing: 1,
     },
     input: {
-        backgroundColor: '#F9FAFB',
-        borderRadius: 16,
-        padding: 16,
-        fontSize: 16,
+        backgroundColor: '#FFFFFF',
+        padding: 14,
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+        fontSize: 14,
+        lineHeight: 22,
         fontFamily: PIXEL,
-        color: '#1F2937',
-        minHeight: 140,
-        marginBottom: 24,
+        color: INK,
+        minHeight: 130,
+        includeFontPadding: false, // Android: keep the first line off the top border
     },
 });
 
