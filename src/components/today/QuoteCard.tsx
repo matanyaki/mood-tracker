@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Quote } from 'lucide-react-native';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 
 interface ZenQuote {
     q: string; // Quote

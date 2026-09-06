@@ -1,13 +1,21 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import { Rect } from 'react-native-svg';
 import { Droplets } from 'lucide-react-native';
-import Card from '../../components/Card';
+import PixelCard from '../ui/PixelCard';
 import { EMOTIONS_CONFIG } from '../../constants/emotions';
 import { getEmotionColor } from '../../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import {
+    OUTLINE, INK, INK_MUTED,
+    SHADOW_OFFSET, BORDER_W, BORDER_W_INNER,
+} from '../../constants/pixel';
 
 const screenWidth = Dimensions.get('window').width;
+
+/** Side of the square plotted in place of chart-kit's round dot. */
+const DOT_SIZE = 10;
 
 // Strongly type the chart dataset and data contract
 export interface ChartDataset {
@@ -32,9 +40,17 @@ interface EmotionWavesChartProps {
 }
 
 export default function EmotionWavesChart({ chartData, handleDataPointClick, isFetching, hasData = true }: EmotionWavesChartProps) {
-    const CARD_HORIZONTAL_MARGIN = 30;
-    const CARD_HORIZONTAL_PADDING = 24;
-    const chartWidth = screenWidth - CARD_HORIZONTAL_MARGIN - CARD_HORIZONTAL_PADDING;
+    // The card no longer breaks out of the screen's padding with a negative
+    // margin: it draws a hard shadow block on its right edge now, and a card
+    // hanging over the screen edge would take that block off with it.
+    const SCREEN_PADDING = 40;      // InsightsScreen content padding, both sides
+    const CARD_BORDERS = BORDER_W * 2;
+    const CHART_RIGHT_GUTTER = 16;  // Room for the last day label
+    const chartWidth = screenWidth
+        - SCREEN_PADDING
+        - SHADOW_OFFSET
+        - CARD_BORDERS
+        - CHART_RIGHT_GUTTER;
 
     const processedData = useMemo(() => {
         if (!chartData || !chartData.datasets || chartData.datasets.length === 0) {
@@ -89,16 +105,25 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                 emotionKey: 'aggregated_wave',
                 data: peakIntensities,
                 color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
-                strokeWidth: 2,
+                // Heavier than the old 2: a pixel line is drawn, not traced.
+                strokeWidth: 3,
             },
-            // Dummy dataset to force the Y-axis range to be 1 to 5
-            {
-                emotionKey: 'y_bounds_dummy',
-                data: numDays >= 2 ? [1, 5, ...Array(numDays - 2).fill(1)] : [1, 5],
-                color: (opacity = 1) => 'rgba(0, 0, 0, 0)',
-                strokeWidth: 0,
-                withDots: false
-            }
+            // Y-axis bounds. chart-kit has no min/max prop, so the 1-5 domain has to
+            // be injected as data -- but the old full-length [1, 5, 1, 1, ...] row
+            // painted a grey triangle across the first days of every month. A
+            // dataset cannot opt out of the area fill, and it cannot hide behind a
+            // transparent colour either: react-native-svg masks the alpha off a
+            // gradient's stopColor and takes it from chartConfig's
+            // fillShadowGradient*Opacity instead, so rgba(0, 0, 0, 0) came out black
+            // at 14%.
+            //
+            // Single-point rows dodge it. renderShadow spaces a polygon by that
+            // dataset's own length, so with one point every vertex lands on the same
+            // x and the fill collapses to zero width. The scale still sees both
+            // values -- it reads all datasets flattened together -- and dot spacing
+            // is untouched, since that comes from the longest dataset.
+            { emotionKey: 'y_min_bound', data: [1], color: () => 'transparent', withDots: false },
+            { emotionKey: 'y_max_bound', data: [5], color: () => 'transparent', withDots: false },
         ];
 
         // Filter EMOTIONS_CONFIG to only include emotions that have at least one value > 0 in chartData.datasets for current month
@@ -119,28 +144,57 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
         };
     }, [chartData]);
 
+    /**
+     * Square markers, drawn as SVG rects inside the chart.
+     *
+     * chart-kit only ever draws its markers as <Circle>, so the real dot is
+     * shrunk to r=0 by getDotProps below and replaced here. The invisible r=14
+     * circle the library stacks on top for the tap target is untouched, so the
+     * day tooltip still opens.
+     */
+    const renderSquareDot = useCallback(({ x, y, index }: { x: number; y: number; index: number }) => {
+        if (!processedData.dayHasEntry[index]) return null;
+
+        return (
+            <Rect
+                key={`dot-${index}`}
+                x={x - DOT_SIZE / 2}
+                y={y - DOT_SIZE / 2}
+                width={DOT_SIZE}
+                height={DOT_SIZE}
+                fill={getEmotionColor(processedData.dominantEmotions[index]) || '#4F46E5'}
+                stroke={OUTLINE}
+                strokeWidth={2}
+            />
+        );
+    }, [processedData]);
+
     const showEmptyState = !hasData || !processedData.hasValidData;
 
     if (showEmptyState) {
         return (
-            <Card padding={24} borderRadius={24} style={styles.emptyCard}>
-                <Droplets size={44} color="#9CA3AF" />
-                <Text style={styles.emptyTitle}>No waves yet</Text>
-                <Text style={styles.emptyText}>Start journaling to see your emotion wave take shape.</Text>
-            </Card>
+            <PixelCard padding={24} wrapperStyle={styles.cardWrapper} style={styles.emptyCard}>
+                <Droplets size={40} color={INK_MUTED} strokeWidth={2.5} />
+                <Text style={styles.emptyTitle}>NO WAVES YET</Text>
+                <Text style={styles.emptyText}>
+                    Start journaling to see your emotion wave take shape.
+                </Text>
+            </PixelCard>
         );
     }
 
     return (
-        <Card padding={12} borderRadius={24} style={[styles.chartCard, { marginHorizontal: -15, paddingHorizontal: 0 }]}>
+        <PixelCard padding={0} wrapperStyle={styles.cardWrapper} style={styles.chartCard}>
+            {/* No spinner here. It was fed by `isFetching`, which is true for the
+                first load and every background refetch, so it span on a screen that
+                was not waiting for anything the user had asked for -- and it was the
+                "stuck wheel" whenever a fetch behind it was slow or failing. The
+                card dims instead, which needs no animation to stay honest. */}
             <View style={styles.headerContainer}>
-                <View>
-                    <Text style={styles.chartTitle}>Emotion Wave Chart</Text>
-                    <Text style={styles.chartSubtitle}>Y: Intensity (1-5) | X: Day of Month</Text>
+                <View style={styles.headerText}>
+                    <Text style={styles.chartTitle}>EMOTION WAVE CHART</Text>
+                    <Text style={styles.chartSubtitle}>Y: INTENSITY 1-5 | X: DAY</Text>
                 </View>
-                {isFetching && (
-                    <ActivityIndicator size="small" color="#4F46E5" style={styles.fetchingIndicator} />
-                )}
             </View>
 
             {processedData.totalDataPoints === 1 && (
@@ -149,15 +203,15 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                 </Text>
             )}
 
-            <View style={{ opacity: isFetching ? 0.7 : 1, overflow: 'hidden', borderRadius: 20 }}>
+            <View style={{ opacity: isFetching ? 0.7 : 1 }}>
                 <LineChart
                     data={processedData}
                     width={chartWidth}
-                    height={350}
+                    height={320}
                     yAxisLabel=""
                     yAxisSuffix=""
                     yAxisInterval={1}
-                    yLabelsOffset={5}
+                    yLabelsOffset={8}
                     fromZero={false}
                     segments={4}
                     withVerticalLines={false}
@@ -172,13 +226,18 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                         decimalPlaces: 0,
                         useShadowColorFromDataset: true,
                         color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(100, 100, 100, ${opacity})`,
-                        fillShadowGradientFromOpacity: 0.10,
-                        fillShadowGradientToOpacity: 0.01,
+                        labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+                        // Same value top and bottom: the area under the wave is a
+                        // flat block of colour, not a gradient fading out. A ramp is
+                        // exactly the sub-pixel detail this style has nowhere to put.
+                        fillShadowGradientFromOpacity: 0.14,
+                        fillShadowGradientToOpacity: 0.14,
                         propsForBackgroundLines: {
-                            strokeDasharray: "4 4",
-                            strokeWidth: 1,
-                            stroke: "rgba(200, 200, 200, 0.25)"
+                            // A drawn rule rather than a hairline wash: same dotted
+                            // treatment the card dividers use.
+                            strokeDasharray: "2 5",
+                            strokeWidth: 2,
+                            stroke: "rgba(100, 116, 139, 0.45)"
                         },
                         // The chart draws its axis labels as SVG text, so the pixel
                         // face has to be passed in here rather than via a style.
@@ -186,37 +245,19 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                             fontFamily: PIXEL,
                             fontSize: 9, // Silkscreen is wide -- the default crowds the axis
                         },
-                        style: {
-                            borderRadius: 16
-                        }
                     }}
-                    bezier
+                    // No `bezier`: a smoothed curve is the one shape a pixel grid
+                    // cannot draw. Straight segments between days also say plainly
+                    // that nothing was measured in between.
                     getDotColor={(dataPoint, index) => {
                         const emotionKey = processedData.dominantEmotions[index];
                         return getEmotionColor(emotionKey) || '#4F46E5';
                     }}
-                    getDotProps={(dataPoint, index) => {
-                        const hasEntry = processedData.dayHasEntry[index];
-                        if (hasEntry) {
-                            return {
-                                r: '5',
-                                strokeWidth: '2',
-                                stroke: '#ffffff',
-                            };
-                        } else {
-                            return {
-                                r: '0',
-                            };
-                        }
-                    }}
-                    style={{
-                        marginVertical: 8,
-                        borderRadius: 16,
-                        paddingTop: 16,
-                        paddingBottom: 16,
-                        paddingLeft: 12,
-                        paddingRight: 40,
-                    }}
+                    // Every built-in circle collapses to nothing; renderDotContent
+                    // draws the square that replaces it.
+                    getDotProps={() => ({ r: '0' })}
+                    renderDotContent={renderSquareDot}
+                    style={styles.chart}
                     onDataPointClick={handleDataPointClick}
                 />
             </View>
@@ -225,17 +266,19 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                 {EMOTIONS_CONFIG.map(e => (
                     <View key={e.id} style={styles.legendItem}>
                         <View style={[styles.legendSquare, { backgroundColor: getEmotionColor(e.id) }]} />
-                        <Text style={styles.legendText}>{e.label}</Text>
+                        <Text style={styles.legendText}>{e.label.toUpperCase()}</Text>
                     </View>
                 ))}
             </View>
-        </Card>
+        </PixelCard>
     );
 }
 
 const styles = StyleSheet.create({
+    cardWrapper: {
+        marginBottom: 20,
+    },
     chartCard: {
-        marginBottom: 10,
         alignItems: 'center',
         minHeight: 220,
     },
@@ -244,40 +287,54 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         width: '100%',
-        paddingHorizontal: 10
+        padding: 14,
+        paddingBottom: 12,
+        borderBottomWidth: BORDER_W_INNER,
+        borderBottomColor: OUTLINE,
+        borderStyle: 'dotted',
     },
-    fetchingIndicator: {
-        marginTop: 5
+    headerText: {
+        flex: 1,
     },
     chartTitle: {
-        fontSize: 18,
+        fontSize: 13,
         fontFamily: PIXEL_BOLD,
-        color: '#1A1A2E',
-        marginTop: 5,
-        marginBottom: 2
+        color: INK,
+        letterSpacing: 2,
     },
     chartSubtitle: {
-        fontSize: 12,
+        fontSize: 9,
         fontFamily: PIXEL,
-        color: '#6B7280',
-        marginBottom: 10
+        color: INK_MUTED,
+        letterSpacing: 1,
+        marginTop: 6,
     },
     singleEntryHint: {
-        fontSize: 12,
+        fontSize: 10,
         fontFamily: PIXEL,
-        color: '#9CA3AF',
-        fontStyle: 'italic',
-        marginBottom: 8,
+        color: INK_MUTED,
+        letterSpacing: 0.5,
+        marginTop: 12,
         alignSelf: 'flex-start',
-        paddingHorizontal: 10
+        paddingHorizontal: 14,
+        // No italic: Silkscreen ships one upright face per weight, so RN fakes the
+        // slant by shearing the bitmap, which tears the pixel grid.
+    },
+    chart: {
+        marginVertical: 10,
+        paddingRight: 16, // The gutter reserved out of chartWidth above
     },
     legendContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
         gap: 10,
-        marginVertical: 12,
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
+        paddingBottom: 14,
+        paddingTop: 12,
+        borderTopWidth: BORDER_W_INNER,
+        borderTopColor: OUTLINE,
+        borderStyle: 'dotted',
     },
     legendItem: {
         flexDirection: 'row',
@@ -287,35 +344,35 @@ const styles = StyleSheet.create({
     legendSquare: {
         width: 10,
         height: 10,
-        borderRadius: 2,
+        borderWidth: 2,
+        borderColor: OUTLINE,
     },
     legendText: {
-        fontSize: 13,
+        fontSize: 9,
         fontFamily: PIXEL,
-        color: '#4B5563',
+        color: INK_MUTED,
+        letterSpacing: 1,
     },
     emptyCard: {
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 40,
-        marginBottom: 10,
-        marginHorizontal: -15,
-        backgroundColor: '#ffffff',
         minHeight: 220,
     },
     emptyTitle: {
-        fontSize: 17,
+        fontSize: 14,
         fontFamily: PIXEL_BOLD,
-        color: '#374151',
-        marginTop: 12,
-        marginBottom: 8
+        color: INK,
+        letterSpacing: 2,
+        marginTop: 16,
+        marginBottom: 10,
     },
     emptyText: {
-        fontSize: 14,
+        fontSize: 11,
         fontFamily: PIXEL,
-        color: '#9CA3AF',
+        color: INK_MUTED,
         textAlign: 'center',
-        lineHeight: 22,
-        paddingHorizontal: 20
-    }
+        lineHeight: 20,
+        paddingHorizontal: 10,
+    },
 });

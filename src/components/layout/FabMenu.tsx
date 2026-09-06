@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Plus } from 'lucide-react-native';
-import { PIXEL_BOLD } from '../constants/typography';
+import { PIXEL_BOLD } from '../../constants/typography';
 
 export interface FabAction {
     label: string;

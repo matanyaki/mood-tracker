@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Target, Check, Pencil } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 
 // One note per day: the card resets each morning, which is the point of "today's focus".
 const STORAGE_PREFIX = '@mindbright_intentions_';

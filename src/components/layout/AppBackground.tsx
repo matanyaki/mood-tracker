@@ -20,7 +20,7 @@ export default function AppBackground({
 }: AppBackgroundProps) {
     return (
         <ImageBackground
-            source={require('../../assets/images/background.png')}
+            source={require('../../../assets/images/background.png')}
             style={[styles.container, style]}
             resizeMode="cover"
         >

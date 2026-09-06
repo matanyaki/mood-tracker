@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import ScreenContainer from '../ScreenContainer';
+import ScreenContainer from '../layout/ScreenContainer';
 import SkeletonBox from './SkeletonBox';
 
 /**

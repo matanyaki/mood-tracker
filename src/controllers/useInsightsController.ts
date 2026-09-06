@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { JournalEntry, EntryStats } from '@shared/types';
 import { useEntriesQuery } from '../hooks/useEntriesQuery';
 import { useEntryStatsQuery } from '../hooks/useEntryStatsQuery';
@@ -82,15 +82,31 @@ export const useInsightsController = (month?: string) => {
         });
     }, [rawEntries]);
 
+    // Tracked separately from `isFetching`, which is also true for the first load
+    // and for any background refetch. A pull-to-refresh spinner driven by
+    // `isFetching` appears on a screen nobody pulled, and then stays up for as long
+    // as the fetch behind it does -- which is what made a slow load look frozen.
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
     // Pull-to-refresh: force both windows past their staleTime.
-    const refreshStats = useCallback(() => {
-        entriesQuery.refetch();
-        statsQuery.refetch();
+    const refreshStats = useCallback(async () => {
+        setIsRefreshing(true);
+        try {
+            // refetch() resolves with the result rather than rejecting, so a failed
+            // refresh still releases the spinner.
+            await Promise.all([entriesQuery.refetch(), statsQuery.refetch()]);
+        } finally {
+            setIsRefreshing(false);
+        }
     }, [entriesQuery.refetch, statsQuery.refetch]);
 
     return {
         loading: entriesQuery.isLoading || statsQuery.isLoading,
         isFetching: entriesQuery.isFetching || statsQuery.isFetching,
+        isRefreshing,
+        // Surfaced so the screen can say the month failed to load. Without it a
+        // failed fetch is indistinguishable from a month with no entries.
+        error: entriesQuery.error ?? statsQuery.error,
         totalEntries: rawEntries.length,
         entries: rawEntries,
         aggregatedEntries,

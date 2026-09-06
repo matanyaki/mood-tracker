@@ -1,16 +1,18 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { ScreenContainer, AppHeader } from '../components';
-import { InsightsStatsSkeleton } from '../components/Skeleton';
+import { StyleSheet, ScrollView, RefreshControl, Text, Pressable } from 'react-native';
+import { ScreenContainer, AppHeader, PixelCard } from '../components';
+import { InsightsStatsSkeleton } from '../components/skeleton';
 import { useInsightsController } from '../controllers/useInsightsController';
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { getEmotionColor } from '../constants/colors';
+import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
 
-import FilterRow from '../components/Insights/FilterRow';
-import SummaryCards from '../components/Insights/SummaryCards';
-import EmotionBreakdown from '../components/Insights/EmotionBreakdown';
-import EmotionWavesChart from '../components/Insights/EmotionWavesChart';
-import ChartTooltipModal, { TooltipData } from '../components/Insights/ChartTooltipModal';
+import FilterRow from '../components/insights/FilterRow';
+import SummaryCards from '../components/insights/SummaryCards';
+import EmotionBreakdown from '../components/insights/EmotionBreakdown';
+import EmotionWavesChart from '../components/insights/EmotionWavesChart';
+import ChartTooltipModal, { TooltipData } from '../components/insights/ChartTooltipModal';
 
 const getDaysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate();
 
@@ -20,7 +22,10 @@ export default function InsightsScreen({ navigation }: any) {
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
 
   const monthParam = `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
-  const { loading, isFetching, entries, aggregatedEntries, emotionCounts, refreshStats } = useInsightsController(monthParam);
+  const {
+    loading, isFetching, isRefreshing, error,
+    entries, aggregatedEntries, emotionCounts, refreshStats,
+  } = useInsightsController(monthParam);
 
   // Tooltip Modal State
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -90,7 +95,15 @@ export default function InsightsScreen({ navigation }: any) {
 
     // Counts come from GET /api/entries/stats — this only shapes them for display
     // (label, color, share of the month). Nothing is counted on device.
-    const totalEmotions = Object.values(emotionCounts).reduce((sum, n) => sum + n, 0);
+    //
+    // Summed over the known taxonomy rather than over every key the server sent:
+    // documents written before the scale rework have no emotion id, so they land
+    // under an `undefined` key that no row ever displays. Left in the total it
+    // would shrink every percentage on the card to pay for a row nobody can see.
+    const totalEmotions = EMOTIONS_CONFIG.reduce(
+      (sum, emotion) => sum + (emotionCounts[emotion.id] || 0),
+      0
+    );
 
     const stats = EMOTIONS_CONFIG.map(emotion => {
       const count = emotionCounts[emotion.id] || 0;
@@ -172,15 +185,21 @@ export default function InsightsScreen({ navigation }: any) {
   }, [chartData]);
 
   return (
-    <ScreenContainer>
+    <ScreenContainer variant="calm">
+      {/* AppHeader is shared with four other screens, so the pixel treatment is
+          passed in here rather than baked into the component. */}
       <AppHeader
         title="Insights"
-        subtitle="Track Your Emotion Waves"
+        subtitle="Track your emotion waves"
+        titleStyle={styles.headerTitle}
+        subtitleStyle={styles.headerSubtitle}
       />
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refreshStats} />}
+        // `isRefreshing`, not `isFetching`: this spinner belongs to a pull the user
+        // actually made, not to every load the screen does on its own.
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refreshStats} />}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -194,6 +213,21 @@ export default function InsightsScreen({ navigation }: any) {
 
         {loading ? (
           <InsightsStatsSkeleton />
+        ) : error ? (
+          // A failed month used to render as an empty one -- same blank chart, same
+          // zero counts, no way to tell "nothing happened" from "nothing loaded".
+          <PixelCard padding={24} style={styles.errorCard}>
+            <Text style={styles.errorTitle}>COULD NOT LOAD</Text>
+            <Text style={styles.errorText}>
+              {(error as Error)?.message ?? 'Something went wrong.'}
+            </Text>
+            <Pressable
+              onPress={refreshStats}
+              style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+            >
+              <Text style={styles.retryText}>[ TRY AGAIN ]</Text>
+            </Pressable>
+          </PixelCard>
         ) : (
           <>
             <EmotionWavesChart
@@ -222,8 +256,55 @@ export default function InsightsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  headerTitle: {
+    fontSize: 18,
+    letterSpacing: 2,
+    color: INK,
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    letterSpacing: 1,
+    color: INK_MUTED,
+  },
   content: {
     padding: 20,
+    paddingTop: 10,
     paddingBottom: 40,
-  }
+  },
+  errorCard: {
+    alignItems: 'center',
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontFamily: PIXEL_BOLD,
+    color: INK,
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  errorText: {
+    fontSize: 11,
+    fontFamily: PIXEL,
+    color: INK_MUTED,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: PAPER,
+    borderWidth: BORDER_W_INNER,
+    borderColor: OUTLINE,
+  },
+  retryButtonPressed: {
+    // Sinks toward its own corner, the way every other pixel control answers a press.
+    transform: [{ translateX: 1 }, { translateY: 1 }],
+    backgroundColor: '#EDE9E0',
+  },
+  retryText: {
+    fontSize: 11,
+    fontFamily: PIXEL_BOLD,
+    color: INK,
+    letterSpacing: 1,
+  },
 });

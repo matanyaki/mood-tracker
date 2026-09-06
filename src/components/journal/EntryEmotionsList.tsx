@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { MOOD_IMAGES } from '../constants/images';
-import { getEmotionColor } from '../constants/colors';
-import { getEmotionImageKey, type EmotionId } from '../../shared/types/emotions';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, BORDER_W_INNER } from '../constants/pixel';
+import { MOOD_IMAGES } from '../../constants/images';
+import { getEmotionColor } from '../../constants/colors';
+import { getEmotionImageKey, type EmotionId } from '../../../shared/types/emotions';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { OUTLINE, PAPER, BORDER_W_INNER } from '../../constants/pixel';
 
 interface Emotion {
     id: EmotionId;

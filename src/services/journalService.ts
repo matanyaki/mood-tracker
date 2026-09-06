@@ -1,11 +1,53 @@
 // src/services/journalService.ts
-import { z } from 'zod';
 import type { JournalEntry, EntryStats } from '@shared/types';
 import { JournalEntrySchema, EntryStatsSchema } from '../../shared/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../config/api';
 import { auth } from '../config/firebase';
 import { GUEST_STORAGE_KEY , GUEST_ID } from '../constants/variables';
+
+/**
+ * Validate a month of entries one document at a time.
+ *
+ * This used to be `z.array(JournalEntrySchema).parse(result)`, which is
+ * all-or-nothing: a single unreadable document threw, and the caller lost the
+ * whole month. Documents written before the scale rework store their emotions as
+ * `{ name, path, note }` — no `id`, no `label`, no `scale` — so every one of them
+ * fails today's schema, and any month containing one returned nothing.
+ *
+ * The failure was invisible in the worst possible way: an empty month parses
+ * cleanly, so the screen only broke once there was something to show.
+ *
+ * A document we cannot read is now dropped and logged. Losing one row is
+ * recoverable; losing the month is not.
+ */
+const parseEntries = (raw: unknown): JournalEntry[] => {
+  if (!Array.isArray(raw)) {
+    throw new Error('GET /api/entries did not return a list of entries.');
+  }
+
+  const entries: JournalEntry[] = [];
+
+  raw.forEach((item, index) => {
+    const parsed = JournalEntrySchema.safeParse(item);
+
+    if (parsed.success) {
+      entries.push(parsed.data);
+      return;
+    }
+
+    const reason = parsed.error.issues
+      .map(issue => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+      .join(' | ');
+
+    console.warn(
+      `[JournalService] Skipping unreadable entry ${(item as any)?.id ?? `#${index}`} ` +
+      `(${(item as any)?.date ?? 'no date'}): ${reason}`
+    );
+  });
+
+  return entries;
+};
 
 export const JournalService = {
 
@@ -84,7 +126,7 @@ export const JournalService = {
         const result = await api.get('/api/entries', {
           params: month ? { month } : undefined,
         });
-        return z.array(JournalEntrySchema).parse(result);
+        return parseEntries(result);
       }
     } catch (error) {
       console.error("Error [getUserEntries]:", error);

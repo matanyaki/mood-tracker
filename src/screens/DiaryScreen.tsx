@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { Calendar } from 'react-native-calendars';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, EmptyState, DayEntryModal } from '../components';
-import { CalendarSkeleton } from '../components/Skeleton';
+import { CalendarSkeleton } from '../components/skeleton';
 import { useDiaryController } from '../controllers/useDiaryController';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 import {

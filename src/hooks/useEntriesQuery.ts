@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { JournalEntry } from '@shared/types';
 import { JournalService } from '../services/journalService';
-import { STALE_TIME_MS, GC_TIME_MS, actingUserId } from './queryConfig';
+import { STALE_TIME_MS, GC_TIME_MS, actingUserId, retryTransportFailures } from './queryConfig';
 
 /**
  * Fetches GET /api/entries?month=YYYY-MM
@@ -17,5 +17,6 @@ export function useEntriesQuery(month?: string) {
         enabled: !!month,
         staleTime: STALE_TIME_MS,
         gcTime: GC_TIME_MS,
+        retry: retryTransportFailures,
     });
 }

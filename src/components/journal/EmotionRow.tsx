@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
-import { getEmotionColor } from '../constants/colors';
-import { MOOD_IMAGES } from '../constants/images';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { getEmotionColor } from '../../constants/colors';
+import { MOOD_IMAGES } from '../../constants/images';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import {
     OUTLINE, PAPER, INK, INK_MUTED,
     SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W,
-} from '../constants/pixel';
+} from '../../constants/pixel';
 
 export interface EmotionRowProps {
     id: string;

@@ -63,19 +63,49 @@ const api = axios.create({
 });
 
 /**
- * Request interceptor — attach a fresh Firebase ID token when a user is signed in.
- * Guests (no currentUser) send the request without an Authorization header.
- * A token-refresh failure must never block the request.
+ * Request interceptor — attach the caller's Firebase ID token.
+ *
+ * Two rules here are load-bearing:
+ *
+ * 1. Wait for `authStateReady()`. Firebase restores the persisted session from
+ *    AsyncStorage asynchronously, so on a cold start `auth.currentUser` is null for
+ *    a moment even though the user is signed in. A request that slips through that
+ *    window used to go out with no Authorization header.
+ *
+ * 2. Never send a signed-in user's request unauthenticated. The old code caught
+ *    token failures and continued without a header — the backend then answered 401
+ *    and the response interceptor relabelled it "Session expired", which blamed the
+ *    user's session for what was actually a token-fetch failure on this device.
+ *    Failing loudly here keeps the real cause visible.
  */
 api.interceptors.request.use(async (config) => {
-  try {
-    const token = await auth.currentUser?.getIdToken(true);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  } catch (error) {
-    console.log('[API] Could not attach auth token, continuing without it:', error);
+  // authStateReady exists on the RN auth instance; `auth` is loosely typed.
+  if (typeof auth.authStateReady === 'function') {
+    await auth.authStateReady();
   }
+
+  const user = auth.currentUser;
+  if (!user) {
+    // Genuinely signed out (guest mode) — the backend decides whether that's allowed.
+    return config;
+  }
+
+  try {
+    // Deliberately NOT forceRefresh. The SDK already refreshes a token within five
+    // minutes of expiry, so forcing it put a securetoken.googleapis.com round-trip
+    // in front of every single call and exposed each one to Google's refresh
+    // throttling — which bites hardest right after login, when the profile sync,
+    // the guest-data migration loop and every screen query fire at once.
+    const token = await user.getIdToken();
+    config.headers.Authorization = `Bearer ${token}`;
+  } catch (error: any) {
+    throw new ApiError(
+      `Could not get an auth token: ${error?.code ?? error?.message ?? error}`,
+      0,
+      error?.code
+    );
+  }
+
   return config;
 });
 
@@ -86,14 +116,38 @@ api.interceptors.request.use(async (config) => {
  */
 api.interceptors.response.use(
   (res) => res.data?.data,
-  (err) => {
-    let message = err.response?.data?.error ?? 'Network error';
+  async (err) => {
+    // Errors raised by the request interceptor already carry a precise message and
+    // never reached the network — don't remap them into a generic transport error.
+    if (err instanceof ApiError) {
+      return Promise.reject(err);
+    }
+
     const status = err.response?.status ?? 0;
+    const config = err.config;
+
+    // A 401 on a request we *did* authenticate means the token was rejected, not
+    // missing — a cached token can be stale after a password change or a revoke.
+    // Force one refresh and retry once before telling the user to log in again.
+    if (status === 401 && config && !config._retriedAfterRefresh && auth.currentUser) {
+      config._retriedAfterRefresh = true;
+      try {
+        await auth.currentUser.getIdToken(true);
+        return api.request(config);
+      } catch {
+        // Refresh failed — fall through to the normal error mapping below.
+      }
+    }
+
+    let message = err.response?.data?.error ?? 'Network error';
 
     if (err.request && !err.response) {
       // Request was sent but no response came back (network down, timeout, etc.)
       message = 'No connection. Check your network.';
     } else if (status === 401) {
+      // Keep the backend's own wording in the log — "No token provided" and
+      // "Invalid token" are very different bugs and the user-facing copy hides that.
+      console.warn('[API] 401 from backend:', err.response?.data?.error, err.config?.url);
       message = 'Session expired. Please log in again.';
     } else if (status === 403) {
       message = "You don't have permission to do that.";

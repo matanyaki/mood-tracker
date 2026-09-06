@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, TextInput, Image } from 'react-native';
-import { MOOD_IMAGES } from '../constants/images';
-import { getEmotionImageKey, type EmotionId } from '../../shared/types/emotions';
-import { getEmotionColor } from '../constants/colors';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { MOOD_IMAGES } from '../../constants/images';
+import { getEmotionImageKey, type EmotionId } from '../../../shared/types/emotions';
+import { getEmotionColor } from '../../constants/colors';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import {
     OUTLINE, PAPER, INK,
     SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W,
-} from '../constants/pixel';
+} from '../../constants/pixel';
 
 interface ReflectionCardProps {
     label: string;

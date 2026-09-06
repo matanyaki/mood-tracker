@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, View, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
-import { PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, SHADOW_OFFSET, BORDER_W } from '../constants/pixel';
+import { PIXEL_BOLD } from '../../constants/typography';
+import { OUTLINE, SHADOW_OFFSET, BORDER_W } from '../../constants/pixel';
 
 interface PrimaryButtonProps {
     onPress: () => void;

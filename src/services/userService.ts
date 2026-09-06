@@ -10,8 +10,11 @@ export const UserService = {
     syncUser: async (user: any) => {
         try {
             if (!user || !user.uid) return;
-            // The request interceptor attaches a fresh Firebase ID token automatically.
-            await api.post('/api/users/sync', { user });
+            // The request interceptor attaches the Firebase ID token automatically, and
+            // the backend builds the profile from the uid on that verified token — it
+            // ignores the body entirely. Send nothing: a Firebase User serialises its
+            // stsTokenManager, which would put the refresh token in a plaintext HTTP body.
+            await api.post('/api/users/sync');
         } catch (error) {
             console.error("Error syncing user profile:", error);
             // We swallow the error so it doesn't block the app flow/migration

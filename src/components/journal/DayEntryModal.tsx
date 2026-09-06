@@ -4,8 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { X, SmilePlus, Edit, Sparkles } from 'lucide-react-native';
 import EntryEmotionsList from './EntryEmotionsList';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER } from '../constants/pixel';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER } from '../../constants/pixel';
 
 interface DayEntryModalProps {
     visible: boolean;

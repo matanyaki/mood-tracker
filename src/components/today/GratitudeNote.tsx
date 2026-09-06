@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Lightbulb, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { PIXEL, PIXEL_BOLD, PIXEL_BULLET } from '../constants/typography';
+import { PIXEL, PIXEL_BOLD, PIXEL_BULLET } from '../../constants/typography';
 
 // Gratitude prompts for the suggestion feature
 const GRATITUDE_PROMPTS = [

@@ -1,19 +1,40 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import {
+    View, Text, StyleSheet, Pressable, TextInput,
+    KeyboardAvoidingView, Platform, ScrollView, Alert,
+} from 'react-native';
 import { LogOut, User, Shield, ChevronRight, CloudOff } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, Card } from '../components';
-import { ProfileScreenSkeleton, SkeletonBox } from '../components/Skeleton';
+import { ScreenContainer, AppHeader, PixelCard, PrimaryButton } from '../components';
+import { ProfileScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
 
-const MenuRow = ({ icon: Icon, label, color = '#4A4A4A', onPress }: any) => (
-    <TouchableOpacity style={styles.menuRow} onPress={onPress}>
-        <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
-            <Icon size={20} color={color} />
+const INDIGO = '#4F46E5';
+const DANGER = '#EF4444';
+
+/**
+ * One row of a settings card.
+ *
+ * The icon tints are flat opaque swatches rather than the `color + '15'` the row
+ * used to build: an eight-digit hex is a translucent fill, and it takes its
+ * lightness from whatever happens to be behind it.
+ */
+const MenuRow = ({ icon: Icon, label, color = INK, tint, onPress, isLast = false }: any) => (
+    <Pressable
+        style={({ pressed }) => [
+            styles.menuRow,
+            !isLast && styles.menuRowDivided,
+            pressed && styles.menuRowPressed,
+        ]}
+        onPress={onPress}
+    >
+        <View style={[styles.iconBox, { backgroundColor: tint }]}>
+            <Icon size={18} color={color} strokeWidth={2.5} />
         </View>
         <Text style={[styles.menuLabel, { color }]}>{label}</Text>
-        <ChevronRight size={20} color="#9CA3AF" />
-    </TouchableOpacity>
+        <ChevronRight size={16} color={INK_MUTED} strokeWidth={3} />
+    </Pressable>
 );
 
 export default function ProfileScreen() {
@@ -84,80 +105,109 @@ export default function ProfileScreen() {
     // --- RENDER GUEST / LOGIN VIEW ---
     if (!user) {
         return (
-            <ScreenContainer>
-                <AppHeader title="Profile" />
+            <ScreenContainer variant="calm">
+                {/* AppHeader is shared with four other screens, so the pixel
+                    treatment is passed in here rather than baked into it. */}
+                <AppHeader title="Profile" titleStyle={styles.headerTitle} />
+
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={{ flex: 1 }}
                 >
-                    <ScrollView contentContainerStyle={styles.scrollContent}>
-
+                    <ScrollView
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
                         {/* Guest Banner */}
-                        <Card padding={16} style={[styles.guestCard, { marginBottom: 20 }]}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                <CloudOff size={24} color="#EA580C" />
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{ color: '#9A3412', fontSize: 16, fontFamily: PIXEL_BOLD }}>Guest Mode</Text>
-                                    <Text style={{ fontSize: 14, fontFamily: PIXEL, color: '#9A3412', marginTop: 4 }}>
-                                        Check-ins are saved locally. Sign up to backup your history to the cloud.
+                        <PixelCard
+                            padding={16}
+                            accentColor="#EA580C"
+                            style={styles.guestCard}
+                            wrapperStyle={styles.guestCardWrapper}
+                        >
+                            <View style={styles.guestRow}>
+                                <View style={styles.guestIconBox}>
+                                    <CloudOff size={18} color="#EA580C" strokeWidth={2.5} />
+                                </View>
+                                <View style={styles.guestText}>
+                                    <Text style={styles.guestTitle}>GUEST MODE</Text>
+                                    <Text style={styles.guestBody}>
+                                        Check-ins are saved on this device only. Sign up to back
+                                        your history up to the cloud.
                                     </Text>
                                 </View>
                             </View>
-                        </Card>
+                        </PixelCard>
 
                         {/* Auth Form */}
-                        <Card padding={24} style={styles.authCard}>
-                            <Text style={styles.authTitle}>
-                                {isSignUp ? 'Create Account' : 'Log In'}
-                            </Text>
-                            <Text style={styles.authSubtitle}>
-                                {isSignUp
-                                    ? 'Sync your local data to the cloud.'
-                                    : 'Access your history across devices.'}
-                            </Text>
+                        <PixelCard padding={20} wrapperStyle={styles.authCardWrapper}>
+                            <View style={styles.authHeader}>
+                                <Text style={styles.authTitle}>
+                                    {isSignUp ? 'CREATE ACCOUNT' : 'LOG IN'}
+                                </Text>
+                                <Text style={styles.authSubtitle}>
+                                    {isSignUp
+                                        ? 'Sync your local data to the cloud.'
+                                        : 'Access your history across devices.'}
+                                </Text>
+                            </View>
 
+                            <Text style={styles.fieldLabel}>[ EMAIL ]</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Email"
+                                placeholder="you@example.com"
                                 value={email}
                                 onChangeText={setEmail}
                                 autoCapitalize="none"
+                                autoCorrect={false}
                                 keyboardType="email-address"
-                                placeholderTextColor="#9CA3AF"
+                                placeholderTextColor="#A8B0BD"
+                                underlineColorAndroid="transparent"
                             />
 
+                            <Text style={styles.fieldLabel}>[ PASSWORD ]</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Password"
+                                placeholder="••••••••"
                                 value={password}
                                 onChangeText={setPassword}
                                 secureTextEntry
-                                placeholderTextColor="#9CA3AF"
+                                placeholderTextColor="#A8B0BD"
+                                underlineColorAndroid="transparent"
                             />
 
-                            {authLoading ? (
-                                <SkeletonBox height={56} borderRadius={12} style={{ marginTop: 8 }} />
-                            ) : (
-                                <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
-                                    <Text style={styles.authButtonText}>
-                                        {isSignUp ? 'Sign Up & Sync' : 'Log In'}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
+                            <View style={styles.authButtonRow}>
+                                <PrimaryButton
+                                    label={
+                                        authLoading
+                                            ? 'Working...'
+                                            : isSignUp ? 'Sign Up & Sync' : 'Log In'
+                                    }
+                                    onPress={handleAuth}
+                                    loading={authLoading}
+                                    disabled={authLoading}
+                                    // Navy face; the button draws its own hard shadow.
+                                    style={{ backgroundColor: INK }}
+                                />
+                            </View>
 
-                            <TouchableOpacity
-                                style={styles.switchButton}
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.switchButton,
+                                    pressed && styles.switchButtonPressed,
+                                ]}
                                 onPress={() => setIsSignUp(!isSignUp)}
                             >
                                 <Text style={styles.switchText}>
                                     {isSignUp
-                                        ? 'Already have an account? Log in'
-                                        : "Don't have an account? Sign up"}
+                                        ? '[ ALREADY REGISTERED? LOG IN ]'
+                                        : '[ NO ACCOUNT? SIGN UP ]'}
                                 </Text>
-                            </TouchableOpacity>
-                        </Card>
+                            </Pressable>
+                        </PixelCard>
 
-                        <Text style={styles.versionText}>Version 1.0.0 (Guest)</Text>
+                        <Text style={styles.versionText}>V1.0.0 [ GUEST ]</Text>
                     </ScrollView>
                 </KeyboardAvoidingView>
             </ScreenContainer>
@@ -166,89 +216,300 @@ export default function ProfileScreen() {
 
     // --- RENDER AUTHENTICATED VIEW ---
     return (
-        <ScreenContainer>
-            <AppHeader title="Profile" />
+        <ScreenContainer variant="calm">
+            <AppHeader title="Profile" titleStyle={styles.headerTitle} />
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <ScrollView
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* User Card */}
-                <Card padding={20} style={styles.userCard}>
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>
-                            {user?.email?.charAt(0).toUpperCase() || 'U'}
-                        </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.userName}>Hello!</Text>
-                        <Text style={styles.userEmail}>{user?.email}</Text>
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>Synced</Text>
+                <PixelCard padding={18} accentColor={INDIGO} wrapperStyle={styles.userCardWrapper}>
+                    <View style={styles.userRow}>
+                        {/* Square, outlined: the 30px radius this carried was the only
+                            circle left anywhere on the screen. */}
+                        <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>
+                                {user?.email?.charAt(0).toUpperCase() || 'U'}
+                            </Text>
+                        </View>
+
+                        <View style={styles.userText}>
+                            <Text style={styles.userName}>HELLO!</Text>
+                            <Text style={styles.userEmail} numberOfLines={1}>
+                                {user?.email}
+                            </Text>
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>SYNCED</Text>
+                            </View>
                         </View>
                     </View>
-                </Card>
+                </PixelCard>
 
                 {/* Settings Section */}
-                <Text style={styles.sectionTitle}>Account</Text>
-                <Card padding={0} style={styles.menuCard}>
+                <Text style={styles.sectionTitle}>[ ACCOUNT ]</Text>
+                <PixelCard padding={0} wrapperStyle={styles.menuCardWrapper}>
                     <MenuRow
                         icon={User}
-                        label="Edit Profile"
+                        label="EDIT PROFILE"
+                        color={INDIGO}
+                        tint="#E0E7FF"
                         onPress={handleComingSoon}
                     />
-                    <View style={styles.divider} />
                     <MenuRow
                         icon={Shield}
-                        label="Privacy & Security"
+                        label="PRIVACY & SECURITY"
+                        color="#166534"
+                        tint="#DCFCE7"
                         onPress={handleComingSoon}
+                        isLast
                     />
-                </Card>
+                </PixelCard>
 
                 {/* Danger Zone */}
-                <Text style={styles.sectionTitle}>Actions</Text>
-                <Card padding={0} style={styles.menuCard}>
+                <Text style={styles.sectionTitle}>[ ACTIONS ]</Text>
+                <PixelCard padding={0} wrapperStyle={styles.menuCardWrapper}>
                     <MenuRow
                         icon={LogOut}
-                        label="Log Out"
-                        color="#EF4444"
+                        label="LOG OUT"
+                        color={DANGER}
+                        tint="#FEE2E2"
                         onPress={handleLogout}
+                        isLast
                     />
-                </Card>
+                </PixelCard>
 
-                <Text style={styles.versionText}>Version 1.0.0 (Pro)</Text>
+                <Text style={styles.versionText}>V1.0.0 [ PRO ]</Text>
             </ScrollView>
         </ScreenContainer>
     );
 }
 
 const styles = StyleSheet.create({
-    content: { padding: 20 },
-    scrollContent: { padding: 20 },
+    headerTitle: {
+        fontSize: 18,
+        letterSpacing: 2,
+        color: INK,
+    },
+    content: {
+        padding: 20,
+        paddingTop: 10,
+        paddingBottom: 40,
+    },
+    scrollContent: {
+        padding: 20,
+        paddingTop: 10,
+        paddingBottom: 40,
+    },
 
-    // Guest / Auth Styles
-    guestCard: { backgroundColor: '#FFF7ED', borderColor: '#FFEDD5', borderWidth: 1 },
-    authCard: { width: '100%', marginBottom: 20 },
-    authTitle: { fontSize: 24, fontFamily: PIXEL_BOLD, color: '#1A1A2E', marginBottom: 8, textAlign: 'center' },
-    authSubtitle: { fontSize: 14, fontFamily: PIXEL, color: '#6B7280', marginBottom: 24, textAlign: 'center' },
-    input: { backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, marginBottom: 16, fontSize: 16, fontFamily: PIXEL, borderWidth: 1, borderColor: '#E5E7EB', color: '#1F2937' },
-    authButton: { backgroundColor: '#4F46E5', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
-    authButtonText: { color: '#fff', fontSize: 16, fontFamily: PIXEL_BOLD },
-    switchButton: { marginTop: 20, alignItems: 'center' },
-    switchText: { color: '#4F46E5', fontSize: 14, fontFamily: PIXEL },
+    // --- Guest banner ---
+    guestCardWrapper: {
+        marginBottom: 20,
+    },
+    guestCard: {
+        // Warm paper, so the banner reads as a notice without needing a second
+        // outline weight to separate it from the cards below.
+        backgroundColor: '#FFF7ED',
+    },
+    guestRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
+    },
+    guestIconBox: {
+        width: 32,
+        height: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFEDD5',
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+    },
+    guestText: {
+        flex: 1,
+    },
+    guestTitle: {
+        fontSize: 12,
+        fontFamily: PIXEL_BOLD,
+        color: '#9A3412',
+        letterSpacing: 2,
+        marginBottom: 6,
+    },
+    guestBody: {
+        fontSize: 10,
+        fontFamily: PIXEL,
+        color: '#9A3412',
+        lineHeight: 18,
+    },
 
-    // User Card
-    userCard: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 25 },
-    avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#E0E7FF', alignItems: 'center', justifyContent: 'center' },
-    avatarText: { fontSize: 24, fontFamily: PIXEL_BOLD, color: '#4F46E5' },
-    userName: { fontSize: 20, fontFamily: PIXEL_BOLD, color: '#1A1A2E' },
-    userEmail: { fontSize: 14, fontFamily: PIXEL, color: '#4A4A4A', marginBottom: 4 },
-    badge: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, alignSelf: 'flex-start' },
-    badgeText: { color: '#166534', fontSize: 10, fontFamily: PIXEL_BOLD, textTransform: 'uppercase' },
+    // --- Auth form ---
+    authCardWrapper: {
+        marginBottom: 20,
+    },
+    authHeader: {
+        alignItems: 'center',
+        paddingBottom: 14,
+        marginBottom: 18,
+        borderBottomWidth: BORDER_W_INNER,
+        borderBottomColor: OUTLINE,
+        borderStyle: 'dotted',
+    },
+    authTitle: {
+        // Silkscreen runs ~0.76em per character bold: "CREATE ACCOUNT" is 14 of
+        // them, which is 255px at the 24 this used to be, against ~260 of room.
+        fontSize: 14,
+        fontFamily: PIXEL_BOLD,
+        color: INK,
+        letterSpacing: 2,
+        marginBottom: 8,
+    },
+    authSubtitle: {
+        fontSize: 10,
+        fontFamily: PIXEL,
+        color: INK_MUTED,
+        letterSpacing: 0.5,
+        textAlign: 'center',
+    },
+    fieldLabel: {
+        fontSize: 9,
+        fontFamily: PIXEL_BOLD,
+        color: INK_MUTED,
+        letterSpacing: 2,
+        marginBottom: 6,
+    },
+    input: {
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        marginBottom: 16,
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+        fontSize: 13,
+        fontFamily: PIXEL,
+        color: INK,
+        includeFontPadding: false, // Android: keep the text off the top border
+    },
+    authButtonRow: {
+        marginTop: 4,
+    },
+    switchButton: {
+        marginTop: 16,
+        alignItems: 'center',
+        paddingVertical: 4,
+    },
+    switchButtonPressed: {
+        // Sinks toward its own corner, the way every pixel control answers a press.
+        transform: [{ translateX: 1 }, { translateY: 1 }],
+    },
+    switchText: {
+        fontSize: 10,
+        fontFamily: PIXEL_BOLD,
+        color: INDIGO,
+        letterSpacing: 1,
+    },
 
-    // Shared
-    sectionTitle: { fontSize: 18, fontFamily: PIXEL_BOLD, color: '#1A1A2E', marginBottom: 12, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-    menuCard: { overflow: 'hidden', marginBottom: 25 },
-    menuRow: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff' },
-    iconBox: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 15 },
-    menuLabel: { flex: 1, fontSize: 16, fontFamily: PIXEL },
-    divider: { height: 1, backgroundColor: '#F3F4F6', marginLeft: 67 },
-    versionText: { textAlign: 'center', color: '#9CA3AF', fontSize: 12, fontFamily: PIXEL, marginTop: 10 }
+    // --- User card ---
+    userCardWrapper: {
+        marginBottom: 24,
+    },
+    userRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+    },
+    avatar: {
+        width: 54,
+        height: 54,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#E0E7FF',
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+    },
+    avatarText: {
+        fontSize: 24,
+        fontFamily: PIXEL_BOLD,
+        color: INDIGO,
+    },
+    userText: {
+        // Without this the column sizes to its text, and a long address widens the
+        // row until the card can no longer hold it.
+        flex: 1,
+    },
+    userName: {
+        fontSize: 14,
+        fontFamily: PIXEL_BOLD,
+        color: INK,
+        letterSpacing: 2,
+    },
+    userEmail: {
+        fontSize: 10,
+        fontFamily: PIXEL,
+        color: INK_MUTED,
+        marginTop: 6,
+        marginBottom: 8,
+    },
+    badge: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        backgroundColor: '#DCFCE7',
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+    },
+    badgeText: {
+        fontSize: 9,
+        fontFamily: PIXEL_BOLD,
+        color: '#166534',
+        letterSpacing: 1,
+    },
+
+    // --- Menu cards ---
+    sectionTitle: {
+        fontSize: 10,
+        fontFamily: PIXEL_BOLD,
+        color: INK_MUTED,
+        letterSpacing: 2,
+        marginBottom: 10,
+    },
+    menuCardWrapper: {
+        marginBottom: 24,
+    },
+    menuRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 14,
+    },
+    menuRowDivided: {
+        borderBottomWidth: BORDER_W_INNER,
+        borderBottomColor: OUTLINE,
+        borderStyle: 'dotted',
+    },
+    menuRowPressed: {
+        backgroundColor: '#EDE9E0',
+    },
+    iconBox: {
+        width: 32,
+        height: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+    },
+    menuLabel: {
+        flex: 1,
+        fontSize: 11,
+        fontFamily: PIXEL_BOLD,
+        letterSpacing: 1,
+    },
+
+    versionText: {
+        textAlign: 'center',
+        fontSize: 9,
+        fontFamily: PIXEL,
+        color: INK_MUTED,
+        letterSpacing: 1,
+        marginTop: 4,
+    },
 });

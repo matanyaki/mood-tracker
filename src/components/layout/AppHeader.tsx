@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 
 interface AppHeaderProps {
   title: string;

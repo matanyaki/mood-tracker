@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, useColorScheme, Image } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
-import Card from '../../components/Card';
+import PixelCard from '../ui/PixelCard';
 import { EMOTIONS_CONFIG } from '../../constants/emotions';
 import { MOOD_IMAGES } from '../../constants/images';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
 
 export interface EmotionStat {
     label: string;
@@ -17,11 +18,19 @@ interface EmotionBreakdownProps {
     stats: EmotionStat[];
 }
 
+/** Gutters drawn over the bar, which is what gives it its segmented meter look. */
+const BAR_SEGMENTS = 10;
+const SEGMENT_GUTTERS = Array.from({ length: BAR_SEGMENTS - 1 }, (_, i) => i);
+
 /**
- * Helper to compute an opacity-reduced background color and a heavily darkened text
- * color from the base emotion color hex for contrast and readability.
+ * Flat, opaque tint of the emotion colour for the count badge, plus a darkened
+ * ink for the text on it.
+ *
+ * The tint is mixed toward paper rather than laid down as `rgba(..., 0.15)`:
+ * a translucent fill borrows whatever is behind it, and a pixel surface wants a
+ * colour that is the same block wherever it lands.
  */
-const getContrastColorStyle = (hexColor: string) => {
+const getBadgeColors = (hexColor: string) => {
     let hex = hexColor.replace('#', '');
     if (hex.length === 3) {
         hex = hex.split('').map(c => c + c).join('');
@@ -30,22 +39,19 @@ const getContrastColorStyle = (hexColor: string) => {
     const g = parseInt(hex.substring(2, 4), 16) || 0;
     const b = parseInt(hex.substring(4, 6), 16) || 0;
 
-    // 15% opacity background
-    const bg = `rgba(${r}, ${g}, ${b}, 0.15)`;
+    const mix = (channel: number) => Math.round(channel * 0.18 + 255 * 0.82);
+    const bg = `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 
-    // Heavily darkened text color (multiply RGB channels by 0.45 for contrast)
-    const darkR = Math.round(r * 0.45);
-    const darkG = Math.round(g * 0.45);
-    const darkB = Math.round(b * 0.45);
-    const text = `rgb(${darkR}, ${darkG}, ${darkB})`;
+    // Heavily darkened text colour (multiply RGB channels by 0.45 for contrast)
+    const text = `rgb(${Math.round(r * 0.45)}, ${Math.round(g * 0.45)}, ${Math.round(b * 0.45)})`;
 
     return { bg, text };
 };
 
 /**
- * Individual emotion row displaying text, count, percentage, and an animated progress bar.
+ * Individual emotion row displaying text, count, percentage, and an animated meter.
  */
-const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: React.Key }) => {
+const EmotionRowItem = ({ item }: { item: EmotionStat; key?: React.Key }) => {
     const reduceMotion = useReducedMotion();
 
     // The fill is laid out at full width and squashed horizontally, so the animated
@@ -84,7 +90,7 @@ const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: 
         (e) => e.label === item.label
     )!.imageKey;
 
-    const { bg: badgeBg, text: badgeText } = getContrastColorStyle(item.color);
+    const { bg: badgeBg, text: badgeText } = getBadgeColors(item.color);
 
     return (
         <View style={styles.rowContainer}>
@@ -97,26 +103,24 @@ const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: 
                         style={styles.emotionImage}
                         resizeMode="contain"
                     />
-                    <Text style={[styles.labelText, { color: theme.primaryText }]}>
-                        {item.label}
-                    </Text>
+                    <Text style={styles.labelText}>{item.label.toUpperCase()}</Text>
                 </View>
 
                 {/* Right Side: Percentage and Occurrence Badge */}
                 <View style={styles.rightGroup}>
-                    <Text style={[styles.percentageText, { color: theme.secondaryText }]}>
+                    <Text style={styles.percentageText}>
                         {Math.round(item.percentage)}%
                     </Text>
-                    <View style={[styles.badgePill, { backgroundColor: badgeBg }]}>
+                    <View style={[styles.badge, { backgroundColor: badgeBg }]}>
                         <Text style={[styles.badgeText, { color: badgeText }]}>
-                            {item.count}×
+                            {item.count}x
                         </Text>
                     </View>
                 </View>
             </View>
 
-            {/* Bottom Row: Horizontal Progress Bar */}
-            <View style={[styles.progressBarTrack, { backgroundColor: theme.trackBg }]}>
+            {/* Bottom Row: Segmented meter */}
+            <View style={styles.progressBarTrack}>
                 <Animated.View
                     style={[
                         styles.progressBarFill,
@@ -127,101 +131,82 @@ const EmotionRowItem = ({ item, theme }: { item: EmotionStat; theme: any; key?: 
                         },
                     ]}
                 />
+
+                {/* Gutters sit ON TOP of the fill rather than dividing it, so the
+                    animation stays one continuous scaleX on the native driver
+                    while the bar still reads as discrete cells. */}
+                <View style={styles.segmentOverlay} pointerEvents="none">
+                    {SEGMENT_GUTTERS.map(i => (
+                        <View key={i} style={styles.segmentGutter} />
+                    ))}
+                    <View style={styles.segmentCell} />
+                </View>
             </View>
         </View>
     );
 };
 
 export default function EmotionBreakdown({ stats = [] }: EmotionBreakdownProps) {
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    // No light/dark theming here any more: the pixel palette is a fixed set of
+    // inks that every other surface in the app draws with, and a card that
+    // swapped itself to navy would be the only one doing it.
 
-    // Theme values for seamless light/dark mode support
-    const theme = {
-        cardBg: isDark ? '#1E293B' : '#FFFFFF',
-        cardBorder: isDark ? '#334155' : '#E2E8F0',
-        primaryText: isDark ? '#F1F5F9' : '#0F172A',
-        secondaryText: isDark ? '#94A3B8' : '#64748B',
-        tertiaryText: isDark ? '#64748B' : '#94A3B8',
-        trackBg: isDark ? '#334155' : '#E2E8F0',
-    };
-
-    // 1. Data Filtering: Skip rows where count <= 0
+    // Data filtering: skip rows where count <= 0
     const activeStats = (stats || []).filter(item => item && item.count > 0);
     const hasActiveEmotions = activeStats.length > 0;
 
     return (
-        <Card
-            padding={20}
-            borderRadius={24}
-            elevation={0}
-            style={[
-                styles.cardContainer,
-                {
-                    backgroundColor: theme.cardBg,
-                    borderColor: theme.cardBorder,
-                }
-            ]}
-            children={(
-                <>
-                    {/* Card Header */}
-                    <View style={styles.cardHeader}>
-                        <Text style={[styles.cardTitle, { color: theme.primaryText }]}>
-                            Emotion breakdown
-                        </Text>
-                        <Text style={[styles.cardSubtitle, { color: theme.secondaryText }]}>
-                            Frequency and relative weight this month
-                        </Text>
-                    </View>
+        <PixelCard padding={18} wrapperStyle={styles.cardWrapper}>
+            {/* Card Header */}
+            <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>EMOTION BREAKDOWN</Text>
+                <Text style={styles.cardSubtitle}>
+                    Frequency and relative weight this month
+                </Text>
+            </View>
 
-                    {/* Active Emotion Rows flat list (No valence sections) */}
-                    {hasActiveEmotions ? (
-                        <View style={styles.rowsContainer}>
-                            {activeStats.map((row) => (
-                                <EmotionRowItem
-                                    key={row.label}
-                                    item={row}
-                                    theme={theme}
-                                />
-                            ))}
-                        </View>
-                    ) : (
-                        <View style={styles.emptyContainer}>
-                            <Text style={[styles.emptyText, { color: theme.secondaryText }]}>
-                                No entries matching filter
-                            </Text>
-                        </View>
-                    )}
-                </>
+            {/* Active Emotion Rows flat list (No valence sections) */}
+            {hasActiveEmotions ? (
+                <View style={styles.rowsContainer}>
+                    {activeStats.map((row) => (
+                        <EmotionRowItem key={row.label} item={row} />
+                    ))}
+                </View>
+            ) : (
+                <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>NO ENTRIES MATCHING FILTER</Text>
+                </View>
             )}
-        />
+        </PixelCard>
     );
 }
 
 const styles = StyleSheet.create({
-    cardContainer: {
-        borderWidth: 1,
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
+    cardWrapper: {
         marginBottom: 24,
     },
     cardHeader: {
+        paddingBottom: 12,
         marginBottom: 16,
+        borderBottomWidth: BORDER_W_INNER,
+        borderBottomColor: OUTLINE,
+        borderStyle: 'dotted',
     },
     cardTitle: {
-        fontSize: 18,
+        fontSize: 13,
         fontFamily: PIXEL_BOLD,
-        letterSpacing: -0.3,
+        color: INK,
+        letterSpacing: 2,
     },
     cardSubtitle: {
-        fontSize: 13,
+        fontSize: 10,
         fontFamily: PIXEL,
-        marginTop: 2,
+        color: INK_MUTED,
+        letterSpacing: 0.5,
+        marginTop: 6,
     },
     rowsContainer: {
-        gap: 12, // 12px vertical gap between rows
+        gap: 16,
     },
     rowContainer: {
         flexDirection: 'column',
@@ -230,7 +215,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: 8,
     },
     leftGroup: {
         flexDirection: 'row',
@@ -238,38 +223,46 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     emotionImage: {
-        width: 25,
-        height: 25,
+        width: 24,
+        height: 24,
     },
     labelText: {
-        fontSize: 15,
+        fontSize: 12,
         fontFamily: PIXEL_BOLD,
+        color: INK,
+        letterSpacing: 1,
     },
     rightGroup: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 8,
     },
     percentageText: {
-        fontSize: 13,
+        fontSize: 11,
         fontFamily: PIXEL_BOLD,
+        color: INK_MUTED,
     },
-    badgePill: {
+    badge: {
         paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 8,
-        minWidth: 24,
+        paddingVertical: 3,
+        minWidth: 30,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
     },
     badgeText: {
-        fontSize: 12,
+        fontSize: 10,
         fontFamily: PIXEL_BOLD,
         lineHeight: 12,
     },
     progressBarTrack: {
-        height: 4,
-        borderRadius: 2,
+        // Tall enough to read as a drawn meter rather than a hairline: at the old
+        // 4px there was no room for the outline, let alone the cells.
+        height: 14,
+        backgroundColor: '#F1F5F9',
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
         overflow: 'hidden',
         width: '100%',
     },
@@ -279,7 +272,20 @@ const styles = StyleSheet.create({
         // driver where an animated `width` would relayout on the JS thread.
         width: '100%',
         transformOrigin: 'left',
-        borderRadius: 2,
+    },
+    segmentOverlay: {
+        ...StyleSheet.absoluteFill,
+        flexDirection: 'row',
+    },
+    segmentGutter: {
+        flex: 1,
+        borderRightWidth: 2,
+        borderRightColor: PAPER,
+    },
+    segmentCell: {
+        // The last cell carries no gutter of its own -- one there would double up
+        // with the track's own right border.
+        flex: 1,
     },
     emptyContainer: {
         paddingVertical: 20,
@@ -287,7 +293,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     emptyText: {
-        fontSize: 14,
+        fontSize: 11,
         fontFamily: PIXEL,
+        color: INK_MUTED,
+        letterSpacing: 1,
     },
 });
