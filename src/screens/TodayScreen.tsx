@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView, Alert } from 'react-native';
-import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote } from '../components'; // FabMenu exported from index?
+import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
 
@@ -30,6 +30,12 @@ export default function TodayScreen({ navigation }: any) {
     }, [saveGreeting]);
 
     const handleCloseGratitude = useCallback(() => setIsGratitudeVisible(false), []);
+
+    // The StreakCard's two "start" buttons lead to the same two inputs the Fab opens,
+    // so they route through the same handler rather than duplicating the navigate and
+    // the modal toggle. Each button opens ITS OWN type's input.
+    const openEmotionInput = useCallback(() => handleFabAction('Emotions'), [handleFabAction]);
+    const openGreetingInput = useCallback(() => handleFabAction('Greeting'), [handleFabAction]);
 
     const fabActions = useMemo(() => [
         {
@@ -61,6 +67,14 @@ export default function TodayScreen({ navigation }: any) {
             />
 
             <ScrollView contentContainerStyle={styles.content}>
+
+                {/* Daily Streaks -- first, because it is the only card that reports on
+                    what the user has already done, and its buttons are the shortcut
+                    into the two inputs the rest of this screen is about. */}
+                <StreakCard
+                    onStartEmotion={openEmotionInput}
+                    onStartGreeting={openGreetingInput}
+                />
 
                 {/* Morning Intentions Card */}
                 <IntentionCard />

@@ -8,6 +8,7 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "lint": "eslint src",
+    "test:streak": "node --require ts-node/register --test src/utils/streak.test.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

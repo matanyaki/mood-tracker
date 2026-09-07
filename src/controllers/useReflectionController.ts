@@ -60,6 +60,11 @@ export const useReflectionController = (route: any, navigation: any) => {
             queryClient.invalidateQueries({ queryKey: ['entries', currentMonth] });
             queryClient.invalidateQueries({ queryKey: ['entries', 'stats', currentMonth] });
 
+            // The streak is derived from the entry dates, so it is stale the instant
+            // this entry lands -- and the card that shows it is on the screen we are
+            // about to reset to.
+            queryClient.invalidateQueries({ queryKey: ['streaks'] });
+
             // 3. Navigate Home immediately (AI Removed as requested)
             navigation.reset({
                 index: 0,

@@ -88,6 +88,35 @@ class JournalRepository extends BaseRepository<JournalEntry, CreateJournalEntryD
         });
     }
 
+    /**
+     * The timestamps of recent entries, and nothing else.
+     *
+     * `.select('timestamp')` is the point: a streak only needs to know WHICH days
+     * have an entry, so shipping the emotions array and every note back for a year
+     * of documents would be paying for data the caller throws away.
+     *
+     * Deliberately reads `timestamp` rather than the stored `date` field — `date`
+     * is written from the client's UTC day while the app displays local days, so
+     * the two disagree either side of midnight. The epoch value is unambiguous, and
+     * the caller converts it once with the user's own offset.
+     */
+    async getRecentTimestamps(userId: string, sinceMs: number): Promise<number[]> {
+        if (!db) throw new Error('Firestore is not initialized.');
+
+        const snapshot = await this.getCollection(userId)
+            .where('timestamp', '>=', sinceMs)
+            .select('timestamp')
+            .get();
+
+        if (snapshot.empty) {
+            return [];
+        }
+
+        return snapshot.docs
+            .map(doc => doc.data().timestamp)
+            .filter((timestamp): timestamp is number => typeof timestamp === 'number');
+    }
+
     async getEmotionCounts(userId: string, days?: number, month?: string): Promise<Record<string, number>> {
         if (!db) throw new Error('Firestore is not initialized.');
         

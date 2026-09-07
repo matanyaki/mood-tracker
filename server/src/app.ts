@@ -8,6 +8,7 @@ import journalRoutes from './routes/journalRoutes';
 import greetingRoutes from './routes/greetingRoutes';
 import userRoutes from './routes/userRoutes';
 import insightsRoutes from './routes/insightsRoutes';
+import streakRoutes from './routes/streakRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -44,6 +45,7 @@ app.use('/api/entries', journalRoutes);
 app.use('/api/greetings', greetingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/insights', insightsRoutes);
+app.use('/api/streaks', streakRoutes);
 
 // Health Check Route — public and unauthenticated, so the response body must not
 // describe internal structure. Diagnostics go to the log, never to the client.

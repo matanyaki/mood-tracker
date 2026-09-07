@@ -29,7 +29,7 @@ Build backend | `npm run build` | server/ |
 
 ## API Routes
 
-`/api/entries` `/api/greetings` `/api/users` `/api/insights` `/health`
+`/api/entries` `/api/greetings` `/api/users` `/api/insights` `/api/streaks` `/health`
 
 ## Env Vars
 
