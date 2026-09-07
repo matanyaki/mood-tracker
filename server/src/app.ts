@@ -15,6 +15,15 @@ dotenv.config();
 
 const app = express();
 
+// Render (and any similar host) terminates TLS at a load balancer and forwards the
+// real client IP in X-Forwarded-For. Without this, express-rate-limit sees every
+// request as coming from the proxy's single IP and would throttle the whole world
+// against one 100-request budget. Scoped to one hop -- trusting the header blindly
+// would let a caller spoof their way around the limiter.
+if (process.env.TRUST_PROXY === 'true') {
+    app.set('trust proxy', 1);
+}
+
 app.use(helmet());
 
 app.use(cors({
