@@ -3,6 +3,7 @@ import { StyleSheet, ScrollView, Alert } from 'react-native';
 import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
+import { CARD_GAP, FAB_CLEARANCE } from '../constants/layout';
 
 export default function TodayScreen({ navigation }: any) {
     const [isGratitudeVisible, setIsGratitudeVisible] = useState(false);
@@ -31,11 +32,15 @@ export default function TodayScreen({ navigation }: any) {
 
     const handleCloseGratitude = useCallback(() => setIsGratitudeVisible(false), []);
 
-    // The StreakCard's two "start" buttons lead to the same two inputs the Fab opens,
-    // so they route through the same handler rather than duplicating the navigate and
-    // the modal toggle. Each button opens ITS OWN type's input.
+    // The streak pills lead to the same two inputs the Fab opens, so they route
+    // through the same handler rather than duplicating the navigate and the modal
+    // toggle. Each pill opens ITS OWN type's input.
     const openEmotionInput = useCallback(() => handleFabAction('Emotions'), [handleFabAction]);
     const openGreetingInput = useCallback(() => handleFabAction('Greeting'), [handleFabAction]);
+
+    // Straight to the form, not the goals list: this is the empty day's shortcut to
+    // making one, and the list has nothing to show it yet.
+    const openGoalForm = useCallback(() => navigation.navigate('GoalForm', {}), [navigation]);
 
     const fabActions = useMemo(() => [
         {
@@ -68,20 +73,20 @@ export default function TodayScreen({ navigation }: any) {
 
             <ScrollView contentContainerStyle={styles.content}>
 
-                {/* Daily Streaks -- first, because it is the only card that reports on
-                    what the user has already done, and its buttons are the shortcut
-                    into the two inputs the rest of this screen is about. */}
-                <StreakCard
-                    onStartEmotion={openEmotionInput}
-                    onStartGreeting={openGreetingInput}
-                />
-
                 {/* What is due today, with the one checkbox each that can still be
-                    ticked -- directly under the streaks it feeds. */}
-                <TodayGoalsCard />
+                    ticked. First, because it is the only card that asks for anything. */}
+                <TodayGoalsCard onAddGoal={openGoalForm} />
 
                 {/* Morning Intentions Card */}
                 <IntentionCard />
+
+                {/* Daily Streaks -- a thin strip, below the two cards that ask for
+                    something. It reports on what is already done, so it reads as a
+                    footnote to them rather than the first thing on the screen. */}
+                <StreakCard
+                    onPressEmotions={openEmotionInput}
+                    onPressGreetings={openGreetingInput}
+                />
 
                 {/* ZenQuotes Daily Card */}
                 <QuoteCard />
@@ -104,6 +109,11 @@ export default function TodayScreen({ navigation }: any) {
 const styles = StyleSheet.create({
     content: {
         padding: 20,
-        gap: 16,
+        // The ONE thing that spaces this column. Every card reserves room for its own
+        // shadow and nothing else carries a margin, so the gaps are all this value.
+        gap: CARD_GAP,
+        // Clears the FAB, which floats outside the scroll view and would otherwise
+        // sit on top of the last card at the end of the scroll.
+        paddingBottom: FAB_CLEARANCE,
     },
 });

@@ -9,6 +9,7 @@ import SkeletonBox from '../skeleton/SkeletonBox';
 import { useGoalsQuery, useGoalCompletionsQuery } from '../../hooks/useGoalsQuery';
 import { useGoalsController } from '../../controllers/useGoalsController';
 import { TIMES_OF_DAY, TIME_OF_DAY_LABELS } from '../../constants/goals';
+import { CARD_PADDING } from '../../constants/layout';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import {
     OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER,
@@ -83,6 +84,11 @@ function GoalRow({ goal, slot, done, onCheck }: GoalRowProps) {
     );
 }
 
+interface TodayGoalsCardProps {
+    /** Opens goal creation. Held by the screen, which owns the navigator. */
+    onAddGoal: () => void;
+}
+
 /**
  * Everything scheduled for today, grouped through the day.
  *
@@ -93,7 +99,7 @@ function GoalRow({ goal, slot, done, onCheck }: GoalRowProps) {
  * This card is today and only today: it is the one day that can still be marked, so
  * there is no other date for it to offer. Every other day is read-only, in the Diary.
  */
-export default function TodayGoalsCard() {
+export default function TodayGoalsCard({ onAddGoal }: TodayGoalsCardProps) {
     const goalsQuery = useGoalsQuery();
     const completionsQuery = useGoalCompletionsQuery();
     const { markGoalDone } = useGoalsController();
@@ -157,8 +163,28 @@ export default function TodayGoalsCard() {
         );
     }, [markGoalDone, today]);
 
+    const isEmpty = !goalsQuery.isLoading && !completionsQuery.isLoading
+        && !goalsQuery.isError && !completionsQuery.isError
+        && sections.length === 0;
+
+    // Nothing due today is not a card's worth of anything to say, so it collapses to
+    // the one row that IS useful: the way to add a goal. The eyebrow goes with it --
+    // a heading over a single CTA only restates the CTA.
+    if (isEmpty) {
+        return (
+            <PixelCard padding={CARD_PADDING} accentColor={GOAL_ACCENT}>
+                <Pressable
+                    onPress={onAddGoal}
+                    style={({ pressed }) => [styles.addRow, pressed && styles.rowPressed]}
+                >
+                    <Text style={styles.addText}>+ ADD A GOAL FOR TODAY</Text>
+                </Pressable>
+            </PixelCard>
+        );
+    }
+
     return (
-        <PixelCard padding={16} accentColor={GOAL_ACCENT}>
+        <PixelCard padding={CARD_PADDING} accentColor={GOAL_ACCENT}>
             <Text style={styles.eyebrow}>[ TODAY'S GOALS ]</Text>
 
             {goalsQuery.isLoading || completionsQuery.isLoading ? (
@@ -185,10 +211,6 @@ export default function TodayGoalsCard() {
                     >
                         <Text style={styles.retryText}>[ TRY AGAIN ]</Text>
                     </Pressable>
-                </View>
-            ) : sections.length === 0 ? (
-                <View style={styles.messageBlock}>
-                    <Text style={styles.messageText}>Nothing scheduled for today.</Text>
                 </View>
             ) : (
                 sections.map((section, index) => (
@@ -242,6 +264,17 @@ const styles = StyleSheet.create({
     rowPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
         transform: [{ translateX: 1 }, { translateY: 1 }],
+    },
+    addRow: {
+        // No border or fill: the card's own outline is already around it, and a box
+        // inside a box at this height reads as a button in a frame.
+        justifyContent: 'center',
+    },
+    addText: {
+        fontSize: 11,
+        fontFamily: PIXEL_BOLD,
+        color: GOAL_ACCENT,
+        letterSpacing: 1,
     },
     checkbox: {
         width: 26,

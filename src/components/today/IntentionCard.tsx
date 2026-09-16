@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Target, Check, Pencil } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { CARD_PADDING } from '../../constants/layout';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 
 // One note per day: the card resets each morning, which is the point of "today's focus".
@@ -177,9 +178,11 @@ const BRIGHT = '#FCD34D';  // Bright gold, used only for the active writing rule
 
 const styles = StyleSheet.create({
     wrapper: {
+        // Room for the offset pixel shadow on both edges it falls on. The gap to the
+        // next card is CARD_GAP, applied once by the screen -- not here.
         position: 'relative',
-        marginBottom: 16,
-        marginRight: 6, // Room for the offset pixel shadow
+        marginBottom: 6,
+        marginRight: 6,
     },
     pixelShadow: {
         ...StyleSheet.absoluteFill,
@@ -188,7 +191,7 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: PAPER,
-        padding: 18,
+        padding: CARD_PADDING,
         borderWidth: 3,
         borderColor: INK,
         borderLeftWidth: 10,

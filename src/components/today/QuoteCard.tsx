@@ -5,6 +5,7 @@ import { Quote } from 'lucide-react-native';
 import SkeletonBox from '../skeleton/SkeletonBox';
 import { GC_TIME_MS } from '../../hooks/queryConfig';
 import { dayKeyFromMillis } from '../../../shared/utils/streak';
+import { CARD_PADDING } from '../../constants/layout';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 
 interface ZenQuote {
@@ -100,9 +101,11 @@ const LABEL = '#BE185D';   // Title / author pink
 
 const styles = StyleSheet.create({
     wrapper: {
+        // Room for the offset pixel shadow on both edges it falls on. The gap to the
+        // next card is CARD_GAP, applied once by the screen -- not here.
         position: 'relative',
-        marginBottom: 16,
-        marginRight: 6, // Room for the offset pixel shadow
+        marginBottom: 6,
+        marginRight: 6,
     },
     pixelShadow: {
         ...StyleSheet.absoluteFill,
@@ -111,7 +114,7 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: PAPER,
-        padding: 18,
+        padding: CARD_PADDING,
         borderWidth: 3,
         borderColor: INK,
         borderLeftWidth: 10,

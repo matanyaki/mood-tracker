@@ -14,6 +14,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Plus } from 'lucide-react-native';
 import { PIXEL_BOLD } from '../../constants/typography';
+import { FAB_SIZE, FAB_BOTTOM } from '../../constants/layout';
 
 export interface FabAction {
     label: string;
@@ -30,7 +31,8 @@ interface FabMenuProps {
 const BORDER = '#000000';
 const SHADOW_OFFSET = 4;
 
-const FAB_SIZE = 60;
+// FAB_SIZE and FAB_BOTTOM live in constants/layout so a scroll view can leave
+// room for this button without guessing at it -- see FAB_CLEARANCE.
 const MINI_FAB_SIZE = 56;
 const ROW_SPACING = 60; // Vertical distance between fanned-out rows
 
@@ -242,7 +244,7 @@ const styles = StyleSheet.create({
     },
     fabWrapper: {
         position: 'absolute',
-        bottom: 20,
+        bottom: FAB_BOTTOM,
         right: 20,
         width: FAB_SIZE,
         height: FAB_SIZE,
