@@ -1,12 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Flame } from 'lucide-react-native';
-import type { StreakSummary } from '@shared/types';
 import PixelCard from '../ui/PixelCard';
 import SkeletonBox from '../skeleton/SkeletonBox';
 import { useStreaksQuery } from '../../hooks/useStreaksQuery';
-import { actingUserId } from '../../hooks/queryConfig';
-import { StreakService } from '../../services/streakService';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import { OUTLINE, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
 
@@ -81,52 +78,35 @@ interface StreakCardProps {
  * card cannot navigate to both itself.
  */
 export default function StreakCard({ onStartEmotion, onStartGreeting }: StreakCardProps) {
-    const { data, isLoading, error, refetch } = useStreaksQuery();
-
-    // Last known counts, read from the device while the query runs.
-    //
-    // TanStack's cache is memory-only, so without this the card holds a skeleton for
-    // a full round trip on EVERY app launch -- and for up to half a minute when the
-    // request times out and gets retried. Showing yesterday's number and correcting
-    // it a moment later beats showing nothing at all.
-    const [cached, setCached] = useState<StreakSummary | null>(null);
-
-    useEffect(() => {
-        let active = true;
-
-        StreakService.getCachedStreaks(actingUserId()).then(summary => {
-            if (active) setCached(summary);
-        });
-
-        return () => { active = false; };
-    }, []);
-
-    // Fresh data always wins; the cache only fills the gap before it arrives.
-    const summary = data ?? cached;
+    // `data` is either fresh or restored from the persisted cache and already checked
+    // against today (useStreaksQuery's select), so it is never a guess. With neither,
+    // the card holds a skeleton -- it never paints a placeholder count to replace later.
+    const { data, isPending, error, refetch } = useStreaksQuery();
 
     return (
         <PixelCard padding={16} accentColor={FLAME}>
             <Text style={styles.eyebrow}>[ STREAKS ]</Text>
 
-            {summary ? (
+            {data ? (
                 <View>
                     <StreakRow
                         label="EMOTIONS"
-                        streak={summary.emotionStreak}
+                        streak={data.emotionStreak}
                         startLabel="[ START YOUR STREAK ]"
                         onStart={onStartEmotion}
                     />
                     <View style={styles.divider}>
                         <StreakRow
                             label="GREETINGS"
-                            streak={summary.greetingStreak}
+                            streak={data.greetingStreak}
                             startLabel="[ START GREETING STREAK ]"
                             onStart={onStartGreeting}
                         />
                     </View>
                 </View>
-            ) : isLoading ? (
-                // Only reached with nothing cached -- a first run, or a new account.
+            ) : isPending ? (
+                // Nothing persisted yet (a first run, a new account) or the cache is still
+                // being read off the device.
                 // Two placeholder lines at the height of a real row, so the card does
                 // not resize under the reader when the counts arrive.
                 <View>
@@ -140,7 +120,7 @@ export default function StreakCard({ onStartEmotion, onStartGreeting }: StreakCa
                     </View>
                 </View>
             ) : (
-                // Nothing fresh, nothing cached. A failed fetch must not be drawn as a
+                // Nothing fresh, nothing persisted. A failed fetch must not be drawn as a
                 // streak of zero -- that tells the user they lost a streak they still have.
                 <View style={styles.errorBlock}>
                     <Text style={styles.errorText}>

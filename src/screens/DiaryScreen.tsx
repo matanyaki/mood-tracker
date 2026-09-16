@@ -116,13 +116,16 @@ export default function DiaryScreen({ navigation }: any) {
   const {
     entries,
     loading,
+    refreshing,
     selectedDate,
-    currentMonth,
+    seedMonth,
+    calendarKey,
     modalVisible,
     setModalVisible,
     markedDates,
     selectedDateEntries,
     selectedDateGreetings,
+    selectedDateGoals,
     handleDayPress,
     handleMonthChange,
     goToToday,
@@ -183,7 +186,14 @@ export default function DiaryScreen({ navigation }: any) {
             <CalendarSkeleton />
           ) : (
             <Calendar
-              initialDate={currentMonth}
+              // Remounts only when the controller deliberately moves the calendar
+              // (the Today button). Paging with the arrows leaves both untouched,
+              // which is what keeps the month out of a parent/child feedback loop.
+              key={calendarKey}
+              initialDate={seedMonth}
+              // Dimmed, not replaced: the grid has to stay mounted through a month
+              // whose entries are still in flight, or it forgets where it was.
+              style={refreshing ? styles.calendarRefreshing : undefined}
               onDayPress={handleDayPress}
               onMonthChange={handleMonthChange}
               markingType="multi-dot"
@@ -230,6 +240,7 @@ export default function DiaryScreen({ navigation }: any) {
         selectedDate={selectedDate}
         entries={selectedDateEntries}
         greetings={selectedDateGreetings}
+        goals={selectedDateGoals}
         onEditEntry={handleEditEntry}
       />
     </ScreenContainer>
@@ -274,6 +285,9 @@ const styles = StyleSheet.create({
     // to spare at the old 16.
     paddingHorizontal: 8,
     paddingVertical: 16,
+  },
+  calendarRefreshing: {
+    opacity: 0.45,
   },
   customHeaderContainer: {
     flex: 1,

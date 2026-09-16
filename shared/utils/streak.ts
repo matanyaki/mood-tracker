@@ -45,6 +45,18 @@ export function latestDayKey(dayKeys: string[]): string | null {
 }
 
 /**
+ * Whether a streak counted on some earlier day is still alive `today`.
+ *
+ * A saved count does not age on its own: "5 days, last logged Monday" is still 5 on
+ * Thursday unless someone re-counts it. The same grace rule as computeStreak decides
+ * it -- a most-recent day of today or yesterday keeps the streak, anything older has
+ * broken it -- so the client can settle this from the clock without a round trip.
+ */
+export function streakStillAlive(lastDay: string | null, today: string): boolean {
+    return lastDay !== null && lastDay >= previousDay(today);
+}
+
+/**
  * Count consecutive days ending at `today` (or at yesterday).
  *
  * The grace rule is the whole point: a user who logged yesterday but has not got

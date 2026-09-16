@@ -15,6 +15,8 @@ import ReflectionScreen from '../screens/ReflectionScreen';
 import DiaryScreen from '../screens/DiaryScreen';
 import InsightsScreen from '../screens/InsightsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import GoalsScreen from '../screens/GoalsScreen';
+import GoalFormScreen from '../screens/GoalFormScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -169,6 +171,8 @@ export default function RootNavigator() {
         <Stack.Screen name="App" component={AppTabs} />
         <Stack.Screen name="Reflection" component={ReflectionScreen} />
         <Stack.Screen name="CheckIn" component={CheckInScreen} />
+        <Stack.Screen name="Goals" component={GoalsScreen} />
+        <Stack.Screen name="GoalForm" component={GoalFormScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

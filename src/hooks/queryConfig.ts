@@ -4,7 +4,10 @@ import { ApiError } from '../config/api';
 
 /** Shared freshness window for the journal queries. */
 export const STALE_TIME_MS = 1000 * 60 * 5;  // treat as fresh for 5 min
-export const GC_TIME_MS = 1000 * 60 * 10;
+// Also the persister's maxAge (App.tsx). Long on purpose: a query garbage-collected
+// from memory is removed from the persisted cache too, and a week covers a user who
+// skips a few days -- their streak still paints instantly on the next open.
+export const GC_TIME_MS = 1000 * 60 * 60 * 24 * 7;
 
 /**
  * Retry only what a second attempt could actually fix.

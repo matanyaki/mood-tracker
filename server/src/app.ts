@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { db, admin } from './config/firebase';
 import journalRoutes from './routes/journalRoutes';
 import greetingRoutes from './routes/greetingRoutes';
+import goalRoutes from './routes/goalRoutes';
 import userRoutes from './routes/userRoutes';
 import insightsRoutes from './routes/insightsRoutes';
 import streakRoutes from './routes/streakRoutes';
@@ -52,6 +53,7 @@ app.use('/api', apiLimiter);
 // API Routes
 app.use('/api/entries', journalRoutes);
 app.use('/api/greetings', greetingRoutes);
+app.use('/api/goals', goalRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/insights', insightsRoutes);
 app.use('/api/streaks', streakRoutes);

@@ -48,39 +48,7 @@ const getGuestStreaks = async (tzOffsetMinutes: number): Promise<StreakSummary> 
     };
 };
 
-/**
- * Where the last known summary is kept, per user.
- *
- * Keyed by uid on purpose: logout drops the TanStack cache but not AsyncStorage, so
- * a shared key would show the previous account's streak to the next one. A different
- * uid simply misses.
- */
-const cacheKey = (userId: string) => `@streak_summary_${userId}`;
-
 export const StreakService = {
-    /**
-     * The last summary written for this user, or null if there isn't one.
-     *
-     * TanStack's cache lives in memory, so every cold start begins with nothing and
-     * the card would hold a skeleton for a whole round trip — longer if the request
-     * times out and gets retried. This is the same trick QuoteCard uses: show what we
-     * had, let the real fetch correct it.
-     */
-    getCachedStreaks: async (userId: string): Promise<StreakSummary | null> => {
-        try {
-            const raw = await AsyncStorage.getItem(cacheKey(userId));
-            if (!raw) return null;
-
-            // safeParse, not parse: a summary written by an older build should be
-            // ignored, not thrown — this is an optimisation, never a failure path.
-            const parsed = StreakSummarySchema.safeParse(JSON.parse(raw));
-            return parsed.success ? parsed.data : null;
-        } catch (error) {
-            console.log('[StreakService] Could not read cached streaks:', error);
-            return null;
-        }
-    },
-
     /**
      * Both daily streaks.
      * - Authenticated: GET /api/streaks — the server counts, the client displays.
@@ -102,15 +70,7 @@ export const StreakService = {
 
             console.log(`[StreakService] Fetching streaks (tzOffsetMinutes: ${tzOffsetMinutes})`);
             const result = await api.get('/api/streaks', { params: { tzOffsetMinutes } });
-            const summary = StreakSummarySchema.parse(result);
-
-            // Deliberately not awaited: the caller is waiting on this response, and a
-            // slow disk write should not be added to a request the user is watching.
-            // A failed write only costs the next cold start its head start.
-            AsyncStorage.setItem(cacheKey(userId), JSON.stringify(summary))
-                .catch(err => console.log('[StreakService] Could not cache streaks:', err));
-
-            return summary;
+            return StreakSummarySchema.parse(result);
         } catch (error) {
             console.error("Error [getStreaks]:", error);
             throw error;

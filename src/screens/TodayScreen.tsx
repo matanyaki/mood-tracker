@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView, Alert } from 'react-native';
-import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard } from '../components'; // FabMenu exported from index?
+import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
 
@@ -13,7 +13,7 @@ export default function TodayScreen({ navigation }: any) {
         if (action === 'Emotions') {
             navigation.navigate('CheckIn');
         } else if (action === 'Goals') {
-            // navigation.navigate('GoalSetting'); 
+            navigation.navigate('Goals');
         } else if (action === 'Greeting') {
             setIsGratitudeVisible(true);
         }
@@ -75,6 +75,10 @@ export default function TodayScreen({ navigation }: any) {
                     onStartEmotion={openEmotionInput}
                     onStartGreeting={openGreetingInput}
                 />
+
+                {/* What is due today, with the one checkbox each that can still be
+                    ticked -- directly under the streaks it feeds. */}
+                <TodayGoalsCard />
 
                 {/* Morning Intentions Card */}
                 <IntentionCard />

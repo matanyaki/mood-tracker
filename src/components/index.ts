@@ -10,10 +10,15 @@ export { default as ReflectionCard } from './journal/ReflectionCard';
 export type { BackgroundVariant } from './layout/AppBackground';
 export { EmotionRow } from './journal/EmotionRow';
 export { PrimaryButton } from './ui/PrimaryButton';
+export { default as PixelSelect } from './ui/PixelSelect';
+export { default as GoalCard } from './goals/GoalCard';
+export { default as PixelField } from './goals/PixelField';
+export { default as ToggleBox } from './goals/ToggleBox';
 export { FabMenu } from './layout/FabMenu';
 export { default as QuoteCard } from './today/QuoteCard';
 export { default as IntentionCard } from './today/IntentionCard';
 export { default as StreakCard } from './today/StreakCard';
+export { default as TodayGoalsCard } from './today/TodayGoalsCard';
 // Temporarily exporting TodayScreen if still needed or used elsewhere
 // export { default as TodayScreen } from '../screens/TodayScreen';
 export { GratitudeNote } from './today/GratitudeNote';
