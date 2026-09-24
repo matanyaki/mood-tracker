@@ -1,9 +1,13 @@
 import { goalRepository } from '../repositories/goalRepository';
 import { AppError, rethrow } from '../middleware/errorHandler';
 import { computeEndDate } from '../../../shared/types';
-import type { Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal } from '../../../shared/types';
+import { dayKeyFromMillis } from '../../../shared/utils/streak';
+import { computeGoalProgress } from '../../../shared/utils/goalProgress';
+import type {
+    Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal, GoalProgress,
+} from '../../../shared/types';
 
-export type { Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal };
+export type { Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal, GoalProgress };
 
 class GoalService {
     /**
@@ -43,6 +47,31 @@ class GoalService {
             return await goalRepository.findAllCompletions(userId);
         } catch (error: unknown) {
             return rethrow(error, 'Failed to fetch goal completions');
+        }
+    }
+
+    /**
+     * Every goal's progress over its full run, derived on every call.
+     *
+     * Nothing is stored, for the same reason /api/streaks stores nothing: a counter
+     * kept beside the completions is one more thing that can disagree with them.
+     *
+     * "Today" is resolved with the caller's UTC offset — the server's own timezone
+     * is not the user's — so a day marked done this evening is not treated as a
+     * future day and left out.
+     */
+    async getGoalProgress(userId: string, tzOffsetMinutes: number): Promise<GoalProgress[]> {
+        try {
+            const today = dayKeyFromMillis(Date.now(), tzOffsetMinutes);
+
+            const [goals, completions] = await Promise.all([
+                goalRepository.findAll(userId),
+                goalRepository.findAllCompletions(userId),
+            ]);
+
+            return computeGoalProgress(goals, completions, today);
+        } catch (error: unknown) {
+            return rethrow(error, 'Failed to calculate goal progress');
         }
     }
 

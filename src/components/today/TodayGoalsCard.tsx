@@ -1,10 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
 import { Check } from 'lucide-react-native';
 import type { Goal, TimeOfDay } from '@shared/types';
 import { isGoalScheduledOn } from '../../../shared/types';
 import PixelCard from '../ui/PixelCard';
+import { PixelAlert } from '../ui/PixelAlert';
 import SkeletonBox from '../skeleton/SkeletonBox';
 import { useGoalsQuery, useGoalCompletionsQuery } from '../../hooks/useGoalsQuery';
 import { useGoalsController } from '../../controllers/useGoalsController';
@@ -23,22 +24,25 @@ const GOAL_ACCENT = '#10B981';
  *
  * Completion is once for the whole day, so a goal that runs morning AND night is
  * still one checkbox -- listing it under both would offer two boxes for one fact.
- * It is filed under the earliest slot it has, and the rest are drawn on the row as
- * tags, so the day still reads in order and nothing is lost.
+ * It is filed under the earliest slot it has, and every slot it has is drawn on the
+ * row as a tag, so the day still reads in order and nothing is lost.
  *
  * TIMES_OF_DAY is already ordered through the day, so its index IS the ordering.
  */
 const slotOf = (goal: Goal): number =>
     Math.min(...goal.timesOfDay.map(time => TIMES_OF_DAY.indexOf(time)));
 
-/** The goal's other slots, in day order -- what the row shows as tags. */
-const otherSlots = (goal: Goal, slot: TimeOfDay): TimeOfDay[] =>
-    TIMES_OF_DAY.filter(time => time !== slot && goal.timesOfDay.includes(time));
+/**
+ * All of the goal's slots, in day order -- what the row shows as tags.
+ *
+ * The slot the row is filed under is included. Tagging only the others made a
+ * morning-to-night goal read "NOON AFTERNOON NIGHT", as if morning were not part of it.
+ */
+const slotsOf = (goal: Goal): TimeOfDay[] =>
+    TIMES_OF_DAY.filter(time => goal.timesOfDay.includes(time));
 
 interface GoalRowProps {
     goal: Goal;
-    /** The section this row sits in, so the row can tag only the OTHER slots. */
-    slot: TimeOfDay;
     done: boolean;
     onCheck: (goal: Goal) => void;
 }
@@ -50,8 +54,8 @@ interface GoalRowProps {
  * the document id and nothing ever deletes one), so there is no unchecked state to
  * go back to and the control should not invite a tap it cannot honour.
  */
-function GoalRow({ goal, slot, done, onCheck }: GoalRowProps) {
-    const tags = otherSlots(goal, slot);
+function GoalRow({ goal, done, onCheck }: GoalRowProps) {
+    const tags = slotsOf(goal);
 
     return (
         <Pressable
@@ -68,8 +72,8 @@ function GoalRow({ goal, slot, done, onCheck }: GoalRowProps) {
                     {goal.name}
                 </Text>
 
-                {/* Only the slots this row is NOT filed under, so the tags add
-                    something the section heading has not already said. */}
+                {/* Only for a goal with more than one slot: a single slot is
+                    already said by the section heading above the row. */}
                 {tags.length > 0 && (
                     <View style={styles.tagRow}>
                         {tags.map(time => (
@@ -140,7 +144,7 @@ export default function TodayGoalsCard({ onAddGoal }: TodayGoalsCardProps) {
     const handleCheck = useCallback((goal: Goal) => {
         // "Are you sure?" because there is no way back: marking a day done writes a
         // record that nothing in the app deletes.
-        Alert.alert(
+        PixelAlert.alert(
             'Are you sure?',
             `Mark "${goal.name}" done for today? This cannot be undone.`,
             [
@@ -154,7 +158,7 @@ export default function TodayGoalsCard({ onAddGoal }: TodayGoalsCardProps) {
                             await markGoalDone(goalId, today);
                         } catch {
                             setJustMarked(prev => prev.filter(id => id !== goalId));
-                            Alert.alert('Error', 'Could not mark that goal done. Please try again.');
+                            PixelAlert.alert('Error', 'Could not mark that goal done. Please try again.');
                         }
                     },
                 },
@@ -221,7 +225,6 @@ export default function TodayGoalsCard({ onAddGoal }: TodayGoalsCardProps) {
                             <GoalRow
                                 key={goal.id}
                                 goal={goal}
-                                slot={section.time}
                                 done={isDone(goal)}
                                 onCheck={handleCheck}
                             />

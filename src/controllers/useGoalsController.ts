@@ -29,6 +29,7 @@ export const useGoalsController = () => {
             console.log(`[GoalsController] Creating goal for UserID: ${userId} (Guest Mode: ${isGuest})`);
             const goal = await GoalService.createGoal(userId, data);
             queryClient.invalidateQueries({ queryKey: ['goals'] });
+            queryClient.invalidateQueries({ queryKey: ['goalProgress'] });
             return goal;
         } catch (err: any) {
             console.error("Failed to create goal:", err);
@@ -46,6 +47,8 @@ export const useGoalsController = () => {
             console.log(`[GoalsController] Updating goal ${goalId}`);
             await GoalService.updateGoal(userId, goalId, data);
             queryClient.invalidateQueries({ queryKey: ['goals'] });
+            // A new name, target or schedule changes what the Insights ring shows.
+            queryClient.invalidateQueries({ queryKey: ['goalProgress'] });
         } catch (err: any) {
             console.error("Failed to update goal:", err);
             setError(err.message || "Could not save your goal.");
@@ -65,6 +68,7 @@ export const useGoalsController = () => {
             // Deleting takes the goal's completions with it, so the cached map
             // still holds days marked against an id that no longer exists.
             queryClient.invalidateQueries({ queryKey: ['goalCompletions'] });
+            queryClient.invalidateQueries({ queryKey: ['goalProgress'] });
         } catch (err: any) {
             console.error("Failed to delete goal:", err);
             setError(err.message || "Could not delete your goal.");
@@ -81,6 +85,7 @@ export const useGoalsController = () => {
             // The Diary reads this map to tell a day that was kept from one that was
             // missed, so a day marked done has to reach it without waiting out staleTime.
             queryClient.invalidateQueries({ queryKey: ['goalCompletions'] });
+            queryClient.invalidateQueries({ queryKey: ['goalProgress'] });
             return completion;
         } catch (err: any) {
             console.error("Failed to mark goal done:", err);

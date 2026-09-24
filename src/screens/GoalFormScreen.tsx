@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Alert,
+  View, Text, StyleSheet, ScrollView, Pressable,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import type { Goal, TimeOfDay } from '@shared/types';
 import { computeEndDate } from '../../shared/types';
 import { ScreenContainer, AppHeader, PrimaryButton, PixelSelect, PixelField, ToggleBox } from '../components';
+import { PixelAlert } from '../components/ui/PixelAlert';
 import { useGoalsController } from '../controllers/useGoalsController';
 import {
   WEEKDAY_LABELS, TIMES_OF_DAY, TIME_OF_DAY_LABELS, TIMES_PER_WEEK_OPTIONS,
@@ -150,7 +151,7 @@ export default function GoalFormScreen({ route, navigation }: any) {
       }
       navigation.goBack();
     } catch {
-      Alert.alert('Error', 'Could not save your goal. Please try again.');
+      PixelAlert.alert('Error', 'Could not save your goal. Please try again.');
     }
   }, [
     validationError, isSaving, name, startDate, months, timesPerWeek,

@@ -2,6 +2,7 @@ import { db } from '../config/firebase';
 import { firestore } from 'firebase-admin';
 import { BaseRepository } from './baseRepository';
 import type { JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO } from '@shared/types';
+import { resolveEmotionId } from '../../../shared/types';
 
 class JournalRepository extends BaseRepository<JournalEntry, CreateJournalEntryDTO, UpdateJournalEntryDTO> {
     
@@ -143,7 +144,13 @@ class JournalRepository extends BaseRepository<JournalEntry, CreateJournalEntryD
             const data = doc.data() as JournalEntry;
             if (data.emotions && Array.isArray(data.emotions)) {
                 data.emotions.forEach(emotion => {
-                    const key = emotion.id;
+                    // Counted under the CURRENT id: documents keep whatever id was
+                    // current when they were written, and a `worry` bucket the client
+                    // no longer asks about is a month of check-ins missing from the
+                    // breakdown. An id belonging to neither the taxonomy nor the
+                    // retired set is skipped rather than counted under itself.
+                    const key = resolveEmotionId(emotion.id);
+                    if (!key) return;
                     counts[key] = (counts[key] || 0) + 1;
                 });
             }

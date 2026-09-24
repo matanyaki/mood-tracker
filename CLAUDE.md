@@ -44,11 +44,18 @@ Build backend | `npm run build` | server/ |
 
 ## Emotion System
 
-9 emotions across 3 valences:
+9 emotions, defined once in `shared/types/emotions.ts` — ids, labels, colors and
+icon keys all live there, and every screen derives from that array. Listed
+pleasant → unpleasant, which is also the render order:
 
-- Positive: Happy, Grateful, Excited
-- Neutral: Calm, Confused
-- Negative: Sad, Anxious, Angry, Fear
+Happy, Excited, Calm, Confused, Bored, Tired, Sad, Anxious, Angry
+
+Icons: `assets/images/emojis/<Label>.png`, wired up in `src/constants/images.ts`
+(paths must stay literal — Metro resolves `require` at build time).
+
+Retired ids (`worry`, `fear`) live in `LEGACY_EMOTION_IDS` and fold into
+`anxious` on read, so entries logged before the rename still parse and still
+count. Never drop a retired id without adding it there.
 
 Firestore: entries grouped by date, multiple entries per day, emotions array per entry.
 

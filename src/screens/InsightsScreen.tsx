@@ -3,6 +3,7 @@ import { StyleSheet, ScrollView, RefreshControl, Text, Pressable } from 'react-n
 import { ScreenContainer, AppHeader, PixelCard } from '../components';
 import { InsightsStatsSkeleton } from '../components/skeleton';
 import { useInsightsController } from '../controllers/useInsightsController';
+import { useGoalProgressQuery } from '../hooks/useGoalsQuery';
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { getEmotionColor } from '../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
@@ -13,6 +14,8 @@ import SummaryCards from '../components/insights/SummaryCards';
 import EmotionBreakdown from '../components/insights/EmotionBreakdown';
 import EmotionWavesChart from '../components/insights/EmotionWavesChart';
 import ChartTooltipModal, { TooltipData } from '../components/insights/ChartTooltipModal';
+import GoalsProgress from '../components/insights/GoalsProgress';
+import MonthlyReassurance from '../components/insights/MonthlyReassurance';
 
 const getDaysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate();
 
@@ -27,12 +30,24 @@ export default function InsightsScreen({ navigation }: any) {
     entries, aggregatedEntries, emotionCounts, refreshStats,
   } = useInsightsController(monthParam);
 
+  // Not part of the month filter: each ring covers its goal's whole run.
+  const {
+    data: goalProgress,
+    isPending: goalProgressPending,
+    refetch: refetchGoalProgress,
+  } = useGoalProgressQuery();
+
+  const handleRefresh = useCallback(() => {
+    refetchGoalProgress();
+    return refreshStats();
+  }, [refetchGoalProgress, refreshStats]);
+
   // Tooltip Modal State
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
 
   // Parse entries to process chart data
-  const { chartData, filteredStats, filteredTotalEntries } = useMemo(() => {
+  const { chartData, filteredStats, filteredTotalEntries, dayEntries } = useMemo(() => {
     const daysInMonth = getDaysInMonth(parseInt(selectedMonth), parseInt(selectedYear));
 
     // Determine label step to show only 1, 7, 14, 21, 28 and the last day
@@ -136,7 +151,10 @@ export default function InsightsScreen({ navigation }: any) {
         datasets: datasets
       },
       filteredStats: stats,
-      filteredTotalEntries: filteredTotal
+      filteredTotalEntries: filteredTotal,
+      // One per journaled day, already collapsed by the controller — what the
+      // reassurance card reads the month's shape off.
+      dayEntries: filteredAggregated
     };
   }, [entries, aggregatedEntries, emotionCounts, selectedMonth, selectedYear]);
 
@@ -146,43 +164,28 @@ export default function InsightsScreen({ navigation }: any) {
   }, []);
 
   const handleDataPointClick = useCallback((data: any) => {
-    // Fallback if data.dataset doesn't have our custom keys
-    let datasetMeta = data?.dataset?.meta;
-    let emotionKeyAttr = data?.dataset?.emotionKey;
+    // The chart plots one emotion at a time and hands that dataset back with the
+    // tap, so the tooltip answers for the emotion on screen rather than reading
+    // every row for the day. The axis-bound datasets carry no meta and no id in
+    // the taxonomy, so a tap that lands on one falls out here.
+    const metaInfo = data?.dataset?.meta?.[data.index];
+    const emotion = EMOTIONS_CONFIG.find(e => e.id === data?.dataset?.emotionKey);
 
-    if (!datasetMeta || !emotionKeyAttr) {
-      const datasetRef = chartData.datasets.find(ds => ds.data === data.dataset?.data);
-      if (datasetRef) {
-        datasetMeta = datasetRef.meta;
-        emotionKeyAttr = datasetRef.emotionKey;
-      }
-    }
+    if (!emotion || !metaInfo || metaInfo.scale <= 0) return;
 
-    if (!emotionKeyAttr || emotionKeyAttr === 'hidden') return;
-
-    const day = data.index + 1;
-    
-    // Gather ALL emotions for this day
-    const allEmotions = chartData.datasets.map(ds => {
-      const metaInfo = ds.meta?.[data.index];
-      return {
-        emotionKey: ds.emotionKey,
-        emotion: ds.emotionKey.charAt(0).toUpperCase() + ds.emotionKey.slice(1),
-        scale: metaInfo?.scale || 0,
-        note: metaInfo?.note || ""
-      };
-    }).filter(e => e.scale > 0); // Skip emotions with value 0
-
-    if (allEmotions.length > 0) {
-      setTooltipData({
-        day: day,
-        emotions: allEmotions,
-        x: data.x, // Passed from react-native-chart-kit
-        y: data.y
-      } as any);
-      setTooltipVisible(true);
-    }
-  }, [chartData]);
+    setTooltipData({
+      day: data.index + 1,
+      emotions: [{
+        emotionKey: emotion.id,
+        emotion: emotion.label,
+        scale: metaInfo.scale,
+        note: metaInfo.note || ""
+      }],
+      x: data.x, // Passed from react-native-chart-kit
+      y: data.y
+    });
+    setTooltipVisible(true);
+  }, []);
 
   return (
     <ScreenContainer variant="calm">
@@ -199,7 +202,7 @@ export default function InsightsScreen({ navigation }: any) {
         contentContainerStyle={styles.content}
         // `isRefreshing`, not `isFetching`: this spinner belongs to a pull the user
         // actually made, not to every load the screen does on its own.
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refreshStats} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -230,6 +233,16 @@ export default function InsightsScreen({ navigation }: any) {
           </PixelCard>
         ) : (
           <>
+            {/* First on the screen on purpose: the cards below it report the
+                month, and this one says the month is survivable before they do. */}
+            <MonthlyReassurance
+              month={selectedMonth}
+              dayEntries={dayEntries}
+              totalEntries={filteredTotalEntries}
+            />
+
+            <SummaryCards filteredTotalEntries={filteredTotalEntries} />
+
             <EmotionWavesChart
               chartData={chartData}
               handleDataPointClick={handleDataPointClick}
@@ -237,11 +250,20 @@ export default function InsightsScreen({ navigation }: any) {
               hasData={filteredTotalEntries > 0}
             />
 
-            <SummaryCards filteredTotalEntries={filteredTotalEntries} />
+
 
             <EmotionBreakdown stats={filteredStats} />
           </>
         )}
+
+        {/* Outside the month's loading/error branches: it has its own query, and a
+            month that failed to load says nothing about the goals. */}
+        <GoalsProgress
+          goals={goalProgress}
+          isPending={goalProgressPending}
+          onRetry={refetchGoalProgress}
+          onAddGoal={() => navigation.navigate('GoalForm', {})}
+        />
 
       </ScrollView>
 

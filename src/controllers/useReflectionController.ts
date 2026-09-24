@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { PixelAlert } from '../components/ui/PixelAlert';
 import { useQueryClient } from '@tanstack/react-query';
 import { JournalService } from '../services/journalService';
 import { useAuth } from '../context/AuthContext';
@@ -25,7 +25,7 @@ export const useReflectionController = (route: any, navigation: any) => {
             const userId = isGuest || !user ? JournalService.GUEST_ID : user.uid;
 
             if (!user && !isGuest) {
-                Alert.alert("Not signed in", "Please sign in or continue as a guest to save your entry.");
+                PixelAlert.alert("Not signed in", "Please sign in or continue as a guest to save your entry.");
                 return;
             }
 
@@ -73,7 +73,7 @@ export const useReflectionController = (route: any, navigation: any) => {
 
         } catch (error) {
             console.error("[Reflection] Save Error:", error);
-            Alert.alert("Error", "Could not save entry. Please try again.");
+            PixelAlert.alert("Error", "Could not save entry. Please try again.");
         } finally {
             setLoading(false);
         }

@@ -18,6 +18,7 @@ export { FabMenu } from './layout/FabMenu';
 export { default as QuoteCard } from './today/QuoteCard';
 export { default as IntentionCard } from './today/IntentionCard';
 export { default as StreakCard } from './today/StreakCard';
+export { default as EmotionCheckInCard } from './today/EmotionCheckInCard';
 export { default as TodayGoalsCard } from './today/TodayGoalsCard';
 // Temporarily exporting TodayScreen if still needed or used elsewhere
 // export { default as TodayScreen } from '../screens/TodayScreen';

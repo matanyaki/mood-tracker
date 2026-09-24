@@ -1,8 +1,9 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { ArrowLeft, Plus } from 'lucide-react-native';
 import type { Goal } from '@shared/types';
 import { ScreenContainer, AppHeader, EmptyState, GoalCard } from '../components';
+import { PixelAlert } from '../components/ui/PixelAlert';
 import { useGoalsQuery } from '../hooks/useGoalsQuery';
 import { useGoalsController } from '../controllers/useGoalsController';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
@@ -33,7 +34,7 @@ export default function GoalsScreen({ navigation }: any) {
   // Deleting takes the completions with it, so it is worth one confirmation --
   // this is the only destructive action in the flow.
   const handleDelete = useCallback((goal: Goal) => {
-    Alert.alert(
+    PixelAlert.alert(
       'Delete goal?',
       `"${goal.name}" and every day marked done against it will be removed.`,
       [
@@ -45,7 +46,7 @@ export default function GoalsScreen({ navigation }: any) {
             try {
               await deleteGoal(goal.id!);
             } catch {
-              Alert.alert('Error', 'Could not delete the goal. Please try again.');
+              PixelAlert.alert('Error', 'Could not delete the goal. Please try again.');
             }
           },
         },

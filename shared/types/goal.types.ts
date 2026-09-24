@@ -59,6 +59,26 @@ export type GoalCompletion = z.infer<typeof GoalCompletionSchema>;
  */
 export type GoalCompletionsByGoal = Record<string, string[]>;
 
+/**
+ * One goal's progress over its full run, startDate to endDate. `GET /api/goals/progress`
+ * returns one of these per goal.
+ *
+ * Nothing here is stored — it is derived from the goal and its completions on every
+ * request, the same way /api/streaks is.
+ *
+ * `target` is every day the goal is scheduled on across that run. A valid goal picks
+ * at least one weekday and runs at least a month, so it is never zero in practice.
+ */
+export const GoalProgressSchema = z.object({
+    goalId: z.string(),
+    name: z.string(),
+    completed: z.number().int().min(0),
+    target: z.number().int().min(0),
+    percent: z.number().int().min(0).max(100), // round(completed / target * 100), clamped
+});
+
+export type GoalProgress = z.infer<typeof GoalProgressSchema>;
+
 /** A 'YYYY-MM-DD' key, the format both startDate and a completion id use. */
 export const GOAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 

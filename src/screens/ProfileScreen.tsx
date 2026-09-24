@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, Pressable, TextInput,
-    KeyboardAvoidingView, Platform, ScrollView, Alert,
+    KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { LogOut, User, Shield, ChevronRight, CloudOff } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, PixelCard, PrimaryButton } from '../components';
+import { PixelAlert } from '../components/ui/PixelAlert';
 import { ProfileScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
@@ -48,7 +49,7 @@ export default function ProfileScreen() {
 
     const handleAuth = useCallback(async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
+            PixelAlert.alert('Error', 'Please fill in all fields');
             return;
         }
 
@@ -56,7 +57,7 @@ export default function ProfileScreen() {
         try {
             if (isSignUp) {
                 await signup(email, password);
-                Alert.alert("Success", "Account created and data synced!");
+                PixelAlert.alert("Success", "Account created and data synced!");
             } else {
                 await login(email, password);
                 // login success automatically updates user state via context
@@ -65,18 +66,18 @@ export default function ProfileScreen() {
             setEmail('');
             setPassword('');
         } catch (error: any) {
-            Alert.alert('Authentication Error', error.message);
+            PixelAlert.alert('Authentication Error', error.message);
         } finally {
             setAuthLoading(false);
         }
     }, [email, password, isSignUp, signup, login]);
 
     const handleComingSoon = useCallback(() => {
-        Alert.alert("Coming Soon", "This feature is under development.");
+        PixelAlert.alert("Coming Soon", "This feature is under development.");
     }, []);
 
     const handleLogout = useCallback(async () => {
-        Alert.alert(
+        PixelAlert.alert(
             "Log Out",
             "Are you sure? If you haven't synced your data, it might be lost.",
             [
@@ -88,7 +89,7 @@ export default function ProfileScreen() {
                         try {
                             await logout();
                         } catch (e) {
-                            Alert.alert("Error", "Failed to log out");
+                            PixelAlert.alert("Error", "Failed to log out");
                         }
                     }
                 }

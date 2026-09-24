@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, ScrollView, Alert } from 'react-native';
-import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard } from '../components'; // FabMenu exported from index?
+import { StyleSheet, ScrollView } from 'react-native';
+import { PixelAlert } from '../components/ui/PixelAlert';
+import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard, EmotionCheckInCard } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
 import { CARD_GAP, FAB_CLEARANCE } from '../constants/layout';
@@ -26,7 +27,7 @@ export default function TodayScreen({ navigation }: any) {
             console.log('Saved gratitude:', text);
             setIsGratitudeVisible(false); // Close strict after save success
         } catch (error) {
-            Alert.alert("Error", "Failed to save your gratitude note. Please try again.");
+            PixelAlert.alert("Error", "Failed to save your gratitude note. Please try again.");
         }
     }, [saveGreeting]);
 
@@ -73,8 +74,13 @@ export default function TodayScreen({ navigation }: any) {
 
             <ScrollView contentContainerStyle={styles.content}>
 
+                {/* The primary action, so it sits directly under the header. An entry
+                    point only -- it reports whether today has been logged and hands
+                    off to the check-in screen, which owns the actual input. */}
+                <EmotionCheckInCard onPress={openEmotionInput} />
+
                 {/* What is due today, with the one checkbox each that can still be
-                    ticked. First, because it is the only card that asks for anything. */}
+                    ticked. */}
                 <TodayGoalsCard onAddGoal={openGoalForm} />
 
                 {/* Morning Intentions Card */}

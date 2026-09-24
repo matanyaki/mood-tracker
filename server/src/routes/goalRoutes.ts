@@ -15,6 +15,10 @@ router.get('/', goalController.getGoals);
 // would otherwise swallow this one and look up a goal named "completions".
 router.get('/completions', goalController.getCompletions);
 
+// GET /api/goals/progress?tzOffsetMinutes= — completed / target per goal, over its full run.
+// Above '/:id' for the same reason as '/completions'.
+router.get('/progress', goalController.getGoalProgress);
+
 // GET /api/goals/:id
 router.get('/:id', goalController.getGoal);
 

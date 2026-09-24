@@ -9,8 +9,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import RootNavigator from './src/navigation/index';
 import { AuthProvider } from './src/context/AuthContext';
+import { PixelAlertHost } from './src/components/ui/PixelAlert';
 import { PIXEL_FONTS } from './src/constants/typography';
-import { GC_TIME_MS } from './src/hooks/queryConfig';
+import { GC_TIME_MS, CACHE_BUSTER } from './src/hooks/queryConfig';
 
 const queryClient = new QueryClient();
 
@@ -36,11 +37,13 @@ export default function App() {
     // everything that uses it -- currently the FabMenu rows.
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: GC_TIME_MS }}>
+        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: GC_TIME_MS, buster: CACHE_BUSTER }}>
           <AuthProvider>
             <RootNavigator />
           </AuthProvider>
         </PersistQueryClientProvider>
+        {/* Every PixelAlert.alert in the app is drawn by this one host. */}
+        <PixelAlertHost />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

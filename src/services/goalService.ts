@@ -4,10 +4,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../config/api';
 import { auth } from '../config/firebase';
 import { GUEST_ID, GUEST_GOALS_KEY, GUEST_GOAL_COMPLETIONS_KEY } from '../constants/variables';
-import type { Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal } from '@shared/types';
-import { GoalSchema, GoalCompletionSchema, computeEndDate } from '../../shared/types';
+import type {
+    Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal, GoalProgress,
+} from '@shared/types';
+import { GoalSchema, GoalCompletionSchema, GoalProgressSchema, computeEndDate } from '../../shared/types';
+import { dayKeyFromMillis } from '../../shared/utils/streak';
+import { computeGoalProgress } from '../../shared/utils/goalProgress';
 
-export type { Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal };
+export type { Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal, GoalProgress };
 
 /**
  * Which days a guest has marked done, as goalId -> ['YYYY-MM-DD', ...].
@@ -128,6 +132,42 @@ export const GoalService = {
             }
         } catch (error) {
             console.error("Error [getAllCompletions]:", error);
+            throw error;
+        }
+    },
+
+    /**
+     * Every goal's completed / target / percent over its full run, start to end date.
+     * - Authenticated: GET /api/goals/progress — the server counts, the client displays.
+     * - Guest: counted locally with the same shared function, because guest data
+     *   never reaches the backend at all.
+     *
+     * The device's UTC offset goes with the request, as it does for streaks: the
+     * server decides which day is today, but only the device knows its timezone.
+     */
+    getGoalProgress: async (userId: string): Promise<GoalProgress[]> => {
+        const tzOffsetMinutes = new Date().getTimezoneOffset();
+
+        try {
+            if (GoalService.isGuest(userId)) {
+                // --- LOCAL STORAGE ---
+                const [goals, completions] = await Promise.all([
+                    GoalService.getUserGoals(userId),
+                    GoalService.getAllCompletions(userId),
+                ]);
+                return computeGoalProgress(goals, completions, dayKeyFromMillis(Date.now(), tzOffsetMinutes));
+
+            } else {
+                // --- API (Authenticated) ---
+                const user = auth.currentUser;
+                if (!user) throw new Error("User not authenticated.");
+
+                console.log(`[GoalService] Fetching goal progress (tzOffsetMinutes: ${tzOffsetMinutes})`);
+                const result = await api.get('/api/goals/progress', { params: { tzOffsetMinutes } });
+                return z.array(GoalProgressSchema).parse(result);
+            }
+        } catch (error) {
+            console.error("Error [getGoalProgress]:", error);
             throw error;
         }
     },

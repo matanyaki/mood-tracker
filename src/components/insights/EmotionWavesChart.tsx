@@ -1,10 +1,11 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { Rect } from 'react-native-svg';
 import { Droplets } from 'lucide-react-native';
 import PixelCard from '../ui/PixelCard';
-import { EMOTIONS_CONFIG } from '../../constants/emotions';
+import PixelSelect from '../ui/PixelSelect';
+import { EMOTIONS_CONFIG, type EmotionId } from '../../constants/emotions';
 import { getEmotionColor } from '../../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import {
@@ -40,6 +41,22 @@ interface EmotionWavesChartProps {
 }
 
 export default function EmotionWavesChart({ chartData, handleDataPointClick, isFetching, hasData = true }: EmotionWavesChartProps) {
+    // One emotion is plotted at a time: the picker below the header chooses
+    // which of the rows the screen hands over becomes the wave, the day squares
+    // and the tooltip behind them.
+    // First of the shared taxonomy rather than a named id, so the default survives
+    // that emotion being renamed or reordered out of the list.
+    const [selectedEmotion, setSelectedEmotion] = useState<EmotionId>(EMOTIONS_CONFIG[0].id);
+
+    // Straight off the shared taxonomy, in its order: an emotion added there
+    // shows up here without this file being touched.
+    const emotionOptions = EMOTIONS_CONFIG.map(e => ({ label: e.label, value: e.id }));
+    const selectedLabel = EMOTIONS_CONFIG.find(e => e.id === selectedEmotion)?.label ?? '';
+    // The emotion's own colour off the shared taxonomy, drawing the line, the
+    // fill under it and the day squares alike -- so the wave reads as that
+    // emotion without a key underneath telling you which one it is.
+    const selectedColor = getEmotionColor(selectedEmotion);
+
     // The card no longer breaks out of the screen's padding with a negative
     // margin: it draws a hard shadow block on its right edge now, and a card
     // hanging over the screen edge would take that block off with it.
@@ -57,39 +74,38 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
             return {
                 labels: [],
                 datasets: [],
-                dominantEmotions: [],
                 dayHasEntry: [],
                 totalDataPoints: 0,
                 hasValidData: false,
-                activeEmotions: []
+                monthHasData: false
             };
         }
 
         const labels = chartData.labels || [];
         const numDays = labels.length;
 
-        const peakIntensities = Array(numDays).fill(1); // default to 1 so the wave doesn't collapse below the grid
-        const dominantEmotions = Array(numDays).fill('');
+        // The picked emotion's row, and only it. Days it was not logged on stay
+        // flat rather than borrowing another emotion's intensity.
+        const selectedSeries = chartData.datasets.find(ds => ds.emotionKey === selectedEmotion);
+
+        const intensities = Array(numDays).fill(1); // default to 1 so the wave doesn't collapse below the grid
         const dayHasEntry = Array(numDays).fill(false);
         let totalDataPoints = 0;
 
         for (let i = 0; i < numDays; i++) {
-            let maxVal = 0;
-            let dominantKey = '';
-            chartData.datasets.forEach(ds => {
-                const val = ds.data[i];
-                if (typeof val === 'number' && !isNaN(val) && val > maxVal) {
-                    maxVal = val;
-                    dominantKey = ds.emotionKey;
-                }
-            });
-            if (maxVal > 0) {
-                peakIntensities[i] = maxVal;
-                dominantEmotions[i] = dominantKey;
+            const val = selectedSeries?.data[i];
+            if (typeof val === 'number' && !isNaN(val) && val > 0) {
+                intensities[i] = val;
                 dayHasEntry[i] = true;
                 totalDataPoints++;
             }
         }
+
+        // A different question from the one above: whether the month holds any
+        // entry at all. A month with entries but none of the picked emotion has
+        // to keep the card -- and the picker inside it -- on screen, or there is
+        // no way back to an emotion that does have days.
+        const monthHasData = chartData.datasets.some(ds => ds.data.some(v => v > 0));
 
         // Filter X-axis labels: show exactly 1, 7, 14, 21, 28 as days of the month
         const displayLabels = labels.map((label, index) => {
@@ -99,12 +115,15 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
             return isMatch ? label : '';
         });
 
-        // Fixed indigo rgba(79, 70, 229, opacity) for line itself
         const datasets: ChartDataset[] = [
             {
-                emotionKey: 'aggregated_wave',
-                data: peakIntensities,
-                color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
+                emotionKey: selectedEmotion,
+                data: intensities,
+                // Carried over from the source row: chart-kit hands the tapped
+                // dataset back to onDataPointClick, which is how the day tooltip
+                // gets this emotion's scale and note without a second lookup.
+                meta: selectedSeries?.meta,
+                color: () => selectedColor,
                 // Heavier than the old 2: a pixel line is drawn, not traced.
                 strokeWidth: 3,
             },
@@ -126,23 +145,15 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
             { emotionKey: 'y_max_bound', data: [5], color: () => 'transparent', withDots: false },
         ];
 
-        // Filter EMOTIONS_CONFIG to only include emotions that have at least one value > 0 in chartData.datasets for current month
-        const activeEmotions = EMOTIONS_CONFIG.filter(e =>
-            chartData.datasets.some(ds =>
-                ds.emotionKey === e.id && ds.data.some(v => v > 0)
-            )
-        );
-
         return {
             labels: displayLabels,
             datasets,
-            dominantEmotions,
             dayHasEntry,
             totalDataPoints,
             hasValidData: totalDataPoints > 0,
-            activeEmotions
+            monthHasData
         };
-    }, [chartData]);
+    }, [chartData, selectedEmotion, selectedColor]);
 
     /**
      * Square markers, drawn as SVG rects inside the chart.
@@ -162,14 +173,14 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                 y={y - DOT_SIZE / 2}
                 width={DOT_SIZE}
                 height={DOT_SIZE}
-                fill={getEmotionColor(processedData.dominantEmotions[index]) || '#4F46E5'}
+                fill={selectedColor}
                 stroke={OUTLINE}
                 strokeWidth={2}
             />
         );
-    }, [processedData]);
+    }, [processedData, selectedColor]);
 
-    const showEmptyState = !hasData || !processedData.hasValidData;
+    const showEmptyState = !hasData || !processedData.monthHasData;
 
     if (showEmptyState) {
         return (
@@ -197,79 +208,93 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                 </View>
             </View>
 
+            {/* Same control the month and year filters use, so the two rows of
+                filtering on this screen answer to one set of manners. */}
+            <View style={styles.selectorRow}>
+                <PixelSelect
+                    eyebrow="[ EMOTION ]"
+                    options={emotionOptions}
+                    value={selectedEmotion}
+                    onChange={value => setSelectedEmotion(value as EmotionId)}
+                    flex={1}
+                />
+            </View>
+
             {processedData.totalDataPoints === 1 && (
                 <Text style={styles.singleEntryHint}>
                     Keep journaling — your wave forms with more entries
                 </Text>
             )}
 
-            <View style={{ opacity: isFetching ? 0.7 : 1 }}>
-                <LineChart
-                    data={processedData}
-                    width={chartWidth}
-                    height={320}
-                    yAxisLabel=""
-                    yAxisSuffix=""
-                    yAxisInterval={1}
-                    yLabelsOffset={8}
-                    fromZero={false}
-                    segments={4}
-                    withVerticalLines={false}
-                    withHorizontalLines={true}
-                    withOuterLines={false}
-                    chartConfig={{
-                        backgroundColor: "transparent",
-                        backgroundGradientFrom: "#ffffff",
-                        backgroundGradientTo: "#ffffff",
-                        backgroundGradientFromOpacity: 0,
-                        backgroundGradientToOpacity: 0,
-                        decimalPlaces: 0,
-                        useShadowColorFromDataset: true,
-                        color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
-                        // Same value top and bottom: the area under the wave is a
-                        // flat block of colour, not a gradient fading out. A ramp is
-                        // exactly the sub-pixel detail this style has nowhere to put.
-                        fillShadowGradientFromOpacity: 0.14,
-                        fillShadowGradientToOpacity: 0.14,
-                        propsForBackgroundLines: {
-                            // A drawn rule rather than a hairline wash: same dotted
-                            // treatment the card dividers use.
-                            strokeDasharray: "2 5",
-                            strokeWidth: 2,
-                            stroke: "rgba(100, 116, 139, 0.45)"
-                        },
-                        // The chart draws its axis labels as SVG text, so the pixel
-                        // face has to be passed in here rather than via a style.
-                        propsForLabels: {
-                            fontFamily: PIXEL,
-                            fontSize: 9, // Silkscreen is wide -- the default crowds the axis
-                        },
-                    }}
-                    // No `bezier`: a smoothed curve is the one shape a pixel grid
-                    // cannot draw. Straight segments between days also say plainly
-                    // that nothing was measured in between.
-                    getDotColor={(dataPoint, index) => {
-                        const emotionKey = processedData.dominantEmotions[index];
-                        return getEmotionColor(emotionKey) || '#4F46E5';
-                    }}
-                    // Every built-in circle collapses to nothing; renderDotContent
-                    // draws the square that replaces it.
-                    getDotProps={() => ({ r: '0' })}
-                    renderDotContent={renderSquareDot}
-                    style={styles.chart}
-                    onDataPointClick={handleDataPointClick}
-                />
-            </View>
-
-            <View style={styles.legendContainer}>
-                {EMOTIONS_CONFIG.map(e => (
-                    <View key={e.id} style={styles.legendItem}>
-                        <View style={[styles.legendSquare, { backgroundColor: getEmotionColor(e.id) }]} />
-                        <Text style={styles.legendText}>{e.label.toUpperCase()}</Text>
-                    </View>
-                ))}
-            </View>
+            {processedData.hasValidData ? (
+                <View style={{ opacity: isFetching ? 0.7 : 1 }}>
+                    <LineChart
+                        data={processedData}
+                        width={chartWidth}
+                        height={320}
+                        yAxisLabel=""
+                        yAxisSuffix=""
+                        yAxisInterval={1}
+                        yLabelsOffset={8}
+                        fromZero={false}
+                        segments={4}
+                        withVerticalLines={false}
+                        withHorizontalLines={true}
+                        withOuterLines={false}
+                        chartConfig={{
+                            backgroundColor: "transparent",
+                            backgroundGradientFrom: "#ffffff",
+                            backgroundGradientTo: "#ffffff",
+                            backgroundGradientFromOpacity: 0,
+                            backgroundGradientToOpacity: 0,
+                            decimalPlaces: 0,
+                            useShadowColorFromDataset: true,
+                            // Only a fallback -- every dataset above brings its
+                            // own colour -- but an indigo left here would be a
+                            // second answer to what colour this chart is.
+                            color: () => selectedColor,
+                            labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+                            // Same value top and bottom: the area under the wave is a
+                            // flat block of colour, not a gradient fading out. A ramp is
+                            // exactly the sub-pixel detail this style has nowhere to put.
+                            fillShadowGradientFromOpacity: 0.14,
+                            fillShadowGradientToOpacity: 0.14,
+                            propsForBackgroundLines: {
+                                // A drawn rule rather than a hairline wash: same dotted
+                                // treatment the card dividers use.
+                                strokeDasharray: "2 5",
+                                strokeWidth: 2,
+                                stroke: "rgba(100, 116, 139, 0.45)"
+                            },
+                            // The chart draws its axis labels as SVG text, so the pixel
+                            // face has to be passed in here rather than via a style.
+                            propsForLabels: {
+                                fontFamily: PIXEL,
+                                fontSize: 9, // Silkscreen is wide -- the default crowds the axis
+                            },
+                        }}
+                        // No `bezier`: a smoothed curve is the one shape a pixel grid
+                        // cannot draw. Straight segments between days also say plainly
+                        // that nothing was measured in between.
+                        getDotColor={() => selectedColor}
+                        // Every built-in circle collapses to nothing; renderDotContent
+                        // draws the square that replaces it.
+                        getDotProps={() => ({ r: '0' })}
+                        renderDotContent={renderSquareDot}
+                        style={styles.chart}
+                        onDataPointClick={handleDataPointClick}
+                    />
+                </View>
+            ) : (
+                <View style={styles.noSeries}>
+                    <Text style={styles.noSeriesTitle}>
+                        NO {selectedLabel.toUpperCase()} DAYS THIS MONTH
+                    </Text>
+                    <Text style={styles.noSeriesText}>
+                        Pick another emotion to see its wave.
+                    </Text>
+                </View>
+            )}
         </PixelCard>
     );
 }
@@ -281,6 +306,7 @@ const styles = StyleSheet.create({
     chartCard: {
         alignItems: 'center',
         minHeight: 220,
+        paddingBottom: 10,
     },
     headerContainer: {
         flexDirection: 'row',
@@ -309,6 +335,33 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
         marginTop: 6,
     },
+    selectorRow: {
+        flexDirection: 'row',
+        width: '100%',
+        paddingHorizontal: 14,
+        paddingTop: 14,
+    },
+    noSeries: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 44,
+        paddingHorizontal: 20,
+    },
+    noSeriesTitle: {
+        fontSize: 12,
+        fontFamily: PIXEL_BOLD,
+        color: INK,
+        letterSpacing: 2,
+        textAlign: 'center',
+        marginBottom: 10,
+    },
+    noSeriesText: {
+        fontSize: 10,
+        fontFamily: PIXEL,
+        color: INK_MUTED,
+        letterSpacing: 0.5,
+        textAlign: 'center',
+    },
     singleEntryHint: {
         fontSize: 10,
         fontFamily: PIXEL,
@@ -323,35 +376,6 @@ const styles = StyleSheet.create({
     chart: {
         marginVertical: 10,
         paddingRight: 16, // The gutter reserved out of chartWidth above
-    },
-    legendContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        gap: 10,
-        paddingHorizontal: 12,
-        paddingBottom: 14,
-        paddingTop: 12,
-        borderTopWidth: BORDER_W_INNER,
-        borderTopColor: OUTLINE,
-        borderStyle: 'dotted',
-    },
-    legendItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    legendSquare: {
-        width: 10,
-        height: 10,
-        borderWidth: 2,
-        borderColor: OUTLINE,
-    },
-    legendText: {
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
     },
     emptyCard: {
         alignItems: 'center',

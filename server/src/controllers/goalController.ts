@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import goalService from '../services/goalService';
-import { Goal, GoalCompletion, GoalCompletionsByGoal, GoalSchema, GoalDateSchema } from '../../../shared/types';
+import {
+    Goal, GoalCompletion, GoalCompletionsByGoal, GoalProgress, GoalSchema, GoalDateSchema,
+} from '../../../shared/types';
 import { asyncWrap } from '../middleware/errorHandler';
 import { requireUid } from '../middleware/auth';
 
@@ -29,6 +31,10 @@ const UpdateGoalBodySchema = GoalBodySchema;
 const MarkDoneBodySchema = z.object({
     date: GoalDateSchema,
 });
+
+// The caller's `getTimezoneOffset()`, bounded and defaulted exactly as GET /api/streaks
+// takes it (see streakController) — "today" is a question about the user's calendar.
+const TzOffsetQuerySchema = z.coerce.number().int().min(-840).max(720).default(0);
 
 // Standardized response interface
 interface ApiResponse<T> {
@@ -79,6 +85,22 @@ export const getCompletions = asyncWrap(async (req: Request, res: Response) => {
         data: completions,
         error: null
     } as ApiResponse<GoalCompletionsByGoal>);
+});
+
+/**
+ * Every goal's completed / target / percent over its full run, start to end date.
+ */
+export const getGoalProgress = asyncWrap(async (req: Request, res: Response) => {
+    const userId = requireUid(req);
+    const tzOffsetMinutes = TzOffsetQuerySchema.parse(req.query.tzOffsetMinutes);
+
+    const progress = await goalService.getGoalProgress(userId, tzOffsetMinutes);
+
+    return res.status(200).json({
+        success: true,
+        data: progress,
+        error: null
+    } as ApiResponse<GoalProgress[]>);
 });
 
 export const getGoal = asyncWrap(async (req: Request, res: Response) => {
