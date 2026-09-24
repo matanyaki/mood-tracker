@@ -2,7 +2,13 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import PixelCard from '../ui/PixelCard';
 import SkeletonBox from './SkeletonBox';
-import { OUTLINE, BORDER_W_INNER } from '../../constants/pixel';
+import { getEmotionColor } from '../../constants/colors';
+import { OUTLINE, PAPER, BORDER_W_INNER } from '../../constants/pixel';
+
+// MonthlyReassurance's fill, off the same taxonomy entry the card takes it from.
+// The one skeleton block that carries colour: it stands in for the only filled
+// card on the screen, and a paper one would flash green when the month lands.
+const REASSURANCE_ACCENT = getEmotionColor('calm');
 
 // EmotionBreakdown renders one row per emotion with a count > 0. Four is the
 // typical first paint for a month of entries.
@@ -24,6 +30,36 @@ const SQUARE = 0;
 export default function InsightsStatsSkeleton() {
     return (
         <>
+            {/* MonthlyReassurance card */}
+            <PixelCard padding={16} wrapperStyle={styles.reassuranceCardWrapper} style={styles.reassuranceCard}>
+                <View style={styles.reassuranceHeader}>
+                    <View style={styles.reassuranceFaceBox}>
+                        <SkeletonBox width={28} height={28} borderRadius={SQUARE} />
+                    </View>
+                    <View style={styles.reassuranceHeaderText}>
+                        <SkeletonBox width={130} height={13} borderRadius={SQUARE} />
+                        <SkeletonBox
+                            width={140}
+                            height={10}
+                            borderRadius={SQUARE}
+                            style={styles.reassuranceSubtitle}
+                        />
+                    </View>
+                </View>
+
+                {/* Three lines: what the shortest of the card's sentences wraps to. */}
+                <View style={styles.reassurancePanel}>
+                    <SkeletonBox height={12} borderRadius={SQUARE} />
+                    <SkeletonBox height={12} borderRadius={SQUARE} style={styles.reassuranceLine} />
+                    <SkeletonBox width="60%" height={12} borderRadius={SQUARE} style={styles.reassuranceLine} />
+                </View>
+
+                <View style={styles.reassuranceStamps}>
+                    <SkeletonBox width={74} height={10} borderRadius={SQUARE} />
+                    <SkeletonBox width={90} height={10} borderRadius={SQUARE} />
+                </View>
+            </PixelCard>
+
             {/* EmotionWavesChart card */}
             <PixelCard padding={0} wrapperStyle={styles.chartCardWrapper} style={styles.chartCard}>
                 <View style={styles.chartHeader}>
@@ -110,6 +146,48 @@ export default function InsightsStatsSkeleton() {
 }
 
 const styles = StyleSheet.create({
+    // Mirrors MonthlyReassurance: filled face, outlined face box, paper panel.
+    reassuranceCardWrapper: {
+        marginBottom: 20,
+    },
+    reassuranceCard: {
+        backgroundColor: REASSURANCE_ACCENT,
+    },
+    reassuranceHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 14,
+    },
+    reassuranceFaceBox: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: PAPER,
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+    },
+    reassuranceHeaderText: {
+        flex: 1,
+    },
+    reassuranceSubtitle: {
+        marginTop: 6,
+    },
+    reassurancePanel: {
+        padding: 12,
+        backgroundColor: PAPER,
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+    },
+    reassuranceLine: {
+        marginTop: 8,
+    },
+    reassuranceStamps: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 12,
+    },
     chartCardWrapper: {
         marginBottom: 20,
     },

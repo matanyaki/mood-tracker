@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { PixelAlert } from '../components/ui/PixelAlert';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
@@ -21,7 +21,7 @@ export const useProfileController = () => {
 
     const handleAuth = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
+            PixelAlert.alert('Error', 'Please fill in all fields');
             return;
         }
 
@@ -36,7 +36,7 @@ export const useProfileController = () => {
             setEmail('');
             setPassword('');
         } catch (error: any) {
-            Alert.alert('Authentication Error', error.message);
+            PixelAlert.alert('Authentication Error', error.message);
         } finally {
             setLoading(false);
         }
@@ -45,7 +45,7 @@ export const useProfileController = () => {
     const toggleAuthMode = () => setIsSignUp(prev => !prev);
 
     const handleLogout = async () => {
-        Alert.alert(
+        PixelAlert.alert(
             "Log Out",
             "Are you sure you want to log out?",
             [
@@ -57,7 +57,7 @@ export const useProfileController = () => {
                         try {
                             await signOut(auth);
                         } catch (error) {
-                            Alert.alert("Error", "Failed to log out");
+                            PixelAlert.alert("Error", "Failed to log out");
                         }
                     }
                 }
@@ -66,7 +66,7 @@ export const useProfileController = () => {
     };
 
     const handleComingSoon = () => {
-        Alert.alert("Coming Soon", "This feature is next on the list!");
+        PixelAlert.alert("Coming Soon", "This feature is next on the list!");
     };
 
     return {

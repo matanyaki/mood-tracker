@@ -1,0 +1,68 @@
+# Render blueprint -- backend API + the Expo web build.
+#
+# Both services read their secrets from the Render dashboard, never from this file:
+# sync:false means Render prompts for the value and never stores it in the repo.
+#
+# See DEPLOY.md for what to paste into each one.
+
+services:
+  # ---------------------------------------------------------------- backend API
+  - type: web
+    name: mood-tracker-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install && npm run build
+    # tsconfig includes ../shared/types, which pushes the entry down to
+    # dist/server/src/index.js rather than dist/index.js. `npm start` already
+    # points at the right path -- do not "simplify" this.
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # The whole service-account.json, as one line. The file itself is gitignored
+      # and never reaches the build, so this is the only way the deployed instance
+      # gets Firebase credentials.
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      # Render terminates TLS at a proxy; without this every request looks like it
+      # came from one IP and the rate limiter throttles all users together.
+      - key: TRUST_PROXY
+        value: "true"
+      # The static site's origin, once it has one. '*' only while testing.
+      - key: CORS_ORIGIN
+        sync: false
+
+  # ------------------------------------------------------------- frontend (web)
+  # Expo web export. The native app does not come from here -- it is built with
+  # EAS and shipped to the stores; this is the browser build only.
+  - type: web
+    name: mood-tracker-web
+    runtime: static
+    plan: free
+    buildCommand: npm install && npx expo export --platform web
+    staticPublishPath: ./dist
+    envVars:
+      # react-native-dotenv inlines these AT BUILD TIME, so they must be set here,
+      # not at runtime. Changing one requires a rebuild, not a restart.
+      - key: API_URL
+        sync: false
+      - key: FIREBASE_API_KEY
+        sync: false
+      - key: FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: FIREBASE_APP_ID
+        sync: false
+    routes:
+      # Expo Router/React Navigation own the URL, so any deep link has to be served
+      # index.html rather than 404ing on a path with no file behind it.
+      - type: rewrite
+        source: /*
+        destination: /index.html

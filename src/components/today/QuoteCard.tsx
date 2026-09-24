@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
 import { Quote } from 'lucide-react-native';
+import SkeletonBox from '../skeleton/SkeletonBox';
+import { GC_TIME_MS } from '../../hooks/queryConfig';
+import { dayKeyFromMillis } from '../../../shared/utils/streak';
+import { CARD_PADDING } from '../../constants/layout';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 
 interface ZenQuote {
@@ -9,62 +13,46 @@ interface ZenQuote {
     a: string; // Author
 }
 
-const STORAGE_KEY = '@mindbright_daily_quote';
-const FALLBACK_QUOTE = {
+/** Shown only when today's quote could not be fetched at all -- never as a first paint. */
+const FALLBACK_QUOTE: ZenQuote = {
     q: "The only way to do great work is to love what you do.",
     a: "Steve Jobs"
 };
 
+const fetchTodaysQuote = async (): Promise<ZenQuote> => {
+    // A short timeout so a slow network fails over to the fallback instead of
+    // holding the skeleton indefinitely.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+    try {
+        const response = await fetch('https://zenquotes.io/api/today', { signal: controller.signal });
+        if (!response.ok) throw new Error(`ZenQuotes answered ${response.status}`);
+
+        const data: ZenQuote[] = await response.json();
+        if (!data || data.length === 0) throw new Error('ZenQuotes returned no quote');
+
+        return { q: data[0].q, a: data[0].a };
+    } finally {
+        clearTimeout(timeoutId);
+    }
+};
+
 export default function QuoteCard() {
-    const [quote, setQuote] = useState<string>(FALLBACK_QUOTE.q);
-    const [author, setAuthor] = useState<string>(FALLBACK_QUOTE.a);
+    // Keyed by the local day: the persisted cache paints today's quote instantly on
+    // every reopen, while yesterday's entry simply does not match -- so a new day shows
+    // a skeleton and then today's quote, never yesterday's quote swapped out in front
+    // of the reader. The quote cannot change within its day, so it is never refetched.
+    const today = dayKeyFromMillis(Date.now(), new Date().getTimezoneOffset());
+    const { data, isPending } = useQuery<ZenQuote>({
+        queryKey: ['quote', today],
+        queryFn: fetchTodaysQuote,
+        staleTime: Infinity,
+        gcTime: GC_TIME_MS,
+        retry: 1,
+    });
 
-    useEffect(() => {
-        loadCachedQuoteAndRevalidate();
-    }, []);
-
-    const loadCachedQuoteAndRevalidate = async () => {
-        try {
-            // 1. Get cached data instantly
-            const cachedData = await AsyncStorage.getItem(STORAGE_KEY);
-            if (cachedData) {
-                const parsed = JSON.parse(cachedData) as ZenQuote;
-                setQuote(parsed.q);
-                setAuthor(parsed.a);
-            }
-
-            // 2. Revalidate silently in the background
-            // Added a short timeout constraint so slow networks don't hang indefinitely
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4000);
-
-            const response = await fetch('https://zenquotes.io/api/today', {
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (!response.ok) return; // Fail silently, keep showing the cached version
-
-            const data: ZenQuote[] = await response.json();
-
-            if (data && data.length > 0) {
-                const newQuote = data[0].q;
-                const newAuthor = data[0].a;
-
-                // 3. Update state only if it's actually a new quote
-                if (newQuote !== quote) {
-                    setQuote(newQuote);
-                    setAuthor(newAuthor);
-
-                    // 4. Cache it for the next app session
-                    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ q: newQuote, a: newAuthor }));
-                }
-            }
-        } catch (err) {
-            // Log natively, but don't disrupt the user since they have a cached/fallback quote visible
-            console.log('[QuoteCard] Background revalidation bypassed:', err);
-        }
-    };
+    const quote = data ?? FALLBACK_QUOTE;
 
     return (
         <View style={styles.wrapper}>
@@ -80,11 +68,26 @@ export default function QuoteCard() {
                     <Text style={styles.cardTitle}>[ DAILY INSPIRATION ]</Text>
                 </View>
 
-                <Text style={styles.quoteText}>"{quote}"</Text>
+                {isPending ? (
+                    // Two quote lines and an author line, each at its real line height.
+                    <View>
+                        <View style={styles.skeletonQuote}>
+                            <SkeletonBox height={13} borderRadius={0} />
+                            <SkeletonBox width="70%" height={13} borderRadius={0} />
+                        </View>
+                        <View style={styles.footerRow}>
+                            <SkeletonBox width={90} height={11} borderRadius={0} />
+                        </View>
+                    </View>
+                ) : (
+                    <View>
+                        <Text style={styles.quoteText}>"{quote.q}"</Text>
 
-                <View style={styles.footerRow}>
-                    <Text style={styles.authorText}>- {author}</Text>
-                </View>
+                        <View style={styles.footerRow}>
+                            <Text style={styles.authorText}>- {quote.a}</Text>
+                        </View>
+                    </View>
+                )}
             </TouchableOpacity>
         </View>
     );
@@ -98,9 +101,11 @@ const LABEL = '#BE185D';   // Title / author pink
 
 const styles = StyleSheet.create({
     wrapper: {
+        // Room for the offset pixel shadow on both edges it falls on. The gap to the
+        // next card is CARD_GAP, applied once by the screen -- not here.
         position: 'relative',
-        marginBottom: 16,
-        marginRight: 6, // Room for the offset pixel shadow
+        marginBottom: 6,
+        marginRight: 6,
     },
     pixelShadow: {
         ...StyleSheet.absoluteFill,
@@ -109,7 +114,7 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: PAPER,
-        padding: 18,
+        padding: CARD_PADDING,
         borderWidth: 3,
         borderColor: INK,
         borderLeftWidth: 10,
@@ -136,6 +141,12 @@ const styles = StyleSheet.create({
         color: INK,
         lineHeight: 22,
         fontFamily: PIXEL,
+        marginBottom: 12,
+    },
+    skeletonQuote: {
+        // Matches quoteText: two 22pt lines and the same gap above the footer.
+        gap: 9,
+        paddingVertical: 4,
         marginBottom: 12,
     },
     footerRow: {

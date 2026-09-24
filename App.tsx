@@ -2,13 +2,24 @@
 import React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import RootNavigator from './src/navigation/index';
 import { AuthProvider } from './src/context/AuthContext';
+import { PixelAlertHost } from './src/components/ui/PixelAlert';
 import { PIXEL_FONTS } from './src/constants/typography';
+import { GC_TIME_MS, CACHE_BUSTER } from './src/hooks/queryConfig';
 
 const queryClient = new QueryClient();
+
+// The query cache is written to the device, so a cold start paints the last known
+// streak and quote at once and refetches behind them instead of starting empty.
+// maxAge matches GC_TIME_MS: a query collected from memory is also dropped from the
+// persisted copy, so a shorter gcTime would quietly defeat this.
+const persister = createAsyncStoragePersister({ storage: AsyncStorage });
 
 export default function App() {
   // Every screen styles its text with the Silkscreen family, and Android renders
@@ -26,11 +37,13 @@ export default function App() {
     // everything that uses it -- currently the FabMenu rows.
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: GC_TIME_MS, buster: CACHE_BUSTER }}>
           <AuthProvider>
             <RootNavigator />
           </AuthProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
+        {/* Every PixelAlert.alert in the app is drawn by this one host. */}
+        <PixelAlertHost />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

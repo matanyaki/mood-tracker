@@ -27,10 +27,10 @@ async function runTests() {
             body: JSON.stringify({
                 date: new Date().toISOString().split('T')[0],
                 timestamp: Date.now(),
-                // NEW SIMPLE SCHEMA
-                emotion: "Optimistic",
-                scale: 5,
-                note: "Things are going great!"
+                // Ids come from the shared taxonomy — an invented one is rejected.
+                emotions: [
+                    { id: "happy", label: "Happy", scale: 5, note: "Things are going great!" }
+                ]
             })
         });
         const createData = await createRes.json() as any;
@@ -69,7 +69,9 @@ async function runTests() {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                emotion: "Ecstatic"
+                emotions: [
+                    { id: "excited", label: "Excited", scale: 4 }
+                ]
             })
         });
         const updateData = await updateRes.json() as any;

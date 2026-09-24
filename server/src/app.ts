@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { db, admin } from './config/firebase';
 import journalRoutes from './routes/journalRoutes';
 import greetingRoutes from './routes/greetingRoutes';
+import goalRoutes from './routes/goalRoutes';
 import userRoutes from './routes/userRoutes';
 import insightsRoutes from './routes/insightsRoutes';
 import streakRoutes from './routes/streakRoutes';
@@ -14,6 +15,15 @@ import { errorHandler } from './middleware/errorHandler';
 dotenv.config();
 
 const app = express();
+
+// Render (and any similar host) terminates TLS at a load balancer and forwards the
+// real client IP in X-Forwarded-For. Without this, express-rate-limit sees every
+// request as coming from the proxy's single IP and would throttle the whole world
+// against one 100-request budget. Scoped to one hop -- trusting the header blindly
+// would let a caller spoof their way around the limiter.
+if (process.env.TRUST_PROXY === 'true') {
+    app.set('trust proxy', 1);
+}
 
 app.use(helmet());
 
@@ -43,6 +53,7 @@ app.use('/api', apiLimiter);
 // API Routes
 app.use('/api/entries', journalRoutes);
 app.use('/api/greetings', greetingRoutes);
+app.use('/api/goals', goalRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/insights', insightsRoutes);
 app.use('/api/streaks', streakRoutes);

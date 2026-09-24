@@ -85,10 +85,12 @@ const EmotionRowItem = ({ item }: { item: EmotionStat; key?: React.Key }) => {
     }, [fraction, reduceMotion, scaleX, fadeIn]);
 
     // EmotionStat carries a label rather than an id, so the registry entry is
-    // located by label; its imageKey is still the registry's.
+    // located by label; its imageKey is still the registry's. A row whose label
+    // matches nothing in the taxonomy draws without an emoji rather than throwing
+    // and taking the whole card down with it.
     const imageKey = EMOTIONS_CONFIG.find(
         (e) => e.label === item.label
-    )!.imageKey;
+    )?.imageKey;
 
     const { bg: badgeBg, text: badgeText } = getBadgeColors(item.color);
 
@@ -98,11 +100,13 @@ const EmotionRowItem = ({ item }: { item: EmotionStat; key?: React.Key }) => {
             <View style={styles.topRow}>
                 {/* Left Side: Image Asset and Label */}
                 <View style={styles.leftGroup}>
-                    <Image
-                        source={MOOD_IMAGES[imageKey]}
-                        style={styles.emotionImage}
-                        resizeMode="contain"
-                    />
+                    {imageKey && (
+                        <Image
+                            source={MOOD_IMAGES[imageKey]}
+                            style={styles.emotionImage}
+                            resizeMode="contain"
+                        />
+                    )}
                     <Text style={styles.labelText}>{item.label.toUpperCase()}</Text>
                 </View>
 

@@ -4,7 +4,23 @@ import { ApiError } from '../config/api';
 
 /** Shared freshness window for the journal queries. */
 export const STALE_TIME_MS = 1000 * 60 * 5;  // treat as fresh for 5 min
-export const GC_TIME_MS = 1000 * 60 * 10;
+// Also the persister's maxAge (App.tsx). Long on purpose: a query garbage-collected
+// from memory is removed from the persisted cache too, and a week covers a user who
+// skips a few days -- their streak still paints instantly on the next open.
+export const GC_TIME_MS = 1000 * 60 * 60 * 24 * 7;
+
+/**
+ * Version of the persisted cache. Change it whenever a query's data changes shape.
+ *
+ * A restored query hands its saved data straight to the screen -- it never passes
+ * back through the service's zod parse -- so an old shape reaches components written
+ * for the new one. A different buster makes the persister discard the saved copy
+ * instead of restoring it.
+ *
+ * Bumped for ['goalProgress'], which went from a { weekStart, weekEnd, goals } object
+ * to a plain array: the saved object crashed GoalsProgress on `goals.map`.
+ */
+export const CACHE_BUSTER = '2';
 
 /**
  * Retry only what a second attempt could actually fix.

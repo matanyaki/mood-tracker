@@ -1,7 +1,7 @@
 
 import Constants from 'expo-constants';
 import axios from 'axios';
-import { API_HOST } from '@env';
+import { API_HOST, API_URL } from '@env';
 import { auth } from './firebase';
 
 /**
@@ -10,6 +10,15 @@ import { auth } from './firebase';
 
 // Helper to get the local IP address
 const getHost = () => {
+    // A full origin wins over everything below. Every other branch here builds
+    // `http://<host>:3000`, which cannot describe a deployed backend: that is https,
+    // on port 443, at a hostname. Set API_URL to the deployed origin
+    // (e.g. https://mood-tracker-api.onrender.com) and the LAN guessing is skipped.
+    if (API_URL) {
+        console.log('[API Config] Using API_URL:', API_URL);
+        return API_URL.replace(/\/+$/, ''); // A trailing slash would double up on every path
+    }
+
     // Attempt to get hostUri dynamically from Expo constants (works when running in LAN mode)
     const hostUri = Constants.expoConfig?.hostUri ||
                     (Constants as any).manifest?.debuggerHost ||

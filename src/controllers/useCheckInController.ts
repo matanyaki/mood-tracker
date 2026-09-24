@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Alert } from 'react-native';
+import { PixelAlert } from '../components/ui/PixelAlert';
 
 import type { EmotionId } from '@shared/types';
 
@@ -40,7 +40,7 @@ export const useCheckInController = () => {
 
     const submitCheckIn = useCallback(() => {
         if (selections.length === 0) {
-            Alert.alert("Selection Required", "Please select at least one emotion to check in.");
+            PixelAlert.alert("Selection Required", "Please select at least one emotion to check in.");
             return null;
         }
         return selections;
