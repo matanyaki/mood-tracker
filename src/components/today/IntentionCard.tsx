@@ -15,7 +15,7 @@ const todayKey = () => STORAGE_PREFIX + new Date().toISOString().slice(0, 10);
 // are drawn at the BOTTOM of each row and the text `lineHeight` fills the same
 // row, which is what puts the words on the line instead of near it.
 const LINE_HEIGHT = 30;   // Height of one row, shared by the rule and the text
-const NUM_LINES = 2;      // The card is exactly this tall -- see FIELD_HEIGHT
+const NUM_LINES = 1;      // The card is exactly this tall -- see FIELD_HEIGHT
 const FIELD_TOP = 6;      // Gap above the first row; the rule and the text both use it
 const FIELD_PAD_H = 2;    // Horizontal inset, shared by the text and the placeholder
 const FIELD_HEIGHT = FIELD_TOP + LINE_HEIGHT * NUM_LINES;

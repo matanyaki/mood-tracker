@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -194,11 +194,21 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
         // bounds, and the fanned-out rows sit well above the FAB. `box-none` keeps this
         // overlay from swallowing taps meant for the screen underneath.
         <View style={styles.container} pointerEvents="box-none">
-            {/* Dimmed backdrop -- visual only, so it can never win a tap over the buttons. */}
+            {/* Dimmed backdrop. While open it swallows taps so the screen underneath can't be
+                touched, and a tap anywhere on it closes the menu. It renders before the rows and
+                the FAB, so they still sit above it and win their own taps. Closed, it passes
+                every touch through. */}
             <Animated.View
                 style={[styles.backdrop, backdropStyle]}
-                pointerEvents="none"
-            />
+                pointerEvents={isOpen ? 'auto' : 'none'}
+            >
+                <Pressable
+                    style={StyleSheet.absoluteFill}
+                    onPress={toggleMenu}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close menu"
+                />
+            </Animated.View>
 
             {/* Action Buttons */}
             {actions.map((action, index) => (

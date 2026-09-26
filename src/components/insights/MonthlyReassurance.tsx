@@ -30,7 +30,7 @@ const ACCENT = getEmotionColor(ANCHOR_EMOTION);
  * all. Under this the card says so instead: two days is a start, not a trend,
  * and a reassurance drawn from them is one the data cannot back.
  */
-const MIN_FOR_A_READ = 3;
+export const MIN_FOR_A_READ = 3;
 
 /** A day scores in [-1, 1]. Below this it counts as a low. */
 const LOW_DAY = -0.2;
@@ -173,6 +173,25 @@ export function pickReassurance(month: string, read: MonthRead, totalEntries: nu
     return `${month} HELD STEADY — YOU SHOWED UP ${days} AND FELT THE WHOLE RANGE. YOU'RE OKAY.`;
 }
 
+/**
+ * The month's mood on a 0..100 line: the mean of its day scores, moved off
+ * [-1, 1]. A neutral month lands on 50, an all-pleasant one on 100.
+ *
+ * Off the same scoreDay the sentence above reads, so the number and the card
+ * can never disagree about what a good day was. Days that score null are
+ * skipped, as readMonth skips them. `null` when nothing in the month scores.
+ */
+export function monthlyMoodScore(days: DayEntry[]): number | null {
+    const dayScores = days
+        .map(scoreDay)
+        .filter((score): score is number => score !== null);
+
+    if (dayScores.length === 0) return null;
+
+    const mean = dayScores.reduce((sum, x) => sum + x, 0) / dayScores.length;
+    return Math.round(((mean + 1) / 2) * 100);
+}
+
 interface MonthlyReassuranceProps {
     /** 1-12, the month the filter above is showing. */
     month: string;
@@ -211,12 +230,12 @@ export default function MonthlyReassurance({ month, dayEntries, totalEntries }: 
                 <Text style={styles.message}>{message}</Text>
             </View>
 
-            {totalEntries > 0 && (
+            {/* {totalEntries > 0 && (
                 <View style={styles.stamps}>
                     <Text style={styles.stamp}>[ {countLabel(read.daysJournaled, 'DAY', 'DAYS')} ]</Text>
                     <Text style={styles.stamp}>[ {countLabel(totalEntries, 'ENTRY', 'ENTRIES')} ]</Text>
                 </View>
-            )}
+            )} */}
         </PixelCard>
     );
 }

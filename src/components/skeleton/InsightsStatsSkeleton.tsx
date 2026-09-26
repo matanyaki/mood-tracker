@@ -60,30 +60,6 @@ export default function InsightsStatsSkeleton() {
                 </View>
             </PixelCard>
 
-            {/* EmotionWavesChart card */}
-            <PixelCard padding={0} wrapperStyle={styles.chartCardWrapper} style={styles.chartCard}>
-                <View style={styles.chartHeader}>
-                    <SkeletonBox width={170} height={13} borderRadius={SQUARE} />
-                    <SkeletonBox
-                        width={150}
-                        height={9}
-                        borderRadius={SQUARE}
-                        style={styles.chartSubtitle}
-                    />
-                </View>
-
-                <SkeletonBox height={320} borderRadius={SQUARE} style={styles.chartBody} />
-
-                <View style={styles.legendContainer}>
-                    {LEGEND_ITEMS.map(i => (
-                        <View key={`legend-${i}`} style={styles.legendItem}>
-                            <SkeletonBox width={10} height={10} borderRadius={SQUARE} />
-                            <SkeletonBox width={48} height={9} borderRadius={SQUARE} />
-                        </View>
-                    ))}
-                </View>
-            </PixelCard>
-
             {/* SummaryCards: two cards side by side */}
             <View style={styles.summaryContainer}>
                 {[0, 1].map(i => (
@@ -111,6 +87,32 @@ export default function InsightsStatsSkeleton() {
                 ))}
             </View>
 
+
+            {/* EmotionWavesChart card */}
+            <PixelCard padding={0} wrapperStyle={styles.chartCardWrapper} style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                    <SkeletonBox width={170} height={13} borderRadius={SQUARE} />
+                    <SkeletonBox
+                        width={150}
+                        height={9}
+                        borderRadius={SQUARE}
+                        style={styles.chartSubtitle}
+                    />
+                </View>
+
+                <SkeletonBox height={320} borderRadius={SQUARE} style={styles.chartBody} />
+
+                <View style={styles.legendContainer}>
+                    {LEGEND_ITEMS.map(i => (
+                        <View key={`legend-${i}`} style={styles.legendItem}>
+                            <SkeletonBox width={10} height={10} borderRadius={SQUARE} />
+                            <SkeletonBox width={48} height={9} borderRadius={SQUARE} />
+                        </View>
+                    ))}
+                </View>
+            </PixelCard>
+
+            
             {/* EmotionBreakdown card */}
             <PixelCard padding={18} wrapperStyle={styles.breakdownCardWrapper}>
                 <View style={styles.breakdownHeader}>

@@ -15,7 +15,7 @@ import EmotionBreakdown from '../components/insights/EmotionBreakdown';
 import EmotionWavesChart from '../components/insights/EmotionWavesChart';
 import ChartTooltipModal, { TooltipData } from '../components/insights/ChartTooltipModal';
 import GoalsProgress from '../components/insights/GoalsProgress';
-import MonthlyReassurance from '../components/insights/MonthlyReassurance';
+import MonthlyReassurance, { monthlyMoodScore, MIN_FOR_A_READ } from '../components/insights/MonthlyReassurance';
 
 const getDaysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate();
 
@@ -27,7 +27,7 @@ export default function InsightsScreen({ navigation }: any) {
   const monthParam = `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
   const {
     loading, isFetching, isRefreshing, error,
-    entries, aggregatedEntries, emotionCounts, refreshStats,
+    entries, aggregatedEntries, prevAggregatedEntries, emotionCounts, refreshStats,
   } = useInsightsController(monthParam);
 
   // Not part of the month filter: each ring covers its goal's whole run.
@@ -47,7 +47,7 @@ export default function InsightsScreen({ navigation }: any) {
   const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
 
   // Parse entries to process chart data
-  const { chartData, filteredStats, filteredTotalEntries, dayEntries } = useMemo(() => {
+  const { chartData, filteredStats, filteredTotalEntries, dayEntries, moodScore, moodDelta } = useMemo(() => {
     const daysInMonth = getDaysInMonth(parseInt(selectedMonth), parseInt(selectedYear));
 
     // Determine label step to show only 1, 7, 14, 21, 28 and the last day
@@ -84,10 +84,22 @@ export default function InsightsScreen({ navigation }: any) {
       if (parts.length !== 3) return false;
       const entryYear = parseInt(parts[0], 10);
       const entryMonth = parseInt(parts[1], 10);
-      
+
       return entryMonth === parseInt(selectedMonth, 10) &&
         entryYear === parseInt(selectedYear, 10);
     });
+
+    // Scored off the reassurance card's own scoreDay. No change is shown off
+    // a month too thin for that card to read either -- a down arrow must never
+    // come off two entries. Last month is null while it loads or if it failed,
+    // so the score shows at once and the arrow joins it when the data lands.
+    const scoreThis = monthlyMoodScore(filteredAggregated);
+    const scoreLast = prevAggregatedEntries ? monthlyMoodScore(prevAggregatedEntries) : null;
+    const enoughToCompare = prevAggregatedEntries !== null &&
+      filteredAggregated.length >= MIN_FOR_A_READ && prevAggregatedEntries.length >= MIN_FOR_A_READ;
+    const delta = enoughToCompare && scoreThis !== null && scoreLast !== null
+      ? scoreThis - scoreLast
+      : null;
 
     filteredAggregated.forEach((entry: any) => {
       if (!entry.date) return;
@@ -154,9 +166,11 @@ export default function InsightsScreen({ navigation }: any) {
       filteredTotalEntries: filteredTotal,
       // One per journaled day, already collapsed by the controller — what the
       // reassurance card reads the month's shape off.
-      dayEntries: filteredAggregated
+      dayEntries: filteredAggregated,
+      moodScore: scoreThis,
+      moodDelta: delta
     };
-  }, [entries, aggregatedEntries, emotionCounts, selectedMonth, selectedYear]);
+  }, [entries, aggregatedEntries, prevAggregatedEntries, emotionCounts, selectedMonth, selectedYear]);
 
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -241,7 +255,11 @@ export default function InsightsScreen({ navigation }: any) {
               totalEntries={filteredTotalEntries}
             />
 
-            <SummaryCards filteredTotalEntries={filteredTotalEntries} />
+            <SummaryCards
+              filteredTotalEntries={filteredTotalEntries}
+              moodScore={moodScore}
+              delta={moodDelta}
+            />
 
             <EmotionWavesChart
               chartData={chartData}
