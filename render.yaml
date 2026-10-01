@@ -12,7 +12,7 @@ services:
     runtime: node
     plan: free
     rootDir: server
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     # tsconfig includes ../shared/types, which pushes the entry down to
     # dist/server/src/index.js rather than dist/index.js. `npm start` already
     # points at the right path -- do not "simplify" this.

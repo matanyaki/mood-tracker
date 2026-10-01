@@ -61,4 +61,8 @@ try {
     console.error("Failed to initialize Firebase:", error);
 }
 
+if (!db && process.env.NODE_ENV === 'production') {
+    throw new Error('Firebase Admin not initialized: set FIREBASE_SERVICE_ACCOUNT');
+}
+
 export { admin, db };

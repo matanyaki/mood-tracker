@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { db, admin } from './config/firebase';
+import { admin } from './config/firebase';
 import journalRoutes from './routes/journalRoutes';
 import greetingRoutes from './routes/greetingRoutes';
 import goalRoutes from './routes/goalRoutes';
@@ -19,7 +19,7 @@ const app = express();
 // Render (and any similar host) terminates TLS at a load balancer and forwards the
 // real client IP in X-Forwarded-For. Without this, express-rate-limit sees every
 // request as coming from the proxy's single IP and would throttle the whole world
-// against one 100-request budget. Scoped to one hop -- trusting the header blindly
+// against one 600-request budget. Scoped to one hop -- trusting the header blindly
 // would let a caller spoof their way around the limiter.
 if (process.env.TRUST_PROXY === 'true') {
     app.set('trust proxy', 1);
@@ -43,7 +43,7 @@ app.use((req: Request, res: Response, next: import('express').NextFunction) => {
 // Rate limiting — applied to /api only, so /health stays pollable.
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
+    max: 600,
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, error: 'Too many requests, please try again later.' }
@@ -60,34 +60,9 @@ app.use('/api/streaks', streakRoutes);
 
 // Health Check Route — public and unauthenticated, so the response body must not
 // describe internal structure. Diagnostics go to the log, never to the client.
-app.get('/health', async (_req: Request, res: Response) => {
-    if (!admin.apps.length || !db) {
-        console.error('[Health] Firebase Admin SDK not initialized (service account missing?)');
-        return res.status(503).json({
-            status: 'ERROR',
-            timestamp: new Date().toISOString(),
-            firebase: 'disconnected'
-        });
-    }
-
-    try {
-        // Liveness probe: confirms we can actually reach Firestore. The result is
-        // deliberately discarded — collection IDs are not the caller's business.
-        await db.listCollections();
-
-        res.status(200).json({
-            status: 'OK',
-            timestamp: new Date().toISOString(),
-            firebase: 'connected'
-        });
-    } catch (error) {
-        console.error('[Health] Firestore check failed:', error);
-        res.status(503).json({
-            status: 'ERROR',
-            timestamp: new Date().toISOString(),
-            firebase: 'disconnected'
-        });
-    }
+app.get('/health', (_req, res) => {
+    const ok = admin.apps.length > 0;
+    res.status(ok ? 200 : 503).json({ status: ok ? 'OK' : 'ERROR' });
 });
 
 // Central error handler — must stay LAST, after all routes.
