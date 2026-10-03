@@ -10,7 +10,7 @@ services:
   - type: web
     name: emotion-tracker-matan-api
     runtime: node
-    # plan: free
+    plan: free
     # Permanent once the service exists. Firestore is eur3 (multi-region Europe);
     # Frankfurt is the closest Render region.
     region: frankfurt
