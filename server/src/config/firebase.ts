@@ -5,64 +5,64 @@ import fs from 'fs';
 
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 let db: admin.firestore.Firestore | undefined;
 
 /**
- * Resolve the service account key.
+ * Locate the service account key for Application Default Credentials.
  *
- * Two sources, in priority order:
+ *   - Deployed: GOOGLE_APPLICATION_CREDENTIALS names a Render Secret File at
+ *     /etc/secrets/serviceAccount.json. The key never enters the repo or the build.
+ *   - Local dev: when the variable is unset, fall back to FIREBASE_SERVICE_ACCOUNT_PATH
+ *     or ./service-account.json (gitignored), which is how `npm run dev` has always
+ *     worked. Production never falls back -- it must be told where the key is.
  *
- *   1. FIREBASE_SERVICE_ACCOUNT -- the whole key as one JSON string. This is how a
- *      deployed instance is configured: service-account.json is gitignored and
- *      never reaches the build, so on Render there is no file to point at.
- *   2. A file on disk, which is how local development has always worked.
- *
- * The env var wins so a deployed instance can never silently fall back to a stale
- * key that happened to be left in the image.
+ * The file is checked here because applicationDefault() does not check it: with no
+ * usable key it falls back to the GCE metadata server and only fails on the first
+ * Firestore call, long after the instance has passed its health check.
  */
-const loadServiceAccount = (): admin.ServiceAccount | null => {
-    const inline = process.env.FIREBASE_SERVICE_ACCOUNT;
+const loadCredentials = (): { file: string; projectId: string } => {
+    let file = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-    if (inline) {
-        console.log('Firebase Admin: using FIREBASE_SERVICE_ACCOUNT');
-        return JSON.parse(inline);
+    if (!file && !isProduction) {
+        file = path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_PATH || './service-account.json');
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = file;
     }
 
-    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || './service-account.json';
-    const resolvedPath = path.resolve(process.cwd(), serviceAccountPath);
-
-    if (fs.existsSync(resolvedPath)) {
-         
-        return require(resolvedPath);
+    if (!file) {
+        throw new Error('GOOGLE_APPLICATION_CREDENTIALS is not set');
+    }
+    if (!fs.existsSync(file)) {
+        throw new Error(`GOOGLE_APPLICATION_CREDENTIALS points at ${file}, which does not exist`);
     }
 
-    console.error('Service account file not found at:', resolvedPath);
-    console.error('Place your firebase service account json in the server root, or set');
-    console.error('FIREBASE_SERVICE_ACCOUNT to the key JSON (how the deployed instance is configured).');
-    return null;
+    const key = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (key.type !== 'service_account' || !key.project_id) {
+        throw new Error(`${file} is not a service account key`);
+    }
+
+    return { file, projectId: key.project_id };
 };
 
 try {
+    const { file, projectId } = loadCredentials();
+
     if (!admin.apps.length) {
-        const serviceAccount = loadServiceAccount();
-
-        if (serviceAccount) {
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-            });
-            console.log(`Firebase Admin connected to project: ${(serviceAccount as { project_id?: string }).project_id}`);
-        }
+        admin.initializeApp({
+            credential: admin.credential.applicationDefault(),
+            projectId,
+        });
     }
-    // This will throw if app not initialized
-    if (admin.apps.length) {
-        db = admin.firestore();
-    }
+    db = admin.firestore();
+    console.log(`Firebase Admin connected to project: ${projectId} (key: ${file})`);
 } catch (error) {
-    console.error("Failed to initialize Firebase:", error);
-}
-
-if (!db && process.env.NODE_ENV === 'production') {
-    throw new Error('Firebase Admin not initialized: set FIREBASE_SERVICE_ACCOUNT');
+    // Booting without Firebase means answering every authenticated request with 401,
+    // so production refuses to start. Dev keeps going so unrelated routes still work.
+    if (isProduction) {
+        throw new Error(`Firebase Admin not initialized: ${(error as Error).message}`);
+    }
+    console.error('Failed to initialize Firebase:', (error as Error).message);
 }
 
 export { admin, db };

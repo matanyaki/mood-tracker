@@ -29,17 +29,19 @@ Build backend | `npm run build` | server/ |
 
 ## API Routes
 
-`/api/entries` `/api/greetings` `/api/users` `/api/insights` `/api/streaks` `/health`
+`/api/entries` `/api/greetings` `/api/users` `/api/insights` `/api/streaks` `/health` `/healthz` (Render health check — always 200, no Firestore)
 
 ## Env Vars
 
 - Frontend: root `.env` via `@env` alias (react-native-dotenv / babel.config.js)
 - Backend: `server/.env` + `server/service-account.json` — both gitignored ✔
+- Backend credentials: `GOOGLE_APPLICATION_CREDENTIALS` → key file (Render: secret file at `/etc/secrets/serviceAccount.json`). Unset in dev → falls back to `server/service-account.json`. Production throws at boot without it.
 
 ## Gotchas
 
 - `--tunnel` always. LAN IP in `src/config/api.ts` is machine-specific, not a real default.
-- Backend compiled output is `dist/server/src/index.js` not `dist/index.js` — tsconfig includes `../shared/types/**/*` which shifts layout.
+- Backend compiled output is `server/dist/server/src/index.js` not `dist/index.js` — tsconfig `rootDir: ".."` (it compiles `../shared`) shifts layout.
+- Render service has NO rootDir: Render hides files outside it, and the server needs `shared/`. Build is scoped with `npm --prefix server`. See DEPLOY.md.
 - Frontend env = `@env` alias. Backend env = `process.env` via `dotenv.config()`.
 
 ## Emotion System

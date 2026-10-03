@@ -25,6 +25,14 @@ if (process.env.TRUST_PROXY === 'true') {
     app.set('trust proxy', 1);
 }
 
+// Render's health check. Registered before every middleware so probes skip helmet,
+// the request logger and the rate limiter. Always 200 and never touches Firestore:
+// production refuses to boot without Firebase (config/firebase.ts), so a process
+// that is up to answer this is a process that initialized.
+app.get('/healthz', (_req, res) => {
+    res.status(200).json({ status: 'OK' });
+});
+
 app.use(helmet());
 
 app.use(cors({

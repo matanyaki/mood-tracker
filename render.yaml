@@ -8,24 +8,41 @@
 services:
   # ---------------------------------------------------------------- backend API
   - type: web
-    name: mood-tracker-api
+    name: emotion-tracker-matan-api
     runtime: node
     plan: free
-    rootDir: server
-    buildCommand: npm install --include=dev && npm run build
-    # tsconfig includes ../shared/types, which pushes the entry down to
-    # dist/server/src/index.js rather than dist/index.js. `npm start` already
-    # points at the right path -- do not "simplify" this.
-    startCommand: npm start
-    healthCheckPath: /health
+    # Permanent once the service exists. Firestore is eur3 (multi-region Europe);
+    # Frankfurt is the closest Render region.
+    region: frankfurt
+    # No rootDir. The server compiles ../shared, and Render hides everything outside
+    # a service's root directory at build AND run time (tsc fails on every shared
+    # import). The build runs from the repo root, scoped to server/ with --prefix.
+    # --include=dev: NODE_ENV=production would otherwise skip typescript.
+    buildCommand: npm ci --prefix server --include=dev && npm run build --prefix server
+    # tsconfig's rootDir is the repo root (it compiles ../shared), so tsc writes the
+    # entry to server/dist/server/src/index.js -- verified by building, not assumed.
+    # node directly rather than `npm start`, so Render's SIGTERM reaches the process.
+    startCommand: node server/dist/server/src/index.js
+    healthCheckPath: /healthz
+    # With no rootDir, every commit would redeploy the API. Paths are relative to
+    # the repo root. shared/ stays in: the server compiles it.
+    buildFilter:
+      paths:
+        - server/**
+        - shared/**
+        - render.yaml
+      ignoredPaths:
+        - server/**/*.test.ts
     envVars:
+      - key: NODE_VERSION
+        value: 22.23.3
       - key: NODE_ENV
         value: production
-      # The whole service-account.json, as one line. The file itself is gitignored
-      # and never reaches the build, so this is the only way the deployed instance
-      # gets Firebase credentials.
-      - key: FIREBASE_SERVICE_ACCOUNT
-        sync: false
+      # Points Application Default Credentials at the Render Secret File holding the
+      # service account key. Secret files can't be declared in a Blueprint -- add
+      # serviceAccount.json under the service's Environment tab (see DEPLOY.md).
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/serviceAccount.json
       # Render terminates TLS at a proxy; without this every request looks like it
       # came from one IP and the rate limiter throttles all users together.
       - key: TRUST_PROXY
