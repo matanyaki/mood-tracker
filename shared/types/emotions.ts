@@ -14,15 +14,20 @@ import { z } from 'zod';
  * picker reads as a spectrum rather than an alphabetical list.
  */
 export const EMOTIONS = [
-    { id: 'happy', label: 'Happy', imageKey: 'happy', color: '#F59E0B' },          // Amber
-    { id: 'excited', label: 'Excited', imageKey: 'excited', color: '#EC4899' },    // Pink
-    { id: 'calm', label: 'Calm', imageKey: 'calm', color: '#10B981' },             // Emerald
-    { id: 'confused', label: 'Confused', imageKey: 'confused', color: '#A855F7' }, // Purple
-    { id: 'bored', label: 'Bored', imageKey: 'bored', color: '#94A3B8' },          // Slate
-    { id: 'tired', label: 'Tired', imageKey: 'tired', color: '#0EA5E9' },          // Sky
+    // Positive
+    { id: 'happy', label: 'Happy', imageKey: 'happy', color: '#FFC857' },         // Amber
+    { id: 'excited', label: 'Excited', imageKey: 'excited', color: '#FF6B35' },    // Orange
+    { id: 'calm', label: 'Calm', imageKey: 'calm', color: '#2EC4B6' },             // Emerald
+
+    // Neutral / Everyday
+    { id: 'confused', label: 'Confused', imageKey: 'confused', color: '#A78BFA' }, // Slate
+    { id: 'bored', label: 'Bored', imageKey: 'bored', color: '#9CA3AF' },          // Zinc
+    { id: 'tired', label: 'Tired', imageKey: 'tired', color: '#64748B' },          // Light blue
+
+    // Negative
     { id: 'sad', label: 'Sad', imageKey: 'sad', color: '#3B82F6' },                // Blue
-    { id: 'anxious', label: 'Anxious', imageKey: 'anxious', color: '#8B5CF6' },    // Violet
-    { id: 'angry', label: 'Angry', imageKey: 'angry', color: '#EF4444' },          // Red
+    { id: 'anxious', label: 'Anxious', imageKey: 'anxious', color: '#C026D3' },    // Violet
+    { id: 'angry', label: 'Angry', imageKey: 'angry', color: '#E63946' },          // Red
 ] as const;
 
 export type EmotionId = typeof EMOTIONS[number]['id'];

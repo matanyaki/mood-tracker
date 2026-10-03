@@ -32,7 +32,7 @@ const loadServiceAccount = (): admin.ServiceAccount | null => {
     const resolvedPath = path.resolve(process.cwd(), serviceAccountPath);
 
     if (fs.existsSync(resolvedPath)) {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+         
         return require(resolvedPath);
     }
 

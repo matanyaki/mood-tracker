@@ -57,7 +57,7 @@ export default function ProfileScreen() {
         try {
             if (isSignUp) {
                 await signup(email, password);
-                PixelAlert.alert("Success", "Account created and data synced!");
+                PixelAlert.alert("Success", "Account created!");
             } else {
                 await login(email, password);
                 // login success automatically updates user state via context

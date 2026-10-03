@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "target": "es2020",
-        "module": "commonjs",
+        "module": "node16",
         "lib": [
             "es2020",
             "DOM"
@@ -10,10 +10,10 @@
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
+        "rootDir": "..",
         "outDir": "./dist",
         "resolveJsonModule": true,
-        "moduleResolution": "node",
-        "baseUrl": ".",
+        "moduleResolution": "node16",
         "paths": {
             "@shared/*": ["../shared/*"],
             "zod": ["./node_modules/zod"]

@@ -10,12 +10,12 @@ import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
 
 import FilterRow from '../components/insights/FilterRow';
-import SummaryCards from '../components/insights/SummaryCards';
+import SummaryCards, { MoodDelta } from '../components/insights/SummaryCards';
 import EmotionBreakdown from '../components/insights/EmotionBreakdown';
 import EmotionWavesChart from '../components/insights/EmotionWavesChart';
 import ChartTooltipModal, { TooltipData } from '../components/insights/ChartTooltipModal';
 import GoalsProgress from '../components/insights/GoalsProgress';
-import MonthlyReassurance, { monthlyMoodScore, MIN_FOR_A_READ } from '../components/insights/MonthlyReassurance';
+import MonthlyReassurance, { monthlyMoodScore } from '../components/insights/MonthlyReassurance';
 
 const getDaysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate();
 
@@ -89,17 +89,17 @@ export default function InsightsScreen({ navigation }: any) {
         entryYear === parseInt(selectedYear, 10);
     });
 
-    // Scored off the reassurance card's own scoreDay. No change is shown off
-    // a month too thin for that card to read either -- a down arrow must never
-    // come off two entries. Last month is null while it loads or if it failed,
-    // so the score shows at once and the arrow joins it when the data lands.
+    // Scored off the reassurance card's own scoreDay, in points on the 0-100
+    // line. Last month is null while it loads or if it failed, so the score
+    // shows at once and the change joins it when the data lands. A month with
+    // a score after one without gets 'new' -- there is no baseline to take a
+    // difference from, and counting the empty month as 0 would invent one.
     const scoreThis = monthlyMoodScore(filteredAggregated);
     const scoreLast = prevAggregatedEntries ? monthlyMoodScore(prevAggregatedEntries) : null;
-    const enoughToCompare = prevAggregatedEntries !== null &&
-      filteredAggregated.length >= MIN_FOR_A_READ && prevAggregatedEntries.length >= MIN_FOR_A_READ;
-    const delta = enoughToCompare && scoreThis !== null && scoreLast !== null
-      ? scoreThis - scoreLast
-      : null;
+    let delta: MoodDelta = null;
+    if (scoreThis !== null && prevAggregatedEntries !== null) {
+      delta = scoreLast !== null ? scoreThis - scoreLast : 'new';
+    }
 
     filteredAggregated.forEach((entry: any) => {
       if (!entry.date) return;

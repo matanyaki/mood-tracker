@@ -1,11 +1,12 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import { useCheckInController } from '../controllers/useCheckInController';
 import { ScreenContainer, AppHeader, EmotionRow, PrimaryButton } from '../components';
 
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
 
 export default function CheckInScreen({ navigation }: any) {
   const {
@@ -38,6 +39,17 @@ export default function CheckInScreen({ navigation }: any) {
         style={styles.header}
         titleStyle={styles.headerTitle}
         subtitleStyle={styles.headerSubtitle}
+        // goBack, not navigate('Today'): Check In is pushed over the tabs from
+        // Today and from Diary's empty state, and back should land where it came from.
+        leftAction={
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+            hitSlop={8}
+          >
+            <ArrowLeft color={INK} size={20} strokeWidth={2.5} />
+          </Pressable>
+        }
       />
 
       <ScrollView
@@ -80,6 +92,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 10,
+    // The emoji + two-line title is taller than the back button, so centre the
+    // button against it rather than pinning it to the top edge.
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
@@ -90,6 +105,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1,
     color: INK_MUTED,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PAPER,
+    borderWidth: BORDER_W_INNER,
+    borderColor: OUTLINE,
+  },
+  backButtonPressed: {
+    // Sinks toward its own corner, matching how PrimaryButton answers a press.
+    transform: [{ translateX: 1 }, { translateY: 1 }],
+    backgroundColor: '#EDE9E0',
   },
   scrollView: {
     flex: 1,

@@ -1,22 +1,27 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { TrendingUp, Smile, ArrowUp, ArrowDown } from 'lucide-react-native';
+import { TrendingUp, Smile, ArrowUp, ArrowDown, Minus } from 'lucide-react-native';
 import PixelCard from '../ui/PixelCard';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import { OUTLINE, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
+
+/**
+ * Mood score points against last month. 'new' when last month had nothing to
+ * score, null while last month is loading (or failed) or this month is empty.
+ */
+export type MoodDelta = number | 'new' | null;
 
 interface SummaryCardsProps {
     filteredTotalEntries: number;
     /** 0-100, or null for a month with nothing to score. */
     moodScore: number | null;
-    /** Points against last month, or null when there is nothing fair to compare. */
-    delta: number | null;
+    delta: MoodDelta;
 }
 
 export default function SummaryCards({ filteredTotalEntries, moodScore, delta }: SummaryCardsProps) {
     // A decline is drawn muted, not red: a down month is not something to be
     // told off for.
-    const deltaColor = delta !== null && delta < 0 ? INK_MUTED : INK;
+    const deltaColor = typeof delta === 'number' && delta < 0 ? INK_MUTED : INK;
 
     return (
         <View style={styles.container}>
@@ -35,12 +40,20 @@ export default function SummaryCards({ filteredTotalEntries, moodScore, delta }:
                 </View>
                 <View style={styles.numberRow}>
                     <Text style={styles.summaryNumber}>{moodScore ?? '—'}</Text>
-                    {delta !== null && (
-                        // Arrows as icons: Silkscreen has no glyph for them.
+                    {delta === 'new' && (
+                        <Text style={[styles.deltaText, { color: INK_MUTED }]}>NEW</Text>
+                    )}
+                    {typeof delta === 'number' && (
+                        // Arrows as icons: Silkscreen has no glyph for them. An
+                        // unchanged month gets a dash, so "no change" still reads
+                        // as an answer rather than a missing one.
                         <View style={styles.delta}>
                             {delta > 0 && <ArrowUp size={12} color={deltaColor} strokeWidth={3} />}
                             {delta < 0 && <ArrowDown size={12} color={deltaColor} strokeWidth={3} />}
-                            <Text style={[styles.deltaText, { color: deltaColor }]}>{Math.abs(delta)}%</Text>
+                            {delta === 0 && <Minus size={12} color={INK_MUTED} strokeWidth={3} />}
+                            <Text style={[styles.deltaText, { color: delta === 0 ? INK_MUTED : deltaColor }]}>
+                                {Math.abs(delta)} PTS
+                            </Text>
                         </View>
                     )}
                 </View>
