@@ -1,10 +1,13 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useIsRestoring, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import type { JournalEntry, EntryStats } from '@shared/types';
-import { useEntriesQuery } from '../hooks/useEntriesQuery';
-import { useEntryStatsQuery } from '../hooks/useEntryStatsQuery';
+import { resolveEmotionId } from '../../shared/types';
+import { useAuth } from '../context/AuthContext';
+import { entriesQueryOptions, useEntriesQuery } from '../hooks/useEntriesQuery';
+import { goalProgressQueryOptions } from '../hooks/useGoalsQuery';
 
 const NO_ENTRIES: JournalEntry[] = [];
-const NO_STATS: EntryStats = {};
 
 /** "YYYY-MM" -> the month before it, rolling January back into last December. */
 function previousMonth(month: string): string {
@@ -88,14 +91,38 @@ function aggregateByDay(rawEntries: JournalEntry[]) {
     });
 }
 
+/**
+ * How many times each emotion was logged across the month's entries.
+ *
+ * Counted here rather than fetched from GET /api/entries/stats: the screen already
+ * holds every entry for the month to draw the chart, and the endpoint only re-read
+ * those same documents to count them. One request instead of two, and the counts
+ * come from the very list the chart and the entry total do, so they cannot disagree.
+ *
+ * Retired ids fold into their replacement and unknown ones are skipped, the same
+ * rule the server applied. API entries are already folded by the schema; guest
+ * entries come straight off the device unparsed, so this resolves them too.
+ */
+function countEmotions(rawEntries: JournalEntry[]): EntryStats {
+    const counts: EntryStats = {};
+    rawEntries.forEach(entry => {
+        entry.emotions?.forEach(emotion => {
+            const key = resolveEmotionId(emotion.id);
+            if (!key) return;
+            counts[key] = (counts[key] || 0) + 1;
+        });
+    });
+    return counts;
+}
+
 export const useInsightsController = (month?: string) => {
-    // Full entry docs for the waves chart; counts straight from the server.
+    // Full entry docs: the waves chart, the totals and the emotion counts all read these.
     const entriesQuery = useEntriesQuery(month);
-    const statsQuery = useEntryStatsQuery(month);
 
     const rawEntries = entriesQuery.data ?? NO_ENTRIES;
 
     const aggregatedEntries = useMemo(() => aggregateByDay(rawEntries), [rawEntries]);
+    const emotionCounts = useMemo(() => countEmotions(rawEntries), [rawEntries]);
 
     // Last month, read only for the mood score's change. Same query and cache
     // key as any other month, but kept out of loading/error below: the screen
@@ -106,40 +133,54 @@ export const useInsightsController = (month?: string) => {
         [prevEntriesQuery.isSuccess, prevEntriesQuery.data]
     );
 
-    // Tracked separately from `isFetching`, which is also true for the first load
-    // and for any background refetch. A pull-to-refresh spinner driven by
-    // `isFetching` appears on a screen nobody pulled, and then stays up for as long
-    // as the fetch behind it does -- which is what made a slow load look frozen.
-    const [isRefreshing, setIsRefreshing] = useState(false);
-
-    // Pull-to-refresh: force both windows past their staleTime.
-    const refreshStats = useCallback(async () => {
-        setIsRefreshing(true);
-        try {
-            // refetch() resolves with the result rather than rejecting, so a failed
-            // refresh still releases the spinner.
-            // Last month rides along but isn't awaited: the spinner is for the
-            // month on screen.
-            prevEntriesQuery.refetch();
-            await Promise.all([entriesQuery.refetch(), statsQuery.refetch()]);
-        } finally {
-            setIsRefreshing(false);
-        }
-    }, [entriesQuery.refetch, statsQuery.refetch, prevEntriesQuery.refetch]);
+    // The error card's retry: force both windows past their staleTime.
+    const refreshStats = useCallback(() => {
+        prevEntriesQuery.refetch();
+        entriesQuery.refetch();
+    }, [entriesQuery.refetch, prevEntriesQuery.refetch]);
 
     return {
-        loading: entriesQuery.isLoading || statsQuery.isLoading,
-        isFetching: entriesQuery.isFetching || statsQuery.isFetching,
-        isRefreshing,
+        loading: entriesQuery.isLoading,
+        isFetching: entriesQuery.isFetching,
         // Surfaced so the screen can say the month failed to load. Without it a
         // failed fetch is indistinguishable from a month with no entries.
-        error: entriesQuery.error ?? statsQuery.error,
+        error: entriesQuery.error,
         totalEntries: rawEntries.length,
         entries: rawEntries,
         aggregatedEntries,
         // null until last month has loaded, and stays null if it fails.
         prevAggregatedEntries,
-        emotionCounts: statsQuery.data ?? NO_STATS,
+        emotionCounts,
         refreshStats
     };
+};
+
+/**
+ * Warms every query the Insights tab opens with, so the first visit paints from
+ * cache instead of a skeleton. Mounted by the tab navigator, i.e. once auth has
+ * resolved.
+ *
+ * Waits out the persisted-cache restore: a prefetch fired before it would hit the
+ * network for data the restore is about to hand back. prefetchQuery skips anything
+ * already fresh and joins any request in flight -- the Today tab reads this month
+ * too -- so this only ever costs the requests the cache cannot answer.
+ *
+ * Re-runs when the account changes: AuthContext resets the cache on a switch, and
+ * the new account's Insights would otherwise start cold again.
+ */
+export const usePrefetchInsights = () => {
+    const queryClient = useQueryClient();
+    const isRestoring = useIsRestoring();
+    const { user } = useAuth();
+    const uid = user?.uid;
+
+    useEffect(() => {
+        if (isRestoring) return;
+
+        // The month InsightsScreen opens on, built the same local-time way.
+        const month = format(new Date(), 'yyyy-MM');
+        queryClient.prefetchQuery(entriesQueryOptions(month));
+        queryClient.prefetchQuery(entriesQueryOptions(previousMonth(month)));
+        queryClient.prefetchQuery(goalProgressQueryOptions());
+    }, [isRestoring, queryClient, uid]);
 };

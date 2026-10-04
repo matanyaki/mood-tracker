@@ -1,6 +1,6 @@
 // src/services/journalService.ts
-import type { JournalEntry, EntryStats } from '@shared/types';
-import { JournalEntrySchema, EntryStatsSchema } from '../../shared/types';
+import type { JournalEntry } from '@shared/types';
+import { JournalEntrySchema } from '../../shared/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../config/api';
 import { auth } from '../config/firebase';
@@ -130,38 +130,6 @@ export const JournalService = {
       }
     } catch (error) {
       console.error("Error [getUserEntries]:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get emotion counts for a month.
-   * - Authenticated: GET /api/entries/stats — the server aggregates, the client displays.
-   * - Guest: counted locally, because guest data never reaches the backend at all.
-   */
-  getEntryStats: async (userId: string, month: string): Promise<EntryStats> => {
-    try {
-      if (userId === GUEST_ID) {
-        // --- LOCAL STORAGE ---
-        const entries = await JournalService.getUserEntries(userId, month);
-        return entries.reduce<EntryStats>((counts, entry) => {
-          entry.emotions?.forEach(emotion => {
-            counts[emotion.id] = (counts[emotion.id] || 0) + 1;
-          });
-          return counts;
-        }, {});
-
-      } else {
-        // --- API (Authenticated) ---
-        const user = auth.currentUser;
-        if (!user) throw new Error("User not authenticated.");
-
-        console.log(`[JournalService] Fetching entry stats (month: ${month})`);
-        const result = await api.get('/api/entries/stats', { params: { month } });
-        return EntryStatsSchema.parse(result);
-      }
-    } catch (error) {
-      console.error("Error [getEntryStats]:", error);
       throw error;
     }
   },

@@ -7,6 +7,7 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { usePrefetchInsights } from '../controllers/useInsightsController';
 import { PIXEL_BOLD } from '../constants/typography';
 
 // Screens
@@ -44,6 +45,9 @@ function AppTabs() {
   // A fixed tabBarStyle height overrides react-navigation's own safe-area handling,
   // so the bar was sitting too low / crowding the home indicator -- add the inset back in ourselves.
   const insets = useSafeAreaInsets();
+
+  // Insights is a tab away from wherever the app opens; have its data ready by then.
+  usePrefetchInsights();
 
   return (
     <Tab.Navigator

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import type { Goal, GoalCompletionsByGoal, GoalProgress } from '@shared/types';
 import { GoalService } from '../services/goalService';
 import { STALE_TIME_MS, GC_TIME_MS, actingUserId, retryTransportFailures } from './queryConfig';
@@ -43,13 +43,17 @@ export function useGoalCompletionsQuery() {
  * Its own key because it moves for both of the reasons above: a new or edited goal
  * changes the list and the targets, and a day marked done changes the counts.
  * useGoalsController invalidates ['goalProgress'] on every one of those writes.
+ *
+ * Defined once so usePrefetchInsights warms the same key the screen reads.
  */
+export const goalProgressQueryOptions = () => queryOptions<GoalProgress[]>({
+    queryKey: ['goalProgress'],
+    queryFn: () => GoalService.getGoalProgress(actingUserId()),
+    staleTime: STALE_TIME_MS,
+    gcTime: GC_TIME_MS,
+    retry: retryTransportFailures,
+});
+
 export function useGoalProgressQuery() {
-    return useQuery<GoalProgress[]>({
-        queryKey: ['goalProgress'],
-        queryFn: () => GoalService.getGoalProgress(actingUserId()),
-        staleTime: STALE_TIME_MS,
-        gcTime: GC_TIME_MS,
-        retry: retryTransportFailures,
-    });
+    return useQuery(goalProgressQueryOptions());
 }

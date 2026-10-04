@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, ScrollView, RefreshControl, Text, Pressable } from 'react-native';
+import { StyleSheet, ScrollView, Text, Pressable } from 'react-native';
 import { ScreenContainer, AppHeader, PixelCard } from '../components';
 import { InsightsStatsSkeleton } from '../components/skeleton';
 import { useInsightsController } from '../controllers/useInsightsController';
@@ -26,7 +26,7 @@ export default function InsightsScreen({ navigation }: any) {
 
   const monthParam = `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
   const {
-    loading, isFetching, isRefreshing, error,
+    loading, isFetching, error,
     entries, aggregatedEntries, prevAggregatedEntries, emotionCounts, refreshStats,
   } = useInsightsController(monthParam);
 
@@ -36,11 +36,6 @@ export default function InsightsScreen({ navigation }: any) {
     isPending: goalProgressPending,
     refetch: refetchGoalProgress,
   } = useGoalProgressQuery();
-
-  const handleRefresh = useCallback(() => {
-    refetchGoalProgress();
-    return refreshStats();
-  }, [refetchGoalProgress, refreshStats]);
 
   // Tooltip Modal State
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -120,13 +115,11 @@ export default function InsightsScreen({ navigation }: any) {
       }
     });
 
-    // Counts come from GET /api/entries/stats — this only shapes them for display
-    // (label, color, share of the month). Nothing is counted on device.
+    // Counts come from the controller, tallied off the month's entries -- this only
+    // shapes them for display (label, color, share of the month).
     //
-    // Summed over the known taxonomy rather than over every key the server sent:
-    // documents written before the scale rework have no emotion id, so they land
-    // under an `undefined` key that no row ever displays. Left in the total it
-    // would shrink every percentage on the card to pay for a row nobody can see.
+    // Summed over the known taxonomy rather than over every key in the counts, so
+    // a key no row displays can never shrink the percentages on the card.
     const totalEmotions = EMOTIONS_CONFIG.reduce(
       (sum, emotion) => sum + (emotionCounts[emotion.id] || 0),
       0
@@ -214,9 +207,10 @@ export default function InsightsScreen({ navigation }: any) {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        // `isRefreshing`, not `isFetching`: this spinner belongs to a pull the user
-        // actually made, not to every load the screen does on its own.
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+        // No pull-to-refresh, and no rubber-band either: pulling down past the top
+        // does nothing here. Queries refresh themselves when they go stale.
+        bounces={false}
+        overScrollMode="never"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

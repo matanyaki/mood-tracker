@@ -55,10 +55,10 @@ export const useReflectionController = (route: any, navigation: any) => {
             const entryId = await JournalService.addEntry(entryData);
             console.log("[Reflection] Entry saved successfully. ID:", entryId);
 
-            // Invalidate the saved month so Diary and Insights both refresh on next read
+            // Invalidate the saved month so Diary and Insights both refresh on next read.
+            // Insights counts its emotions from these same entries, so this covers it.
             const currentMonth = entryData.date.slice(0, 7);
             queryClient.invalidateQueries({ queryKey: ['entries', currentMonth] });
-            queryClient.invalidateQueries({ queryKey: ['entries', 'stats', currentMonth] });
 
             // The streak is derived from the entry dates, so it is stale the instant
             // this entry lands -- and the card that shows it is on the screen we are
