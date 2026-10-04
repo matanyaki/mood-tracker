@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { getEmotionImageKey, resolveEmotionId } from '../../../shared/types/emotions';
 import PixelCard from '../ui/PixelCard';
 import { MONTH_NAMES } from './FilterRow';
@@ -7,7 +7,7 @@ import { EMOTIONS_CONFIG } from '../../constants/emotions';
 import { getEmotionColor } from '../../constants/colors';
 import { MOOD_IMAGES } from '../../constants/images';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, BORDER_W_INNER } from '../../constants/pixel';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
 
 /**
  * The one card on Insights that talks rather than counts.
@@ -16,6 +16,11 @@ import { OUTLINE, PAPER, INK, BORDER_W_INNER } from '../../constants/pixel';
  * the wave ran. This one reads those same numbers back as a sentence, and it sits
  * first because a bad month is exactly when the numbers land worst: a chart that
  * dips is not something to meet before someone has told you it is survivable.
+ *
+ * Under the sentence sits the month as a strip of days -- one cell per day,
+ * filled with the feeling that led it -- so the gaps are visible without being
+ * scolded about, and any day can be tapped to see what was logged. In the current
+ * month, a day not yet logged gets a check-in button rather than a lecture.
  *
  * Drawn in the same pixel frame as the cards below it, but filled rather than
  * paper, so it reads as the loudest thing on the screen.
@@ -41,6 +46,9 @@ const RECOVERY_WINDOW = 3;
 /** How far the month has to move, half against half, to be called up or down. */
 const TREND_STEP = 0.15;
 
+/** Empty cell in the day strip: a day that has passed with nothing logged. */
+const EMPTY_DAY = '#F1F5F9';
+
 /**
  * Valence per emotion id, straight off the taxonomy's own order: EMOTIONS runs
  * pleasant -> unpleasant, so an emotion's position in it already is its rank.
@@ -49,6 +57,10 @@ const TREND_STEP = 0.15;
  */
 const EMOTION_VALENCE: Record<string, number> = Object.fromEntries(
     EMOTIONS_CONFIG.map((e, i) => [e.id, 1 - (2 * i) / (EMOTIONS_CONFIG.length - 1)])
+);
+
+const EMOTION_LABEL: Record<string, string> = Object.fromEntries(
+    EMOTIONS_CONFIG.map(e => [e.id, e.label])
 );
 
 /** "1 DAY" / "3 DAYS". Silkscreen is too wide to spend on "(S)". */
@@ -65,6 +77,28 @@ interface MonthRead {
     hasLows: boolean;
     lowsRecovered: boolean;
     trend: 'up' | 'flat' | 'down';
+    /** Label of the emotion logged on the most days, or null when none resolve. */
+    topEmotion: string | null;
+}
+
+/** Where the month sits against today. The copy changes tense on it. */
+type MonthTiming = 'past' | 'current' | 'future';
+
+interface MonthContext {
+    timing: MonthTiming;
+    loggedToday: boolean;
+}
+
+/**
+ * A day's emotions folded onto the taxonomy, strongest first. Retired ids go
+ * through the resolver; anything still unknown, or logged without a scale, is
+ * dropped rather than guessed at.
+ */
+function dayEmotions(day: DayEntry): { id: string; scale: number }[] {
+    return (day.emotions ?? [])
+        .map(e => ({ id: resolveEmotionId(e.id), scale: e.scale }))
+        .filter((e): e is { id: NonNullable<typeof e.id>; scale: number } => !!e.id && e.scale > 0)
+        .sort((a, b) => b.scale - a.scale);
 }
 
 /**
@@ -78,21 +112,42 @@ function scoreDay(day: DayEntry): number | null {
     let weighted = 0;
     let weight = 0;
 
-    (day.emotions ?? []).forEach(e => {
-        // Through the taxonomy's resolver, so a day logged under a retired id
-        // still scores instead of dropping out of the month.
-        const id = resolveEmotionId(e.id);
-        const valence = id ? EMOTION_VALENCE[id] : undefined;
-        if (valence === undefined || !(e.scale > 0)) return;
-
-        weighted += valence * e.scale;
+    dayEmotions(day).forEach(e => {
+        weighted += EMOTION_VALENCE[e.id] * e.scale;
         weight += e.scale;
     });
 
     return weight > 0 ? weighted / weight : null;
 }
 
-/** The three things the copy is allowed to claim, read off the month's days. */
+/**
+ * The emotion that turned up on the most days, ties going to the one felt more
+ * strongly overall. Counted in days, like everything else on the card, so one
+ * day with five entries cannot make itself the month's feeling.
+ */
+function topEmotionOf(days: DayEntry[]): string | null {
+    const tally: Record<string, { days: number; weight: number }> = {};
+
+    days.forEach(day => {
+        const seen = new Set<string>();
+        dayEmotions(day).forEach(e => {
+            const t = (tally[e.id] ??= { days: 0, weight: 0 });
+            t.weight += e.scale;
+            if (!seen.has(e.id)) {
+                t.days++;
+                seen.add(e.id);
+            }
+        });
+    });
+
+    const best = Object.entries(tally).sort(
+        ([, a], [, b]) => b.days - a.days || b.weight - a.weight
+    )[0];
+
+    return best ? EMOTION_LABEL[best[0]] : null;
+}
+
+/** The things the copy is allowed to claim, read off the month's days. */
 function readMonth(days: DayEntry[]): MonthRead {
     const scores = [...days]
         .sort((a, b) => a.date.localeCompare(b.date))
@@ -135,6 +190,7 @@ function readMonth(days: DayEntry[]): MonthRead {
         hasLows: lows > 0,
         lowsRecovered: lows > 0 && recovered === lows,
         trend,
+        topEmotion: topEmotionOf(days),
     };
 }
 
@@ -142,35 +198,64 @@ function readMonth(days: DayEntry[]): MonthRead {
  * The sentence the card exists for.
  *
  * Every branch rests on something that stays true in a bad month -- that they
- * showed up, that lows passed, that they felt a range. None of them reads the
- * mood as high, and the heavy branch does not say "you're okay": a month that is
+ * showed up, that lows passed, what they felt most. None of them reads the mood
+ * as high, and the heavy branch does not say "you're okay": a month that is
  * genuinely going badly is granted, not argued with.
+ *
+ * A thin month is where the card asks for more, and only there: it says how many
+ * more days until the month can be read, so the ask is a number, not a guilt trip.
  *
  * `totalEntries` is only a confidence check. It never appears in the sentence --
  * days are what showing up is counted in -- but a month that is one busy day is
  * not a month there is anything to say about.
  */
-export function pickReassurance(month: string, read: MonthRead, totalEntries: number): string {
-    const { daysJournaled, hasLows, lowsRecovered, trend } = read;
+export function pickReassurance(
+    month: string,
+    read: MonthRead,
+    totalEntries: number,
+    { timing, loggedToday }: MonthContext,
+): string {
+    const { daysJournaled, hasLows, lowsRecovered, trend, topEmotion } = read;
     const days = countLabel(daysJournaled, 'DAY', 'DAYS');
+    const top = topEmotion?.toUpperCase();
+    const isNow = timing === 'current';
+
+    if (timing === 'future') {
+        return `${month} HASN'T STARTED YET. YOUR STORY FOR IT WILL SHOW UP HERE.`;
+    }
 
     if (daysJournaled === 0) {
-        return `NOTHING LOGGED IN ${month} YET. CHECK IN WHEN YOU'RE READY.`;
+        return isNow
+            ? `${month} IS A BLANK PAGE SO FAR. ONE QUICK CHECK-IN IS ALL IT TAKES TO START.`
+            : `NOTHING WAS LOGGED IN ${month}. THAT'S OKAY — EVERY MONTH IS A FRESH START.`;
     }
 
     if (daysJournaled < MIN_FOR_A_READ || totalEntries < MIN_FOR_A_READ) {
-        return `YOU'VE LOGGED ${days} THIS MONTH. KEEP CHECKING IN.`;
+        if (!isNow) {
+            return `YOU LOGGED ${days} IN ${month} — A REAL START. A FEW MORE CHECK-INS NEXT TIME WILL SHOW THE BIGGER PICTURE.`;
+        }
+        const need = Math.max(MIN_FOR_A_READ - daysJournaled, 1);
+        const feltMost = top ? `, MOSTLY ${top}` : '';
+        const nudge = loggedToday ? 'COME BACK TOMORROW' : 'CHECK IN TODAY';
+        return `YOU'VE LOGGED ${days} SO FAR${feltMost}. ${countLabel(need, 'MORE DAY', 'MORE DAYS')} AND YOUR MONTH STARTS TO TAKE SHAPE — ${nudge}.`;
     }
 
     if (trend === 'down' || (hasLows && !lowsRecovered)) {
-        return `THIS HAS BEEN A HEAVY STRETCH — AND YOU STILL SHOWED UP ${days}. THAT COUNTS. BE GENTLE WITH YOURSELF.`;
+        return `THIS ${isNow ? 'HAS BEEN' : 'WAS'} A HEAVY STRETCH — AND YOU STILL SHOWED UP ${days}. THAT COUNTS. BE GENTLE WITH YOURSELF.`;
     }
 
     if (hasLows) {
-        return `${month} HAD ITS DIPS — YOU SHOWED UP ${days}. EVERY LOW WAS FOLLOWED BY A LIFT. YOU'RE OKAY.`;
+        const feltMost = top ? ` ${top} CAME UP MOST.` : '';
+        return `${month} HAD ITS DIPS, BUT EVERY LOW WAS FOLLOWED BY A LIFT. YOU SHOWED UP ${days}.${feltMost} YOU'RE OKAY.`;
     }
 
-    return `${month} HELD STEADY — YOU SHOWED UP ${days} AND FELT THE WHOLE RANGE. YOU'RE OKAY.`;
+    if (trend === 'up') {
+        const feltMost = top ? `, MOSTLY ${top}` : '';
+        return `${month} ${isNow ? 'IS TRENDING' : 'TRENDED'} UP — YOUR LATER DAYS FELT LIGHTER THAN THE EARLY ONES. ${days} LOGGED${feltMost}. KEEP IT GOING.`;
+    }
+
+    const feltMost = top ? `, WITH ${top} SHOWING UP MOST` : '';
+    return `${month} ${isNow ? 'IS HOLDING' : 'HELD'} STEADY — ${days} LOGGED${feltMost}. YOU'RE OKAY.`;
 }
 
 /**
@@ -195,17 +280,76 @@ export function monthlyMoodScore(days: DayEntry[]): number | null {
 interface MonthlyReassuranceProps {
     /** 1-12, the month the filter above is showing. */
     month: string;
+    /** Four digits, the year the filter above is showing. */
+    year: string;
     /** One entry per journaled day of that month, already aggregated by the screen. */
     dayEntries: DayEntry[];
     /** Every entry in the month, days with several counted separately. */
     totalEntries: number;
+    /** Opens a check-in. Offered only in the current month, before today is logged. */
+    onCheckIn?: () => void;
 }
 
-export default function MonthlyReassurance({ month, dayEntries, totalEntries }: MonthlyReassuranceProps) {
-    const monthName = (MONTH_NAMES[parseInt(month, 10) - 1] ?? '').toUpperCase();
+export default function MonthlyReassurance({
+    month,
+    year,
+    dayEntries,
+    totalEntries,
+    onCheckIn,
+}: MonthlyReassuranceProps) {
+    const monthIndex = parseInt(month, 10) - 1;
+    const yearNum = parseInt(year, 10);
+    const monthName = (MONTH_NAMES[monthIndex] ?? '').toUpperCase();
+    const monthShort = monthName.slice(0, 3);
+    const daysInMonth = new Date(yearNum, monthIndex + 1, 0).getDate();
+
+    // Read once per render: the card does not need to roll over at midnight
+    // while it is on screen, only to be right when it is drawn.
+    const now = new Date();
+    const timing: MonthTiming =
+        yearNum === now.getFullYear() && monthIndex === now.getMonth() ? 'current'
+            : yearNum > now.getFullYear() || (yearNum === now.getFullYear() && monthIndex > now.getMonth()) ? 'future'
+                : 'past';
+    const today = timing === 'current' ? now.getDate() : null;
+
+    /** Day of the month -> that day's entry. */
+    const byDay = useMemo(() => {
+        const map = new Map<number, DayEntry>();
+        dayEntries.forEach(entry => {
+            const day = parseInt(entry.date.split('-')[2], 10);
+            if (day >= 1) map.set(day, entry);
+        });
+        return map;
+    }, [dayEntries]);
 
     const read = useMemo(() => readMonth(dayEntries), [dayEntries]);
-    const message = pickReassurance(monthName, read, totalEntries);
+    const loggedToday = today !== null && byDay.has(today);
+    const message = pickReassurance(monthName, read, totalEntries, { timing, loggedToday });
+
+    // Days that have had their chance to be logged -- the denominator of the
+    // "logged" count, so a month in progress is not measured against days that
+    // have not happened yet.
+    const daysSoFar = timing === 'current' ? now.getDate() : timing === 'past' ? daysInMonth : 0;
+
+    // Tagged with the month it was picked in, so switching the filter drops the
+    // selection instead of carrying "day 12" over to a different month.
+    const monthKey = `${year}-${month}`;
+    const [selection, setSelection] = useState<{ monthKey: string; day: number } | null>(null);
+    const selectedDay = selection?.monthKey === monthKey ? selection.day : null;
+    const setSelectedDay = (day: number | null) => setSelection(day === null ? null : { monthKey, day });
+
+    // Two rows, however long the month: 14-16 cells across a phone-width card is
+    // the most that still leaves each one big enough to tap.
+    const columns = Math.ceil(daysInMonth / 2);
+    const cellWidth = `${100 / columns}%` as const;
+
+    const selectedEntry = selectedDay !== null ? byDay.get(selectedDay) : undefined;
+    const selectedFeelings = selectedEntry
+        ? dayEmotions(selectedEntry).map(e => EMOTION_LABEL[e.id].toUpperCase()).join(', ')
+        : '';
+    const peekText = selectedDay === null
+        ? (read.daysJournaled > 0 ? 'TAP A DAY TO PEEK' : null)
+        : `${monthShort} ${selectedDay}: ${selectedFeelings || 'NOTHING LOGGED'}`;
 
     return (
         <PixelCard padding={16} wrapperStyle={styles.cardWrapper} style={styles.card}>
@@ -230,12 +374,69 @@ export default function MonthlyReassurance({ month, dayEntries, totalEntries }: 
                 <Text style={styles.message}>{message}</Text>
             </View>
 
-            {/* {totalEntries > 0 && (
-                <View style={styles.stamps}>
-                    <Text style={styles.stamp}>[ {countLabel(read.daysJournaled, 'DAY', 'DAYS')} ]</Text>
-                    <Text style={styles.stamp}>[ {countLabel(totalEntries, 'ENTRY', 'ENTRIES')} ]</Text>
+            <View style={[styles.panel, styles.stripPanel]}>
+                <View style={styles.stripHeader}>
+                    <Text style={styles.stripLabel}>DAYS LOGGED</Text>
+                    <Text style={styles.stripCount}>
+                        {read.daysJournaled} / {daysSoFar || daysInMonth}
+                    </Text>
                 </View>
-            )} */}
+
+                <View style={styles.strip}>
+                    {Array.from({ length: daysInMonth }, (_, i) => {
+                        const day = i + 1;
+                        const entry = byDay.get(day);
+                        const lead = entry ? dayEmotions(entry)[0] : undefined;
+                        const isFuture = day > daysSoFar;
+                        const isToday = day === today;
+                        const isSelected = day === selectedDay;
+
+                        return (
+                            <Pressable
+                                key={day}
+                                disabled={isFuture}
+                                onPress={() => setSelectedDay(isSelected ? null : day)}
+                                style={[styles.cellSlot, { width: cellWidth }]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${MONTH_NAMES[monthIndex]} ${day}${entry ? ', logged' : ''}`}
+                            >
+                                <View
+                                    style={[
+                                        styles.cell,
+                                        entry
+                                            ? { backgroundColor: lead ? getEmotionColor(lead.id) : INK_MUTED }
+                                            : null,
+                                        isFuture && styles.cellFuture,
+                                        isToday && styles.cellToday,
+                                        isSelected && styles.cellSelected,
+                                    ]}
+                                />
+                            </Pressable>
+                        );
+                    })}
+                </View>
+
+                {peekText && (
+                    <Text style={[styles.peek, selectedDay !== null && styles.peekActive]}>
+                        {peekText}
+                    </Text>
+                )}
+            </View>
+
+            {/* Asked for only where it can be acted on: today, in this month,
+                before anything is logged. A past month gets no nudge. */}
+            {timing === 'current' && !loggedToday && onCheckIn && (
+                <Pressable
+                    onPress={onCheckIn}
+                    style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+                    accessibilityRole="button"
+                >
+                    <Text style={styles.ctaText}>+ CHECK IN TODAY</Text>
+                </Pressable>
+            )}
+            {loggedToday && (
+                <Text style={styles.stamp}>[ TODAY IS LOGGED — NICE ]</Text>
+            )}
         </PixelCard>
     );
 }
@@ -303,16 +504,90 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
         lineHeight: 20,
     },
-    stamps: {
+    stripPanel: {
+        marginTop: 10,
+    },
+    stripHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    stripLabel: {
+        fontSize: 10,
+        fontFamily: PIXEL,
+        color: INK_MUTED,
+        letterSpacing: 1,
+    },
+    stripCount: {
+        fontSize: 11,
+        fontFamily: PIXEL_BOLD,
+        color: INK,
+        letterSpacing: 1,
+    },
+    strip: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 10,
-        marginTop: 12,
+        // The slots' own padding is the gutter; this cancels it at the edges so
+        // the strip lines up with the text above it.
+        marginHorizontal: -1.5,
+    },
+    cellSlot: {
+        padding: 1.5,
+    },
+    cell: {
+        aspectRatio: 1,
+        backgroundColor: EMPTY_DAY,
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+    },
+    cellFuture: {
+        // Days that have not happened are drawn, so the month keeps its length,
+        // but faded so they never read as missed.
+        opacity: 0.3,
+    },
+    cellToday: {
+        borderColor: INK,
+    },
+    cellSelected: {
+        borderColor: INK,
+        borderWidth: 3,
+    },
+    peek: {
+        fontSize: 10,
+        fontFamily: PIXEL,
+        color: INK_MUTED,
+        letterSpacing: 0.5,
+        marginTop: 8,
+    },
+    peekActive: {
+        fontFamily: PIXEL_BOLD,
+        color: INK,
+    },
+    cta: {
+        marginTop: 10,
+        alignItems: 'center',
+        paddingVertical: 10,
+        backgroundColor: PAPER,
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+    },
+    ctaPressed: {
+        // Sinks toward its own corner, the way every other pixel control answers a press.
+        transform: [{ translateX: 1 }, { translateY: 1 }],
+        backgroundColor: '#EDE9E0',
+    },
+    ctaText: {
+        fontSize: 11,
+        fontFamily: PIXEL_BOLD,
+        color: INK,
+        letterSpacing: 1,
     },
     stamp: {
         fontSize: 10,
         fontFamily: PIXEL_BOLD,
         color: INK,
         letterSpacing: 1,
+        marginTop: 10,
     },
 });

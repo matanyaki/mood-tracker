@@ -251,8 +251,10 @@ export default function InsightsScreen({ navigation }: any) {
                 month, and this one says the month is survivable before they do. */}
             <MonthlyReassurance
               month={selectedMonth}
+              year={selectedYear}
               dayEntries={dayEntries}
               totalEntries={filteredTotalEntries}
+              onCheckIn={() => navigation.navigate('CheckIn')}
             />
 
             <SummaryCards

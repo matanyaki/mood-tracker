@@ -54,9 +54,10 @@ export default function InsightsStatsSkeleton() {
                     <SkeletonBox width="60%" height={12} borderRadius={SQUARE} style={styles.reassuranceLine} />
                 </View>
 
-                <View style={styles.reassuranceStamps}>
-                    <SkeletonBox width={74} height={10} borderRadius={SQUARE} />
+                {/* The day strip: a label row and two rows of cells. */}
+                <View style={[styles.reassurancePanel, styles.reassuranceStrip]}>
                     <SkeletonBox width={90} height={10} borderRadius={SQUARE} />
+                    <SkeletonBox height={36} borderRadius={SQUARE} style={styles.reassuranceLine} />
                 </View>
             </PixelCard>
 
@@ -185,10 +186,8 @@ const styles = StyleSheet.create({
     reassuranceLine: {
         marginTop: 8,
     },
-    reassuranceStamps: {
-        flexDirection: 'row',
-        gap: 10,
-        marginTop: 12,
+    reassuranceStrip: {
+        marginTop: 10,
     },
     chartCardWrapper: {
         marginBottom: 20,
