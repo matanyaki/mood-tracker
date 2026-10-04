@@ -1,10 +1,15 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { ArrowLeft, Plus } from 'lucide-react-native';
+import { format } from 'date-fns';
 import type { Goal } from '@shared/types';
+import {
+  pauseLastDay, resumeDay, currentPause, isGoalPaused, goalLastDay, plannedDayCount, endPause,
+} from '../../shared/types';
+import { countScheduledDaysThrough } from '../../shared/utils/goalProgress';
 import { ScreenContainer, AppHeader, EmptyState, GoalCard } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
-import { useGoalsQuery } from '../hooks/useGoalsQuery';
+import { useGoalsQuery, useGoalCompletionsQuery } from '../hooks/useGoalsQuery';
 import { useGoalsController } from '../controllers/useGoalsController';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 import {
@@ -16,12 +21,27 @@ import {
  * The goal list: everything the user is working on, with the way in to the form.
  *
  * Reached from the Fab's Goals action. Reads through useGoalsQuery and writes only
- * deletes -- creating and editing both hand off to GoalForm, which owns the whole
- * schedule at once.
+ * pauses, resumes and deletes -- creating and editing both hand off to GoalForm,
+ * which owns the whole schedule at once.
+ *
+ * Pausing is the everyday way to step back from a goal: it keeps every day already
+ * behind it, and resuming picks the run up where it left off. Delete stays for
+ * goals made by mistake.
  */
 export default function GoalsScreen({ navigation }: any) {
   const { data: goals, isLoading, isError, refetch } = useGoalsQuery();
-  const { deleteGoal } = useGoalsController();
+  const { data: completions } = useGoalCompletionsQuery();
+  const { deleteGoal, pauseGoal, resumeGoal } = useGoalsController();
+
+  // Read once per mount, like the Today card and the Diary: which day is "today"
+  // must not move under a confirmation dialog that is already open.
+  const [today] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+
+  // Running goals first, paused ones in their own section underneath.
+  const { activeGoals, pausedGoals } = useMemo(() => ({
+    activeGoals: (goals ?? []).filter(goal => !isGoalPaused(goal)),
+    pausedGoals: (goals ?? []).filter(goal => isGoalPaused(goal)),
+  }), [goals]);
 
   const handleCreate = useCallback(() => {
     navigation.navigate('GoalForm', {});
@@ -33,26 +53,99 @@ export default function GoalsScreen({ navigation }: any) {
 
   // Deleting takes the completions with it, so it is worth one confirmation --
   // this is the only destructive action in the flow.
-  const handleDelete = useCallback((goal: Goal) => {
+  const confirmDelete = useCallback((goal: Goal, title: string, message: string) => {
+    PixelAlert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteGoal(goal.id!);
+          } catch {
+            PixelAlert.alert('Error', 'Could not delete the goal. Please try again.');
+          }
+        },
+      },
+    ]);
+  }, [deleteGoal]);
+
+  const handlePause = useCallback((goal: Goal) => {
+    const doneToday = (completions?.[goal.id!] ?? []).includes(today);
+    const lastDay = pauseLastDay(today, doneToday);
+
+    // A goal with no scheduled day up to the pause has no past to keep, so pausing
+    // it would only leave an empty card behind. Offer the delete instead.
+    if (countScheduledDaysThrough(goal, lastDay) === 0) {
+      confirmDelete(
+        goal,
+        'Nothing to keep yet',
+        `"${goal.name}" hasn't had any days yet, so there's no history to keep. Delete it instead?`
+      );
+      return;
+    }
+
     PixelAlert.alert(
-      'Delete goal?',
-      `"${goal.name}" and every day marked done against it will be removed.`,
+      'Pause goal?',
+      `"${goal.name}" won't be scheduled from ${doneToday ? 'tomorrow' : 'today'} until you resume it. ` +
+      "Every day behind you stays, and the days you haven't done yet wait for you.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: 'Pause',
           onPress: async () => {
             try {
-              await deleteGoal(goal.id!);
+              await pauseGoal(goal.id!, lastDay);
             } catch {
-              PixelAlert.alert('Error', 'Could not delete the goal. Please try again.');
+              PixelAlert.alert('Error', 'Could not pause the goal. Please try again.');
             }
           },
         },
       ]
     );
-  }, [deleteGoal]);
+  }, [completions, today, pauseGoal, confirmDelete]);
+
+  const handleResume = useCallback((goal: Goal) => {
+    const pause = currentPause(goal);
+    if (!pause) return;
+
+    const resumedOn = resumeDay(today, pause.lastDay);
+    const daysLeft = plannedDayCount(goal) - countScheduledDaysThrough(goal, pause.lastDay);
+
+    // The end it will have once resumed -- the same rule the server applies, so the
+    // date in the dialog is the date the card shows afterwards.
+    const change = endPause(goal, resumedOn);
+    const newEnd = 'pauses' in change ? goalLastDay({ ...goal, pauses: change.pauses }) : null;
+    const [y, m, d] = (newEnd ?? '').split('-');
+
+    PixelAlert.alert(
+      'Resume goal?',
+      `"${goal.name}" picks up where it left off, from ${resumedOn === today ? 'today' : 'tomorrow'}. ` +
+      `${daysLeft} goal ${daysLeft === 1 ? 'day' : 'days'} to go` +
+      (newEnd ? `, so it now ends ${d}/${m}/${y.slice(2)}.` : '.'),
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Resume',
+          onPress: async () => {
+            try {
+              await resumeGoal(goal.id!, resumedOn);
+            } catch {
+              PixelAlert.alert('Error', 'Could not resume the goal. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  }, [today, resumeGoal]);
+
+  const handleDelete = useCallback((goal: Goal) => {
+    confirmDelete(
+      goal,
+      'Delete goal?',
+      `"${goal.name}" and every day marked done against it will be removed.`
+    );
+  }, [confirmDelete]);
 
   return (
     <ScreenContainer variant="focus">
@@ -105,15 +198,35 @@ export default function GoalsScreen({ navigation }: any) {
 
         {!isLoading && !isError && !!goals?.length && (
           <>
-            <Text style={styles.countEyebrow}>
-              [ {goals.length} ACTIVE ]
-            </Text>
+            {activeGoals.length > 0 && (
+              <Text style={styles.countEyebrow}>
+                [ ACTIVE ]
+              </Text>
+            )}
 
-            {goals.map(goal => (
+            {activeGoals.map(goal => (
               <GoalCard
                 key={goal.id}
                 goal={goal}
                 onEdit={handleEdit}
+                // A goal past its last day has no days left to pause.
+                onPause={goalLastDay(goal) >= today ? handlePause : undefined}
+                onDelete={handleDelete}
+              />
+            ))}
+
+            {pausedGoals.length > 0 && (
+              <Text style={[styles.countEyebrow, activeGoals.length > 0 && styles.sectionGap]}>
+                [ PAUSED ]
+              </Text>
+            )}
+
+            {pausedGoals.map(goal => (
+              <GoalCard
+                key={goal.id}
+                goal={goal}
+                onEdit={handleEdit}
+                onResume={handleResume}
                 onDelete={handleDelete}
               />
             ))}
@@ -181,6 +294,9 @@ const styles = StyleSheet.create({
     fontFamily: PIXEL_BOLD,
     color: INK_MUTED,
     letterSpacing: 2,
+  },
+  sectionGap: {
+    marginTop: 10,
   },
   footer: {
     padding: 20,

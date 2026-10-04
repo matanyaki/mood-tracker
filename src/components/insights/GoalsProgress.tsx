@@ -80,7 +80,7 @@ export default function GoalsProgress({ goals, isPending, onRetry, onAddGoal }: 
                         key={goal.goalId}
                         style={[styles.cell, { width: columnWidth }]}
                         accessible
-                        accessibilityLabel={`${goal.name}: ${goal.completed} of ${goal.target} days done, ${goal.percent} percent`}
+                        accessibilityLabel={`${goal.name}${goal.paused ? ', paused' : ''}: ${goal.completed} of ${goal.target} days done, ${goal.percent} percent`}
                     >
                         <Text style={styles.goalName} numberOfLines={1}>
                             {goal.name.toUpperCase()}
@@ -89,6 +89,9 @@ export default function GoalsProgress({ goals, isPending, onRetry, onAddGoal }: 
                         <Text style={styles.count}>
                             {goal.completed} / {goal.target}
                         </Text>
+                        {/* A paused goal keeps its ring and its target -- the days
+                            left wait for the resume -- but says it is not running. */}
+                        {goal.paused && <Text style={styles.pausedTag}>PAUSED</Text>}
                     </View>
                 ))}
             </View>
@@ -158,6 +161,13 @@ const styles = StyleSheet.create({
         color: INK_MUTED,
         letterSpacing: 1,
         marginTop: 8,
+    },
+    pausedTag: {
+        fontSize: 8,
+        fontFamily: PIXEL_BOLD,
+        color: INK_MUTED,
+        letterSpacing: 1,
+        marginTop: 4,
     },
     // Empty and failed states match the Insights error card and the waves chart's
     // empty state: bold title, muted centred line, paper [ BUTTON ].

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Pencil, Trash2 } from 'lucide-react-native';
+import { Pencil, Pause, Play, Trash2 } from 'lucide-react-native';
 import type { Goal } from '@shared/types';
+import { currentPause, goalLastDay } from '../../../shared/types';
 import { WEEKDAY_LABELS, TIME_OF_DAY_LABELS } from '../../constants/goals';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import {
@@ -12,6 +13,13 @@ import {
 interface GoalCardProps {
     goal: Goal;
     onEdit: (goal: Goal) => void;
+    /**
+     * Pauses the goal, keeping its past. Left out by the caller for a goal with no
+     * days left to pause (it already finished). Drawn only on a running goal.
+     */
+    onPause?: (goal: Goal) => void;
+    /** Picks a paused goal up where it left off. Drawn only on a paused goal. */
+    onResume?: (goal: Goal) => void;
     onDelete: (goal: Goal) => void;
 }
 
@@ -31,30 +39,65 @@ const shortDate = (date: string) => {
  * facts that define a goal -- how often, which days, which parts of the day -- are
  * exactly the three the form asked for, so seeing them back in the same shapes is
  * what makes an edit predictable.
+ *
+ * A paused goal keeps its card, greyed, with resume in the pause button's place.
+ * Edit is held back until it resumes: changing the schedule mid-pause could move
+ * the start past the day it paused on.
  */
-export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
+export default function GoalCard({ goal, onEdit, onPause, onResume, onDelete }: GoalCardProps) {
     const days = [...goal.daysOfWeek].sort((a, b) => a - b);
+    const pause = currentPause(goal);
+    const isPaused = !!pause;
+    // Later than endDate once a resumed goal has been pushed out by its pauses.
+    const lastDay = goalLastDay(goal);
+    const wasPushed = !isPaused && lastDay !== goal.endDate;
 
     return (
         <View style={styles.wrapper}>
             <View style={styles.shadow} pointerEvents="none" />
 
-            <View style={styles.card}>
+            <View style={[styles.card, isPaused && styles.cardPaused]}>
                 <View style={styles.header}>
-                    <Text style={styles.name} numberOfLines={2}>{goal.name}</Text>
+                    <Text style={[styles.name, isPaused && styles.namePaused]} numberOfLines={2}>
+                        {goal.name}
+                    </Text>
 
                     <View style={styles.actions}>
-                        <Pressable
-                            onPress={() => onEdit(goal)}
-                            hitSlop={8}
-                            style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
-                        >
-                            <Pencil size={14} color={INK} strokeWidth={2.5} />
-                        </Pressable>
+                        {!isPaused && (
+                            <Pressable
+                                onPress={() => onEdit(goal)}
+                                hitSlop={8}
+                                style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
+                                accessibilityLabel={`Edit ${goal.name}`}
+                            >
+                                <Pencil size={14} color={INK} strokeWidth={2.5} />
+                            </Pressable>
+                        )}
+                        {!isPaused && onPause && (
+                            <Pressable
+                                onPress={() => onPause(goal)}
+                                hitSlop={8}
+                                style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
+                                accessibilityLabel={`Pause ${goal.name}`}
+                            >
+                                <Pause size={14} color={INK} strokeWidth={2.5} />
+                            </Pressable>
+                        )}
+                        {isPaused && onResume && (
+                            <Pressable
+                                onPress={() => onResume(goal)}
+                                hitSlop={8}
+                                style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
+                                accessibilityLabel={`Resume ${goal.name}`}
+                            >
+                                <Play size={14} color={GOAL_ACCENT} strokeWidth={2.5} />
+                            </Pressable>
+                        )}
                         <Pressable
                             onPress={() => onDelete(goal)}
                             hitSlop={8}
                             style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
+                            accessibilityLabel={`Delete ${goal.name}`}
                         >
                             <Trash2 size={14} color="#EF4444" strokeWidth={2.5} />
                         </Pressable>
@@ -62,8 +105,9 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                 </View>
 
                 <Text style={styles.meta}>
-                    {shortDate(goal.startDate)} {'>'} {shortDate(goal.endDate)}
-                    {'  '}[{goal.months}M]
+                    {shortDate(goal.startDate)} {'>'} {isPaused
+                        ? `PAUSED AFTER ${shortDate(pause.lastDay)}`
+                        : `${shortDate(lastDay)}  [${goal.months}M${wasPushed ? ' + PAUSE' : ''}]`}
                 </Text>
 
                 {/* The whole week is drawn, not just the chosen days, so the pattern
@@ -110,6 +154,14 @@ const styles = StyleSheet.create({
         borderColor: OUTLINE,
         borderLeftWidth: ACCENT_BAR_W,
         borderLeftColor: GOAL_ACCENT,
+    },
+    cardPaused: {
+        // The green bar is what says "running"; a paused goal drops it to slate.
+        borderLeftColor: INK_MUTED,
+        backgroundColor: '#F4F2EC',
+    },
+    namePaused: {
+        color: INK_MUTED,
     },
     header: {
         flexDirection: 'row',

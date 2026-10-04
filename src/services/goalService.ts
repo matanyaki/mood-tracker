@@ -7,7 +7,11 @@ import { GUEST_ID, GUEST_GOALS_KEY, GUEST_GOAL_COMPLETIONS_KEY } from '../consta
 import type {
     Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal, GoalProgress,
 } from '@shared/types';
-import { GoalSchema, GoalCompletionSchema, GoalProgressSchema, computeEndDate } from '../../shared/types';
+import {
+    GoalSchema, GoalCompletionSchema, GoalProgressSchema, computeEndDate,
+    isGoalPaused, addPause, endPause,
+} from '../../shared/types';
+import type { PauseChange } from '../../shared/types';
 import { dayKeyFromMillis } from '../../shared/utils/streak';
 import { computeGoalProgress } from '../../shared/utils/goalProgress';
 
@@ -30,6 +34,25 @@ const readGuestGoals = async (): Promise<Goal[]> => {
 
 const writeGuestGoals = (goals: Goal[]) =>
     AsyncStorage.setItem(GUEST_GOALS_KEY, JSON.stringify(goals));
+
+/**
+ * Apply a pause or resume to one guest goal. `change` returns null for a no-op
+ * (already paused / not paused), mirroring the server, and an error is thrown the
+ * way the server would answer it with a 409.
+ */
+const updateGuestPauses = async (goalId: string, change: (goal: Goal) => PauseChange | null) => {
+    const goals = await readGuestGoals();
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) throw new Error("Goal not found.");
+
+    const result = change(goal);
+    if (!result) return;
+    if ('error' in result) throw new Error(result.error);
+
+    await writeGuestGoals(goals.map(g =>
+        g.id === goalId ? { ...g, pauses: result.pauses, updatedAt: new Date().toISOString() } : g
+    ));
+};
 
 export const GoalService = {
 
@@ -260,6 +283,62 @@ export const GoalService = {
             }
         } catch (error) {
             console.error("Error [deleteGoal]:", error);
+            throw error;
+        }
+    },
+
+    /**
+     * Pause a goal, so it runs through `lastDay` ('YYYY-MM-DD') and is scheduled on
+     * nothing after until it is resumed.
+     *
+     * Unlike delete, nothing is removed: the goal and its completions stay, so the
+     * days already behind it keep showing in the Diary and Insights.
+     */
+    pauseGoal: async (userId: string, goalId: string, lastDay: string): Promise<void> => {
+        try {
+            if (GoalService.isGuest(userId)) {
+                // --- LOCAL STORAGE ---
+                // The shared rule the server applies, so a guest pause survives sign-up.
+                await updateGuestPauses(goalId, goal =>
+                    isGoalPaused(goal) ? null : addPause(goal, lastDay)
+                );
+
+            } else {
+                // --- API (Authenticated) ---
+                const user = auth.currentUser;
+                if (!user) throw new Error("User not authenticated.");
+
+                console.log(`[GoalService] Pausing goal ${goalId} after ${lastDay}`);
+                await api.post(`/api/goals/${goalId}/pause`, { lastDay });
+            }
+        } catch (error) {
+            console.error("Error [pauseGoal]:", error);
+            throw error;
+        }
+    },
+
+    /**
+     * Resume a paused goal from `resumedOn` ('YYYY-MM-DD'). It picks up where it
+     * left off, with its end pushed out by the goal days the pause covered.
+     */
+    resumeGoal: async (userId: string, goalId: string, resumedOn: string): Promise<void> => {
+        try {
+            if (GoalService.isGuest(userId)) {
+                // --- LOCAL STORAGE ---
+                await updateGuestPauses(goalId, goal =>
+                    isGoalPaused(goal) ? endPause(goal, resumedOn) : null
+                );
+
+            } else {
+                // --- API (Authenticated) ---
+                const user = auth.currentUser;
+                if (!user) throw new Error("User not authenticated.");
+
+                console.log(`[GoalService] Resuming goal ${goalId} from ${resumedOn}`);
+                await api.post(`/api/goals/${goalId}/resume`, { resumedOn });
+            }
+        } catch (error) {
+            console.error("Error [resumeGoal]:", error);
             throw error;
         }
     },

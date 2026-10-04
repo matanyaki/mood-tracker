@@ -16,7 +16,7 @@ import { requireUid } from '../middleware/auth';
  * itself would schedule nothing the user asked for.
  */
 const GoalBodySchema = GoalSchema
-    .omit({ id: true, userId: true, endDate: true, createdAt: true, updatedAt: true })
+    .omit({ id: true, userId: true, endDate: true, pauses: true, createdAt: true, updatedAt: true })
     .extend({ startDate: GoalDateSchema })
     .refine(data => data.daysOfWeek.length === data.timesPerWeek, {
         message: 'Pick exactly one weekday for each time per week.',
@@ -30,6 +30,16 @@ const UpdateGoalBodySchema = GoalBodySchema;
 
 const MarkDoneBodySchema = z.object({
     date: GoalDateSchema,
+});
+
+// The client names the days, the same way it names the day a completion is for:
+// only the device knows which calendar day "today" is (see pauseLastDay / resumeDay).
+const PauseBodySchema = z.object({
+    lastDay: GoalDateSchema,
+});
+
+const ResumeBodySchema = z.object({
+    resumedOn: GoalDateSchema,
 });
 
 // The caller's `getTimezoneOffset()`, bounded and defaulted exactly as GET /api/streaks
@@ -141,6 +151,41 @@ export const deleteGoal = asyncWrap(async (req: Request, res: Response) => {
         data: { id, deleted: true },
         error: null
     } as ApiResponse<unknown>);
+});
+
+/**
+ * Pause a goal: it keeps every day up to `lastDay` and is scheduled on none after,
+ * until it is resumed.
+ */
+export const pauseGoal = asyncWrap(async (req: Request, res: Response) => {
+    const userId = requireUid(req);
+    const { id } = req.params;
+    const { lastDay } = PauseBodySchema.parse(req.body);
+
+    const goal = await goalService.pauseGoal(userId, id as string, lastDay);
+
+    return res.status(200).json({
+        success: true,
+        data: goal,
+        error: null
+    } as ApiResponse<Goal>);
+});
+
+/**
+ * Resume a paused goal from `resumedOn`, picking the run up where it left off.
+ */
+export const resumeGoal = asyncWrap(async (req: Request, res: Response) => {
+    const userId = requireUid(req);
+    const { id } = req.params;
+    const { resumedOn } = ResumeBodySchema.parse(req.body);
+
+    const goal = await goalService.resumeGoal(userId, id as string, resumedOn);
+
+    return res.status(200).json({
+        success: true,
+        data: goal,
+        error: null
+    } as ApiResponse<Goal>);
 });
 
 export const markGoalDone = asyncWrap(async (req: Request, res: Response) => {

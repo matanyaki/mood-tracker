@@ -78,6 +78,42 @@ export const useGoalsController = () => {
         }
     }, [userId, queryClient]);
 
+    // Pause and resume leave the completions untouched, so ['goalCompletions'] stays
+    // valid. The goal list (and with it every scheduled day) and the rings change.
+    const pauseGoal = useCallback(async (goalId: string, lastDay: string) => {
+        setIsSaving(true);
+        setError(null);
+        try {
+            console.log(`[GoalsController] Pausing goal ${goalId} after ${lastDay}`);
+            await GoalService.pauseGoal(userId, goalId, lastDay);
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+            queryClient.invalidateQueries({ queryKey: ['goalProgress'] });
+        } catch (err: any) {
+            console.error("Failed to pause goal:", err);
+            setError(err.message || "Could not pause your goal.");
+            throw err;
+        } finally {
+            setIsSaving(false);
+        }
+    }, [userId, queryClient]);
+
+    const resumeGoal = useCallback(async (goalId: string, resumedOn: string) => {
+        setIsSaving(true);
+        setError(null);
+        try {
+            console.log(`[GoalsController] Resuming goal ${goalId} from ${resumedOn}`);
+            await GoalService.resumeGoal(userId, goalId, resumedOn);
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+            queryClient.invalidateQueries({ queryKey: ['goalProgress'] });
+        } catch (err: any) {
+            console.error("Failed to resume goal:", err);
+            setError(err.message || "Could not resume your goal.");
+            throw err;
+        } finally {
+            setIsSaving(false);
+        }
+    }, [userId, queryClient]);
+
     const markGoalDone = useCallback(async (goalId: string, date: string) => {
         try {
             console.log(`[GoalsController] Marking goal ${goalId} done for ${date}`);
@@ -98,6 +134,8 @@ export const useGoalsController = () => {
         createGoal,
         updateGoal,
         deleteGoal,
+        pauseGoal,
+        resumeGoal,
         markGoalDone,
         isSaving,
         error

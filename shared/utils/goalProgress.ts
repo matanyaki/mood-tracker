@@ -1,5 +1,5 @@
 /**
- * Goal progress across a goal's whole run, startDate to endDate.
+ * Goal progress across a goal's whole run, startDate to its last day.
  *
  * Shared for the same reason streak.ts is: guest goals never reach the server, so
  * GoalService runs this on the device instead of calling /api/goals/progress, and
@@ -8,26 +8,29 @@
  * Works on 'YYYY-MM-DD' day keys only. The timezone is settled before anything gets
  * here — the caller turns "now" into a local day with dayKeyFromMillis.
  */
-import { isGoalScheduledOn } from '../types/goal.types';
+import { isGoalScheduledOn, goalLastDay, plannedDayCount, isGoalPaused, nextDay } from '../types/goal.types';
 import type { Goal, GoalCompletionsByGoal, GoalProgress } from '../types/goal.types';
 
 /**
- * How many days the goal is scheduled on, from startDate to endDate inclusive.
+ * How many days the goal has been scheduled on from its start through `through`
+ * (inclusive) -- pauses skipped, nothing past the goal's last day.
  *
  * Walked a day at a time through isGoalScheduledOn, the one place that decides
  * which days a goal falls on, so a partial first or last week counts only the days
- * it really has. Stepped in UTC for the same reason streak.ts steps days in UTC: the
- * key is already a calendar day, and stepping in local time would shift it again.
+ * it really has.
+ *
+ * What the Goals screen asks before a pause (would it keep anything?) and before a
+ * resume (how many goal days are still to go?).
  */
-function countScheduledDays(goal: Goal): number {
-    const cursor = new Date(`${goal.startDate}T00:00:00.000Z`);
-    let day = goal.startDate;
+export function countScheduledDaysThrough(
+    goal: Pick<Goal, 'startDate' | 'endDate' | 'daysOfWeek' | 'pauses'>,
+    through: string
+): number {
+    const lastDay = goalLastDay(goal) < through ? goalLastDay(goal) : through;
     let count = 0;
 
-    while (day <= goal.endDate) {
+    for (let day = goal.startDate; day <= lastDay; day = nextDay(day)) {
         if (isGoalScheduledOn(goal, day)) count++;
-        cursor.setUTCDate(cursor.getUTCDate() + 1);
-        day = cursor.toISOString().slice(0, 10);
     }
 
     return count;
@@ -38,8 +41,10 @@ function countScheduledDays(goal: Goal): number {
  *
  * completed: days marked done, counting only days the goal is scheduled on and none
  *            after today — the same rules the Diary uses to decide a day's status,
- *            so a completion stored for a future or unscheduled day cannot fill the ring.
- * target:    every day the goal is scheduled on between its start and end dates.
+ *            so a completion stored for a future, unscheduled or paused day cannot
+ *            fill the ring.
+ * target:    every day the goal was planned for. A pause does not shrink it: the
+ *            goal picks up where it left off on resume and runs until it is met.
  * percent:   round(completed / target * 100), clamped to 0..100.
  */
 export function computeGoalProgress(
@@ -52,11 +57,11 @@ export function computeGoalProgress(
             date <= today && isGoalScheduledOn(goal, date)
         ).length;
 
-        const target = countScheduledDays(goal);
+        const target = plannedDayCount(goal);
         const percent = target > 0
             ? Math.min(100, Math.max(0, Math.round((completed / target) * 100)))
             : 0;
 
-        return { goalId: goal.id!, name: goal.name, completed, target, percent };
+        return { goalId: goal.id!, name: goal.name, completed, target, percent, paused: isGoalPaused(goal) };
     });
 }

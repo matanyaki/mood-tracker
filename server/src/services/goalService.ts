@@ -1,6 +1,6 @@
 import { goalRepository } from '../repositories/goalRepository';
 import { AppError, rethrow } from '../middleware/errorHandler';
-import { computeEndDate } from '../../../shared/types';
+import { computeEndDate, isGoalPaused, addPause, endPause } from '../../../shared/types';
 import { dayKeyFromMillis } from '../../../shared/utils/streak';
 import { computeGoalProgress } from '../../../shared/utils/goalProgress';
 import type {
@@ -110,6 +110,53 @@ class GoalService {
             await goalRepository.delete(userId, goalId);
         } catch (error: unknown) {
             rethrow(error, `Failed to delete goal ${goalId}`);
+        }
+    }
+
+    /**
+     * Pause a goal, so it runs through `lastDay` and is scheduled on nothing after
+     * until it is resumed.
+     *
+     * Nothing is deleted: the goal and its completions stay, and every day up to
+     * lastDay keeps the status it had.
+     *
+     * Pausing a goal that is already paused keeps the first pause -- moving it later
+     * would bring back days the user already stepped away from. The rules themselves
+     * live in the shared addPause, so the guest path applies the same ones.
+     */
+    async pauseGoal(userId: string, goalId: string, lastDay: string): Promise<Goal> {
+        try {
+            const goal = await this.getGoal(userId, goalId);
+            if (isGoalPaused(goal)) return goal;
+
+            const change = addPause(goal, lastDay);
+            if ('error' in change) throw new AppError(change.error, 409);
+
+            await goalRepository.setPauses(userId, goalId, change.pauses);
+            return { ...goal, pauses: change.pauses };
+        } catch (error: unknown) {
+            return rethrow(error, `Failed to pause goal ${goalId}`);
+        }
+    }
+
+    /**
+     * Resume a paused goal from `resumedOn`. The run picks up where it left off and
+     * is pushed out by the goal days the pause covered (see goalLastDay).
+     *
+     * Resuming a goal that is not paused is a no-op, so a double tap is harmless.
+     */
+    async resumeGoal(userId: string, goalId: string, resumedOn: string): Promise<Goal> {
+        try {
+            const goal = await this.getGoal(userId, goalId);
+            if (!isGoalPaused(goal)) return goal;
+
+            const change = endPause(goal, resumedOn);
+            if ('error' in change) throw new AppError(change.error, 409);
+
+            await goalRepository.setPauses(userId, goalId, change.pauses);
+            return { ...goal, pauses: change.pauses };
+        } catch (error: unknown) {
+            return rethrow(error, `Failed to resume goal ${goalId}`);
         }
     }
 

@@ -31,6 +31,12 @@ router.put('/:id', goalController.updateGoal);
 // DELETE /api/goals/:id
 router.delete('/:id', goalController.deleteGoal);
 
+// POST /api/goals/:id/pause — stop scheduling the goal, keeping every day before it.
+router.post('/:id/pause', goalController.pauseGoal);
+
+// POST /api/goals/:id/resume — pick a paused goal up where it left off.
+router.post('/:id/resume', goalController.resumeGoal);
+
 // POST /api/goals/:id/completions — mark the goal done for one date.
 // A POST, not a PUT: the date is the document id, so the server names the resource.
 router.post('/:id/completions', goalController.markGoalDone);

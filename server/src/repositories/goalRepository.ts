@@ -1,7 +1,7 @@
 import { db } from '../config/firebase';
 import { firestore } from 'firebase-admin';
 import { BaseRepository } from './baseRepository';
-import type { Goal, CreateGoalDTO, GoalCompletion, GoalCompletionsByGoal } from '../../../shared/types';
+import type { Goal, GoalPause, CreateGoalDTO, GoalCompletion, GoalCompletionsByGoal } from '../../../shared/types';
 
 // What the repository actually writes: the caller's DTO plus the endDate the
 // service derived from it. Kept out of the shared DTO on purpose — endDate is
@@ -90,6 +90,29 @@ class GoalRepository extends BaseRepository<Goal, GoalWriteData, GoalWriteData> 
 
         const completions = await this.getCompletionsCollection(userId, goalId).get();
         await Promise.all(completions.docs.map(doc => doc.ref.delete()));
+    }
+
+    /**
+     * Write a goal's pause list. A field write, not a delete: the goal and its
+     * completions stay, which is the whole point of pausing over deleting.
+     *
+     * Its own method rather than the base update(), which writes the editable body
+     * -- pauses are never part of that body, so an edit can neither add nor drop one.
+     * The list is written whole; the service has already applied the change to it.
+     */
+    async setPauses(userId: string, goalId: string, pauses: GoalPause[]): Promise<void> {
+        if (!db) throw new Error('Firestore is not initialized.');
+
+        // Rebuilt field by field: Firestore rejects an `undefined` value, and an open
+        // pause has no resumedOn.
+        const stored = pauses.map(({ lastDay, resumedOn }) =>
+            resumedOn ? { lastDay, resumedOn } : { lastDay }
+        );
+
+        await this.getCollection(userId).doc(goalId).update({
+            pauses: stored,
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
     }
 
     /**

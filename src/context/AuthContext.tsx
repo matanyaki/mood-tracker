@@ -94,10 +94,17 @@ async function migrateGuestData(user: User): Promise<boolean> {
             console.log(`[AuthContext] Found ${goals.length} un-synced guest goals. Migrating now...`);
             for (let i = 0; i < goals.length; i++) {
                 if (!stillSignedIn()) return migratedAny;
-                const { id, userId, endDate, createdAt, updatedAt, ...goalData } = goals[i];
+                const { id, userId, endDate, pauses, createdAt, updatedAt, ...goalData } = goals[i];
                 const created = await GoalService.createGoal(user.uid, goalData);
                 if (!created.id) throw new Error("Created goal has no id.");
                 migratedAny = true;
+
+                // Create never carries pauses, so the guest's are replayed in order on
+                // the new id -- otherwise paused days would come back as missed ones.
+                for (const pause of pauses ?? []) {
+                    await GoalService.pauseGoal(user.uid, created.id, pause.lastDay);
+                    if (pause.resumedOn) await GoalService.resumeGoal(user.uid, created.id, pause.resumedOn);
+                }
 
                 if (id && completions[id]) {
                     completions[created.id] = completions[id];
