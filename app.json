@@ -39,6 +39,12 @@
           ]
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "6a2c3bde-bc49-40fa-bfb1-c40bf11bf25e"
+      }
+    },
+    "owner": "matanyakis-team"
   }
 }
