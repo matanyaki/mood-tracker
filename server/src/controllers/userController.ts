@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import userService from '../services/userService';
-import { UserProfile } from '../../../shared/types';
+import { UserProfile, UpdateProfileBodySchema } from '../../../shared/types';
 import { asyncWrap } from '../middleware/errorHandler';
 import { requireUid } from '../middleware/auth';
 
@@ -51,4 +51,18 @@ export const getProfile = asyncWrap(async (req: Request, res: Response) => {
         data: profile,
         error: null
     } as ApiResponse<UserProfile | null>);
+});
+
+export const updateProfile = asyncWrap(async (req: Request, res: Response) => {
+    // Same rule as getProfile: the uid comes from the token, never the body.
+    const uid = requireUid(req);
+    const data = UpdateProfileBodySchema.parse(req.body);
+
+    const profile = await userService.updateProfile({ uid, email: req.user?.email ?? '' }, data);
+
+    return res.status(200).json({
+        success: true,
+        data: profile,
+        error: null
+    } as ApiResponse<UserProfile>);
 });

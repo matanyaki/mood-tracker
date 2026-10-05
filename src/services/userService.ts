@@ -1,9 +1,33 @@
+import { z } from 'zod';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../config/api';
-import { JournalEntry, Greeting } from '@shared/types';
+import { JournalEntry, Greeting, UserProfile, UpdateProfileBody } from '@shared/types';
+import { UserProfileSchema } from '../../shared/types';
 import { GUEST_STORAGE_KEY , GUEST_GREETINGS_KEY } from '../constants/variables';
 
+/**
+ * The stored profile, as the client reads it. Email is loosened: Firebase permits
+ * emailless accounts and the repository stores '' for them, which `.email()` rejects.
+ */
+const StoredProfileSchema = UserProfileSchema.extend({ email: z.string() });
+
 export const UserService = {
+    /**
+     * The signed-in user's profile, or null if the background sync hasn't created it yet.
+     */
+    getProfile: async (): Promise<UserProfile | null> => {
+        const result = await api.get('/api/users/me');
+        return result ? StoredProfileSchema.parse(result) : null;
+    },
+
+    /**
+     * Save the user's edits. Resolves with the profile as the server now holds it.
+     */
+    updateProfile: async (data: UpdateProfileBody): Promise<UserProfile> => {
+        const result = await api.patch('/api/users/me', data);
+        return StoredProfileSchema.parse(result);
+    },
+
     /**
      * Creates a user document if it doesn't exist (Idempotent)
      */

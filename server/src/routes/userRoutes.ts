@@ -11,5 +11,6 @@ router.use(authenticateUser);
 router.post('/sync', userController.syncUser);
 router.post('/increment-entry', userController.incrementEntryCount);
 router.get('/me', userController.getProfile);
+router.patch('/me', userController.updateProfile);
 
 export default router;

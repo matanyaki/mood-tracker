@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { getAuthErrorMessage, validateAuthForm } from '../utils/authErrors';
 
 export const useProfileController = () => {
     const [user, setUser] = useState<User | null>(auth.currentUser);
@@ -20,23 +21,24 @@ export const useProfileController = () => {
     }, []);
 
     const handleAuth = async () => {
-        if (!email || !password) {
-            PixelAlert.alert('Error', 'Please fill in all fields');
+        const formError = validateAuthForm(email, password, isSignUp);
+        if (formError) {
+            PixelAlert.alert(isSignUp ? "Couldn't sign up" : "Couldn't log in", formError);
             return;
         }
 
         setLoading(true);
         try {
             if (isSignUp) {
-                await createUserWithEmailAndPassword(auth, email, password);
+                await createUserWithEmailAndPassword(auth, email.trim(), password);
             } else {
-                await signInWithEmailAndPassword(auth, email, password);
+                await signInWithEmailAndPassword(auth, email.trim(), password);
             }
             // Clear form on success
             setEmail('');
             setPassword('');
         } catch (error: any) {
-            PixelAlert.alert('Authentication Error', error.message);
+            PixelAlert.alert(isSignUp ? "Couldn't sign up" : "Couldn't log in", getAuthErrorMessage(error));
         } finally {
             setLoading(false);
         }

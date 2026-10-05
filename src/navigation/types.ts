@@ -17,4 +17,5 @@ export type RootStackParamList = {
   // No goal = create, a goal = edit. GoalForm handles both, because a goal is only
   // valid as a whole schedule.
   GoalForm: { goal?: Goal };
+  EditProfile: undefined;
 };

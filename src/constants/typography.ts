@@ -1,5 +1,3 @@
-import { Silkscreen_400Regular, Silkscreen_700Bold } from '@expo-google-fonts/silkscreen';
-
 /**
  * Silkscreen is the app's only typeface -- every screen, card, label and input
  * draws with it, so the pixel-art look never drifts between screens.
@@ -15,10 +13,15 @@ import { Silkscreen_400Regular, Silkscreen_700Bold } from '@expo-google-fonts/si
  * Sizing note: Silkscreen is wide -- ~0.66em per character regular, ~0.76em bold,
  * against ~0.5em for a system sans -- so a label needs roughly 30% more room here
  * than it did in the old system/monospace face. Sizes are tuned down to suit.
+ *
+ * Hebrew: stock Silkscreen is Latin-only, so Hebrew fell back to the system face.
+ * The files loaded here are Silkscreen with a Hebrew alphabet drawn on the same
+ * pixel grid, built by scripts/fonts/build_pixel_font.py -- edit glyphs there and
+ * rebuild, never by hand. Same family names, so nothing else had to change.
  */
 export const PIXEL_FONTS = {
-    Silkscreen_400Regular,
-    Silkscreen_700Bold,
+    Silkscreen_400Regular: require('../../assets/fonts/Silkscreen_400Regular.ttf'),
+    Silkscreen_700Bold: require('../../assets/fonts/Silkscreen_700Bold.ttf'),
 };
 
 /** Regular face: body copy, inputs, anything longer than a few words. */

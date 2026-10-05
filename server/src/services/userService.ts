@@ -1,6 +1,6 @@
 import { userRepository } from '../repositories/userRepository';
-import { rethrow } from '../middleware/errorHandler';
-import type { UserProfile, CreateUserProfileDTO } from '../../../shared/types';
+import { AppError, rethrow } from '../middleware/errorHandler';
+import type { UserProfile, CreateUserProfileDTO, UpdateProfileBody } from '../../../shared/types';
 
 class UserService {
     /**
@@ -27,6 +27,29 @@ class UserService {
             await userRepository.incrementEntryStats(userId);
         } catch (error: unknown) {
             rethrow(error, 'Failed to increment entry count');
+        }
+    }
+
+    /**
+     * Apply the user's own edits and return the profile as it now stands.
+     *
+     * The profile is ensured first: it is created by the background sync on sign-in,
+     * and if that request never landed the update would otherwise 404 on an edit the
+     * user has every right to make.
+     */
+    async updateProfile(
+        user: Pick<CreateUserProfileDTO, 'uid' | 'email'>,
+        data: UpdateProfileBody
+    ): Promise<UserProfile> {
+        try {
+            await userRepository.create({ uid: user.uid, email: user.email || '' });
+            await userRepository.update(user.uid, data);
+
+            const profile = await userRepository.findById(user.uid);
+            if (!profile) throw new AppError('User profile not found.', 404);
+            return profile;
+        } catch (error: unknown) {
+            return rethrow(error, 'Failed to update user profile');
         }
     }
 
