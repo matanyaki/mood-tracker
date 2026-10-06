@@ -19,6 +19,8 @@ import ProfileScreen from '../screens/ProfileScreen';
 import GoalsScreen from '../screens/GoalsScreen';
 import GoalFormScreen from '../screens/GoalFormScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import HelpScreen from '../screens/HelpScreen';
+import TipsScreen from '../screens/TipsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -179,6 +181,8 @@ export default function RootNavigator() {
         <Stack.Screen name="Goals" component={GoalsScreen} />
         <Stack.Screen name="GoalForm" component={GoalFormScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="Help" component={HelpScreen} />
+        <Stack.Screen name="Tips" component={TipsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

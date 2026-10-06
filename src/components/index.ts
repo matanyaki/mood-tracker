@@ -11,6 +11,8 @@ export type { BackgroundVariant } from './layout/AppBackground';
 export { EmotionRow } from './journal/EmotionRow';
 export { PrimaryButton } from './ui/PrimaryButton';
 export { default as PixelSelect } from './ui/PixelSelect';
+export { default as PixelAvatar } from './ui/PixelAvatar';
+export { default as AvatarPicker } from './ui/AvatarPicker';
 export { default as GoalCard } from './goals/GoalCard';
 export { default as PixelField } from './goals/PixelField';
 export { default as ToggleBox } from './goals/ToggleBox';

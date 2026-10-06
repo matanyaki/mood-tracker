@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import Constants from 'expo-constants';
 import { format } from 'date-fns';
-import { ScreenContainer, AppHeader, PixelCard, PrimaryButton } from '../components';
+import { ScreenContainer, AppHeader, PixelCard, PrimaryButton, PixelAvatar } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { ProfileScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
@@ -55,13 +55,17 @@ const MenuRow = ({ icon: Icon, label, color = INK, tint, onPress, isLast = false
 );
 
 /** Tips, Help and About. Shown to guests too: none of them need an account. */
-const WellnessSection = ({ onPress }: { onPress: () => void }) => (
+const WellnessSection = ({ onTips, onHelp, onComingSoon }: {
+    onTips: () => void;
+    onHelp: () => void;
+    onComingSoon: () => void;
+}) => (
     <>
         <Text style={styles.sectionTitle}>[ WELLNESS ]</Text>
         <PixelCard padding={0} wrapperStyle={styles.menuCardWrapper}>
-            <MenuRow icon={Lightbulb} label="TIPS" color="#A16207" tint="#FEF9C3" onPress={onPress} />
-            <MenuRow icon={CircleHelp} label="HELP" color="#0E7490" tint="#CFFAFE" onPress={onPress} />
-            <MenuRow icon={Info} label="ABOUT" color="#7C3AED" tint="#EDE9FE" onPress={onPress} isLast />
+            <MenuRow icon={Lightbulb} label="TIPS" color="#A16207" tint="#FEF9C3" onPress={onTips} />
+            <MenuRow icon={CircleHelp} label="HELP" color="#0E7490" tint="#CFFAFE" onPress={onHelp} />
+            <MenuRow icon={Info} label="ABOUT" color="#7C3AED" tint="#EDE9FE" onPress={onComingSoon} isLast />
         </PixelCard>
     </>
 );
@@ -106,6 +110,9 @@ export default function ProfileScreen({ navigation }: any) {
     const handleComingSoon = useCallback(() => {
         PixelAlert.alert("Coming Soon", "This feature is under development.");
     }, []);
+
+    const openTips = useCallback(() => navigation.navigate('Tips'), [navigation]);
+    const openHelp = useCallback(() => navigation.navigate('Help'), [navigation]);
 
     const handleLogout = useCallback(async () => {
         PixelAlert.alert(
@@ -239,7 +246,7 @@ export default function ProfileScreen({ navigation }: any) {
                             </Pressable>
                         </PixelCard>
 
-                        <WellnessSection onPress={handleComingSoon} />
+                        <WellnessSection onTips={openTips} onHelp={openHelp} onComingSoon={handleComingSoon} />
 
                         <Text style={styles.sectionTitle}>[ THIS DEVICE ]</Text>
                         <PixelCard padding={0} wrapperStyle={styles.menuCardWrapper}>
@@ -282,9 +289,7 @@ export default function ProfileScreen({ navigation }: any) {
                         <View style={styles.userRow}>
                             {/* Square, outlined: the 30px radius this carried was the only
                                 circle left anywhere on the screen. */}
-                            <View style={styles.avatar}>
-                                <Text style={styles.avatarText}>{initial}</Text>
-                            </View>
+                            <PixelAvatar avatarId={profile?.avatarId} initial={initial} size={54} />
 
                             <View style={styles.userText}>
                                 <Text style={styles.userName} numberOfLines={1}>
@@ -315,7 +320,7 @@ export default function ProfileScreen({ navigation }: any) {
                     />
                 </PixelCard>
 
-                <WellnessSection onPress={handleComingSoon} />
+                <WellnessSection onTips={openTips} onHelp={openHelp} onComingSoon={handleComingSoon} />
 
                 <Text style={styles.sectionTitle}>[ PRIVACY ]</Text>
                 <PixelCard padding={0} wrapperStyle={styles.menuCardWrapper}>
@@ -491,20 +496,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
-    },
-    avatar: {
-        width: 54,
-        height: 54,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#E0E7FF',
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    avatarText: {
-        fontSize: 24,
-        fontFamily: PIXEL_BOLD,
-        color: INDIGO,
     },
     userText: {
         // Without this the column sizes to its text, and a long address widens the

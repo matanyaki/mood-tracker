@@ -18,4 +18,6 @@ export type RootStackParamList = {
   // valid as a whole schedule.
   GoalForm: { goal?: Goal };
   EditProfile: undefined;
+  Help: undefined;
+  Tips: undefined;
 };

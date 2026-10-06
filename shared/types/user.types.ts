@@ -18,6 +18,8 @@ export const UserProfileSchema = z.object({
     email: z.string().email(),
     displayName: z.string().optional(),
     photoURL: z.string().optional(),
+    /** Preset avatar, a key of AVATAR_IMAGES. Unset (or unknown to this build) shows the initial. */
+    avatarId: z.string().optional(),
     createdAt: z.any().optional(),
     preferences: UserPreferencesSchema,
     stats: UserStatsSchema,
@@ -27,12 +29,21 @@ export const UserProfileSchema = z.object({
 export const DisplayNameSchema = z.string().trim().min(1, 'Enter a name.').max(30, 'Keep it under 30 characters.');
 
 /**
- * Body of `PATCH /api/users/me`. Strict, so the profile's other fields — stats,
- * preferences, email — can't be written through it.
+ * A preset avatar id ("avatar-042"). Checked for shape only: the art ships in the
+ * app bundle, so the server can't know which ids a given build has. Same pattern
+ * scripts/generate-avatars.js enforces on file names.
+ */
+export const AvatarIdSchema = z.string().regex(/^[a-z0-9-]{1,40}$/, 'Unknown avatar.');
+
+/**
+ * Body of `PATCH /api/users/me`: any of the editable fields, at least one. Strict,
+ * so the profile's other fields — stats, preferences, email — can't be written
+ * through it.
  */
 export const UpdateProfileBodySchema = z.object({
-    displayName: DisplayNameSchema,
-}).strict();
+    displayName: DisplayNameSchema.optional(),
+    avatarId: AvatarIdSchema.optional(),
+}).strict().refine(body => Object.keys(body).length > 0, 'Nothing to update.');
 
 export type UpdateProfileBody = z.infer<typeof UpdateProfileBodySchema>;
 
