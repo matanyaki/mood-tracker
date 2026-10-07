@@ -12,5 +12,9 @@ router.post('/sync', userController.syncUser);
 router.post('/increment-entry', userController.incrementEntryCount);
 router.get('/me', userController.getProfile);
 router.patch('/me', userController.updateProfile);
+// Wipes entries, greetings and goals; the account and profile stay.
+router.delete('/me/data', userController.deleteAllData);
+// Wipes everything, profile included, and deletes the Firebase Auth account.
+router.delete('/me', userController.deleteAccount);
 
 export default router;

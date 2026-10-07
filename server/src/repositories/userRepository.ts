@@ -78,6 +78,40 @@ class UserRepository {
     }
 
     /**
+     * Delete everything the user has logged -- entries, greetings, goals and the
+     * completions under them -- and zero the profile's counters. The profile
+     * itself (name, avatar, join date) stays: the account is still in use.
+     *
+     * Walks whatever subcollections exist rather than naming them, so one added
+     * later is not quietly left behind by a "delete all".
+     */
+    async deleteAllData(userId: string): Promise<void> {
+        if (!db) throw new Error('Firestore is not initialized.');
+        const firestoreDb = db;
+        const userRef = this.docRef(userId);
+
+        const subcollections = await userRef.listCollections();
+        await Promise.all(subcollections.map(collection => firestoreDb.recursiveDelete(collection)));
+
+        try {
+            // The whole stats map is replaced, which also drops lastCheckInDate.
+            await userRef.update({ stats: { totalEntries: 0, currentStreak: 0 } });
+        } catch (error: unknown) {
+            // NOT_FOUND: no profile yet, so there are no counters to reset.
+            if ((error as { code?: number })?.code !== 5) throw error;
+        }
+    }
+
+    /**
+     * Delete the profile and every subcollection under it. Leaves nothing in
+     * Firestore under this uid; the auth account is the service's to remove.
+     */
+    async deleteUser(userId: string): Promise<void> {
+        if (!db) throw new Error('Firestore is not initialized.');
+        await db.recursiveDelete(this.docRef(userId));
+    }
+
+    /**
      * Firestore rejects an update on a missing document with gRPC code 5 (NOT_FOUND).
      * Translate that into a 404 rather than letting it surface as an opaque 500.
      */

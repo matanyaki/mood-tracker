@@ -10,7 +10,10 @@ import {
 import Constants from 'expo-constants';
 import { format } from 'date-fns';
 import { ScreenContainer, AppHeader, PixelCard, PrimaryButton, PixelAvatar } from '../components';
+import { useQueryClient } from '@tanstack/react-query';
 import { PixelAlert } from '../components/ui/PixelAlert';
+import HoldToConfirmDialog from '../components/ui/HoldToConfirmDialog';
+import { UserService } from '../services/userService';
 import { ProfileScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useProfileQuery } from '../hooks/useProfileQuery';
@@ -71,8 +74,9 @@ const WellnessSection = ({ onTips, onHelp, onComingSoon }: {
 );
 
 export default function ProfileScreen({ navigation }: any) {
-    const { user, isGuest, isLoading, logout, login, signup } = useAuth();
+    const { user, isGuest, isLoading, logout, login, signup, deleteAccount } = useAuth();
     const { data: profile } = useProfileQuery();
+    const queryClient = useQueryClient();
 
     // Auth Form State
     const [email, setEmail] = useState('');
@@ -113,6 +117,23 @@ export default function ProfileScreen({ navigation }: any) {
 
     const openTips = useCallback(() => navigation.navigate('Tips'), [navigation]);
     const openHelp = useCallback(() => navigation.navigate('Help'), [navigation]);
+
+    // Which hold-to-confirm dialog is open, if either.
+    const [pendingDelete, setPendingDelete] = useState<'data' | 'account' | null>(null);
+    const closeDeleteDialog = useCallback(() => setPendingDelete(null), []);
+
+    const handleDeleteAllData = useCallback(async () => {
+        await UserService.deleteAllData();
+        // Reset, not invalidate: every tab is drawing entries, goals and greetings
+        // that no longer exist, and an invalidated query keeps showing its old data
+        // until the refetch lands. The profile is left alone -- it still exists, and
+        // resetting it would blank the name on the card behind the dialog.
+        queryClient.resetQueries({ predicate: query => query.queryKey[0] !== 'profile' });
+    }, [queryClient]);
+
+    // No done state for this one: deleteAccount signs out, the screen swaps to
+    // the guest view, and that unmounts the dialog with it.
+    const handleDeleteAccount = useCallback(() => deleteAccount(), [deleteAccount]);
 
     const handleLogout = useCallback(async () => {
         PixelAlert.alert(
@@ -336,17 +357,35 @@ export default function ProfileScreen({ navigation }: any) {
                         label="DELETE ALL MY DATA"
                         color={DANGER}
                         tint="#FEE2E2"
-                        onPress={handleComingSoon}
+                        onPress={() => setPendingDelete('data')}
                     />
                     <MenuRow
                         icon={UserX}
                         label="DELETE ACCOUNT"
                         color={DANGER}
                         tint="#FEE2E2"
-                        onPress={handleComingSoon}
+                        onPress={() => setPendingDelete('account')}
                         isLast
                     />
                 </PixelCard>
+
+                <HoldToConfirmDialog
+                    visible={pendingDelete === 'data'}
+                    title="Delete all my data?"
+                    message="This permanently deletes every check-in, note, greeting and goal on your account. Your account and profile stay, so you can start fresh. This can't be undone."
+                    confirmLabel="delete"
+                    doneMessage="All your data has been deleted. You're starting fresh."
+                    onConfirm={handleDeleteAllData}
+                    onClose={closeDeleteDialog}
+                />
+                <HoldToConfirmDialog
+                    visible={pendingDelete === 'account'}
+                    title="Delete account?"
+                    message="This permanently deletes your account and everything in it: check-ins, notes, greetings, goals and your profile. You'll be signed out. This can't be undone."
+                    confirmLabel="delete"
+                    onConfirm={handleDeleteAccount}
+                    onClose={closeDeleteDialog}
+                />
 
                 <PixelCard padding={0} wrapperStyle={styles.menuCardWrapper}>
                     <MenuRow
