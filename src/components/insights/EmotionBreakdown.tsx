@@ -111,25 +111,17 @@ const EmotionRowItem = ({ item, loggedDays }: { item: EmotionStat; loggedDays: n
                             resizeMode="contain"
                         />
                     )}
-                    <View>
-                        <Text style={[styles.labelText, { color: darkInk(item.color) }]}>
-                            {item.label.toUpperCase()}
-                        </Text>
-                        <View style={styles.pipRow}>
-                            {PIPS.map(i => (
-                                <View
-                                    key={i}
-                                    style={[
-                                        styles.pip,
-                                        i < filledPips && { backgroundColor: item.color },
-                                    ]}
-                                />
-                            ))}
-                        </View>
-                    </View>
+                    <Text style={[styles.labelText, { color: darkInk(item.color) }]}>
+                        {item.label.toUpperCase()}
+                    </Text>
                 </View>
 
-                <Text style={styles.avgText}>avg {avg}</Text>
+                {/* Stacked rather than side by side: Silkscreen is wide, and a long
+                    name plus both readouts on one line crowds a phone-width card. */}
+                <View style={styles.rightGroup}>
+                    <Text style={styles.avgText}>avg {avg}</Text>
+                    <Text style={styles.daysText}>{daysText}</Text>
+                </View>
             </View>
 
             {/* Segmented meter: share of logged days this emotion showed up on */}
@@ -156,7 +148,17 @@ const EmotionRowItem = ({ item, loggedDays }: { item: EmotionStat; loggedDays: n
                 </View>
             </View>
 
-            <Text style={styles.daysText}>{daysText}</Text>
+            <View style={styles.pipRow}>
+                {PIPS.map(i => (
+                    <View
+                        key={i}
+                        style={[
+                            styles.pip,
+                            i < filledPips && { backgroundColor: item.color },
+                        ]}
+                    />
+                ))}
+            </View>
         </View>
     );
 };
@@ -246,10 +248,13 @@ const styles = StyleSheet.create({
         fontFamily: PIXEL_BOLD,
         letterSpacing: 1,
     },
+    rightGroup: {
+        alignItems: 'flex-end',
+    },
     pipRow: {
         flexDirection: 'row',
         gap: 3,
-        marginTop: 5,
+        marginTop: 6,
     },
     pip: {
         // Square and outlined like every other pixel block; the filled ones take
@@ -271,7 +276,7 @@ const styles = StyleSheet.create({
         fontFamily: PIXEL,
         color: INK_MUTED,
         letterSpacing: 0.5,
-        marginTop: 6,
+        marginTop: 3,
     },
     progressBarTrack: {
         // Tall enough to read as a drawn meter rather than a hairline: at the old

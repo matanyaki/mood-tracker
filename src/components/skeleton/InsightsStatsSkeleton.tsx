@@ -132,16 +132,17 @@ export default function InsightsStatsSkeleton() {
                             <View style={styles.breakdownTopRow}>
                                 <View style={styles.leftGroup}>
                                     <SkeletonBox width={28} height={28} borderRadius={SQUARE} />
-                                    <View>
-                                        <SkeletonBox width={72} height={12} borderRadius={SQUARE} />
-                                        {/* The row of five intensity pips */}
-                                        <SkeletonBox width={52} height={8} borderRadius={SQUARE} style={styles.breakdownPips} />
-                                    </View>
+                                    <SkeletonBox width={72} height={12} borderRadius={SQUARE} />
                                 </View>
-                                <SkeletonBox width={50} height={11} borderRadius={SQUARE} />
+                                {/* avg over days, stacked on the right */}
+                                <View style={styles.breakdownRight}>
+                                    <SkeletonBox width={50} height={11} borderRadius={SQUARE} />
+                                    <SkeletonBox width={80} height={10} borderRadius={SQUARE} style={styles.breakdownDays} />
+                                </View>
                             </View>
                             <SkeletonBox height={14} borderRadius={SQUARE} />
-                            <SkeletonBox width={80} height={10} borderRadius={SQUARE} style={styles.breakdownDays} />
+                            {/* The row of five intensity pips */}
+                            <SkeletonBox width={52} height={8} borderRadius={SQUARE} style={styles.breakdownPips} />
                         </View>
                     ))}
                 </View>
@@ -274,10 +275,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
     },
+    breakdownRight: {
+        alignItems: 'flex-end',
+    },
     breakdownPips: {
-        marginTop: 5,
+        marginTop: 6,
     },
     breakdownDays: {
-        marginTop: 6,
+        marginTop: 3,
     },
 });
