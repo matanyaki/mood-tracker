@@ -258,6 +258,29 @@ export function pickReassurance(
     return `${month} ${isNow ? 'IS HOLDING' : 'HELD'} STEADY — ${days} LOGGED${feltMost}. YOU'RE OKAY.`;
 }
 
+/** Points per day: + for a day checked in on, - for one that passed without. */
+const POINTS_PER_DAY = 1;
+/**
+ * The most showing up (or not) can move the score, either way. Uncapped, a fully
+ * logged month adds 30 and "around 50 is balanced" stops meaning anything --
+ * the score has to stay mostly about how the month felt.
+ */
+const MAX_DAY_POINTS = 10;
+/** Points per goal day completed, and the most goals can add in a month. Kept small
+ *  on purpose, so ticking goals can't stand in for checking in with yourself. */
+const POINTS_PER_GOAL = 1;
+const MAX_GOAL_POINTS = 3;
+
+const clamp = (x: number, min: number, max: number) => Math.min(max, Math.max(min, x));
+
+/** What the score adds on top of how the month felt. */
+export interface ScoreExtras {
+    /** Days that have had their chance to be logged -- see countableDays. */
+    countableDays: number;
+    /** Goal days marked done in the month. */
+    goalsDone: number;
+}
+
 /**
  * The month's mood on a 0..100 line: the mean of its day scores, moved off
  * [-1, 1]. A neutral month lands on 50, an all-pleasant one on 100.
@@ -265,8 +288,13 @@ export function pickReassurance(
  * Off the same scoreDay the sentence above reads, so the number and the card
  * can never disagree about what a good day was. Days that score null are
  * skipped, as readMonth skips them. `null` when nothing in the month scores.
+ *
+ * With `extras`, a small nudge on top: a point for each day checked in on and
+ * one off for each day missed (capped at MAX_DAY_POINTS either way), and a point
+ * per goal day done (capped at MAX_GOAL_POINTS). Still `null` for a month with
+ * no feelings in it -- missed days alone don't make a mood.
  */
-export function monthlyMoodScore(days: DayEntry[]): number | null {
+export function monthlyMoodScore(days: DayEntry[], extras?: ScoreExtras): number | null {
     const dayScores = days
         .map(scoreDay)
         .filter((score): score is number => score !== null);
@@ -274,7 +302,63 @@ export function monthlyMoodScore(days: DayEntry[]): number | null {
     if (dayScores.length === 0) return null;
 
     const mean = dayScores.reduce((sum, x) => sum + x, 0) / dayScores.length;
-    return Math.round(((mean + 1) / 2) * 100);
+    const feltScore = ((mean + 1) / 2) * 100;
+    if (!extras) return Math.round(feltScore);
+
+    const logged = days.length;
+    const missed = Math.max(0, extras.countableDays - logged);
+    const dayPoints = clamp((logged - missed) * POINTS_PER_DAY, -MAX_DAY_POINTS, MAX_DAY_POINTS);
+    const goalPoints = Math.min(extras.goalsDone * POINTS_PER_GOAL, MAX_GOAL_POINTS);
+
+    return Math.round(clamp(feltScore + dayPoints + goalPoints, 0, 100));
+}
+
+/**
+ * How many days of a month count toward showing up.
+ *
+ * Starts at whichever came first, the account or the month's first entry, so a
+ * new user isn't marked down for the days before they had the app. Ends
+ * yesterday in the current month -- today only counts once it's logged, so a
+ * day still in progress is never a missed one. A whole month once it's over.
+ *
+ * `since` is the account's first day as 'YYYY-MM-DD' (undefined for guests).
+ * `days` must all fall inside the month.
+ */
+export function countableDays(
+    year: number,
+    monthIndex: number,
+    days: DayEntry[],
+    since?: string,
+    now: Date = new Date(),
+): number {
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const isCurrent = year === now.getFullYear() && monthIndex === now.getMonth();
+    const isFuture = year > now.getFullYear() || (year === now.getFullYear() && monthIndex > now.getMonth());
+    if (isFuture) return 0;
+
+    const dayOf = (date: string) => parseInt(date.split('-')[2], 10);
+    const loggedDays = days.map(d => dayOf(d.date)).filter(d => d >= 1);
+
+    let lastDay = daysInMonth;
+    if (isCurrent) {
+        const today = now.getDate();
+        lastDay = loggedDays.includes(today) ? today : today - 1;
+    }
+
+    // The account's first day, moved onto this month's day numbers.
+    const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    let sinceDay: number | undefined;
+    if (since) {
+        sinceDay = since.slice(0, 7) < monthKey ? 1
+            : since.slice(0, 7) === monthKey ? dayOf(since)
+                : daysInMonth + 1;
+    }
+
+    const firstLogged = loggedDays.length ? Math.min(...loggedDays) : undefined;
+    const firstDay = Math.min(sinceDay ?? Infinity, firstLogged ?? Infinity);
+    if (!Number.isFinite(firstDay)) return 0;
+
+    return Math.max(0, lastDay - firstDay + 1);
 }
 
 interface MonthlyReassuranceProps {

@@ -3,7 +3,9 @@ import { StyleSheet, ScrollView, Text, Pressable } from 'react-native';
 import { ScreenContainer, AppHeader, PixelCard } from '../components';
 import { InsightsStatsSkeleton } from '../components/skeleton';
 import { useInsightsController } from '../controllers/useInsightsController';
-import { useGoalProgressQuery } from '../hooks/useGoalsQuery';
+import { format } from 'date-fns';
+import { useGoalProgressQuery, useGoalCompletionsQuery } from '../hooks/useGoalsQuery';
+import { useProfileQuery } from '../hooks/useProfileQuery';
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { getEmotionColor } from '../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
@@ -11,11 +13,11 @@ import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pix
 
 import FilterRow from '../components/insights/FilterRow';
 import SummaryCards, { MoodDelta } from '../components/insights/SummaryCards';
-import EmotionBreakdown from '../components/insights/EmotionBreakdown';
+import EmotionBreakdown, { EmotionStat } from '../components/insights/EmotionBreakdown';
 import EmotionWavesChart from '../components/insights/EmotionWavesChart';
 import ChartTooltipModal, { TooltipData } from '../components/insights/ChartTooltipModal';
 import GoalsProgress from '../components/insights/GoalsProgress';
-import MonthlyReassurance, { monthlyMoodScore } from '../components/insights/MonthlyReassurance';
+import MonthlyReassurance, { monthlyMoodScore, countableDays } from '../components/insights/MonthlyReassurance';
 
 const getDaysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate();
 
@@ -27,7 +29,7 @@ export default function InsightsScreen({ navigation }: any) {
   const monthParam = `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
   const {
     loading, isFetching, error,
-    entries, aggregatedEntries, prevAggregatedEntries, emotionCounts, refreshStats,
+    entries, aggregatedEntries, prevAggregatedEntries, emotionSummary, refreshStats,
   } = useInsightsController(monthParam);
 
   // Not part of the month filter: each ring covers its goal's whole run.
@@ -36,6 +38,14 @@ export default function InsightsScreen({ navigation }: any) {
     isPending: goalProgressPending,
     refetch: refetchGoalProgress,
   } = useGoalProgressQuery();
+
+  // For the mood score: goal days done count for a little, and days before the
+  // account existed don't count as missed.
+  const { data: goalCompletions } = useGoalCompletionsQuery();
+  const { data: profile } = useProfileQuery();
+  // A plain string, so the useMemo below only re-runs when the day itself changes.
+  const created = profile?.createdAt ? new Date(profile.createdAt) : null;
+  const accountSince = created && !Number.isNaN(created.getTime()) ? format(created, 'yyyy-MM-dd') : undefined;
 
   // Tooltip Modal State
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -89,8 +99,30 @@ export default function InsightsScreen({ navigation }: any) {
     // shows at once and the change joins it when the data lands. A month with
     // a score after one without gets 'new' -- there is no baseline to take a
     // difference from, and counting the empty month as 0 would invent one.
-    const scoreThis = monthlyMoodScore(filteredAggregated);
-    const scoreLast = prevAggregatedEntries ? monthlyMoodScore(prevAggregatedEntries) : null;
+    //
+    // Both months get the same extras (days shown up, goals done), so the
+    // arrow compares like with like.
+    const monthIndex = parseInt(selectedMonth, 10) - 1;
+    const yearNum = parseInt(selectedYear, 10);
+    const prevMonthIndex = monthIndex === 0 ? 11 : monthIndex - 1;
+    const prevYear = monthIndex === 0 ? yearNum - 1 : yearNum;
+    const prevMonthParam = `${prevYear}-${String(prevMonthIndex + 1).padStart(2, '0')}`;
+
+    const goalsDoneIn = (month: string) => Object.values(goalCompletions ?? {}).reduce(
+      (sum, dates) => sum + dates.filter(date => date.startsWith(month)).length,
+      0
+    );
+
+    const scoreThis = monthlyMoodScore(filteredAggregated, {
+      countableDays: countableDays(yearNum, monthIndex, filteredAggregated, accountSince),
+      goalsDone: goalsDoneIn(monthParam),
+    });
+    const scoreLast = prevAggregatedEntries
+      ? monthlyMoodScore(prevAggregatedEntries, {
+        countableDays: countableDays(prevYear, prevMonthIndex, prevAggregatedEntries, accountSince),
+        goalsDone: goalsDoneIn(prevMonthParam),
+      })
+      : null;
     let delta: MoodDelta = null;
     if (scoreThis !== null && prevAggregatedEntries !== null) {
       delta = scoreLast !== null ? scoreThis - scoreLast : 'new';
@@ -115,25 +147,18 @@ export default function InsightsScreen({ navigation }: any) {
       }
     });
 
-    // Counts come from the controller, tallied off the month's entries -- this only
-    // shapes them for display (label, color, share of the month).
-    //
-    // Summed over the known taxonomy rather than over every key in the counts, so
-    // a key no row displays can never shrink the percentages on the card.
-    const totalEmotions = EMOTIONS_CONFIG.reduce(
-      (sum, emotion) => sum + (emotionCounts[emotion.id] || 0),
-      0
-    );
-
-    const stats = EMOTIONS_CONFIG.map(emotion => {
-      const count = emotionCounts[emotion.id] || 0;
-      return {
-        label: emotion.label,
-        count: count,
-        color: getEmotionColor(emotion.id),
-        percentage: totalEmotions > 0 ? (count / totalEmotions) * 100 : 0
-      };
-    }).filter(item => item.count > 0).sort((a, b) => b.count - a.count);
+    // Days felt and average intensity come from the controller, tallied off the
+    // month's entries -- this only shapes them for display. Most-felt first; a
+    // tie goes to the one felt more strongly.
+    const stats: EmotionStat[] = EMOTIONS_CONFIG.map(emotion => ({
+      id: emotion.id,
+      label: emotion.label,
+      color: getEmotionColor(emotion.id),
+      daysFelt: emotionSummary[emotion.id]?.daysFelt ?? 0,
+      avgIntensity: emotionSummary[emotion.id]?.avgIntensity ?? 0,
+    }))
+      .filter(item => item.daysFelt > 0)
+      .sort((a, b) => b.daysFelt - a.daysFelt || b.avgIntensity - a.avgIntensity);
 
     const filteredTotal = filteredRaw.length;
 
@@ -163,7 +188,7 @@ export default function InsightsScreen({ navigation }: any) {
       moodScore: scoreThis,
       moodDelta: delta
     };
-  }, [entries, aggregatedEntries, prevAggregatedEntries, emotionCounts, selectedMonth, selectedYear]);
+  }, [entries, aggregatedEntries, prevAggregatedEntries, emotionSummary, goalCompletions, accountSince, monthParam, selectedMonth, selectedYear]);
 
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -266,7 +291,9 @@ export default function InsightsScreen({ navigation }: any) {
 
 
 
-            <EmotionBreakdown stats={filteredStats} />
+            {/* The same journaled-day count MonthlyReassurance shows as DAYS LOGGED,
+                so "3 of 12 days" here and "12 / 31" up there always agree. */}
+            <EmotionBreakdown stats={filteredStats} loggedDays={dayEntries.length} />
           </>
         )}
 

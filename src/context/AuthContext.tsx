@@ -16,6 +16,8 @@ interface AuthContextType {
     login: (email: string, pass: string) => Promise<void>;
     signup: (email: string, pass: string) => Promise<void>;
     logout: () => Promise<void>;
+    /** Permanently deletes the account and everything in it, then signs out. */
+    deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -220,6 +222,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsGuest(true); // Fallback to guest mode
     };
 
+    const deleteAccount = async () => {
+        console.log("[AuthContext] User initiated account deletion");
+        // The server removes the data and the Firebase user; signing out here only
+        // ends the session this device is still holding for an account that's gone.
+        await UserService.deleteAccount();
+        await logout();
+    };
+
     return (
         <AuthContext.Provider value={{
             user,
@@ -227,7 +237,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             isLoading,
             login,
             signup,
-            logout
+            logout,
+            deleteAccount
         }}>
             {children}
         </AuthContext.Provider>

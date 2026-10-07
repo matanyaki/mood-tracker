@@ -11,6 +11,8 @@ import { GUEST_STORAGE_KEY , GUEST_GREETINGS_KEY } from '../constants/variables'
  */
 const StoredProfileSchema = UserProfileSchema.extend({ email: z.string() });
 
+const DELETE_TIMEOUT_MS = 60_000;
+
 export const UserService = {
     /**
      * The signed-in user's profile, or null if the background sync hasn't created it yet.
@@ -26,6 +28,25 @@ export const UserService = {
     updateProfile: async (data: UpdateProfileBody): Promise<UserProfile> => {
         const result = await api.patch('/api/users/me', data);
         return StoredProfileSchema.parse(result);
+    },
+
+    /**
+     * Delete every entry, greeting and goal on the account. The profile stays.
+     *
+     * Longer timeout than the client's 10s: the server deletes document by
+     * document, and on a cold Render instance the wake-up alone can eat most of 10s.
+     * A timeout here would report a failure for a delete that went on to finish.
+     */
+    deleteAllData: async (): Promise<void> => {
+        await api.delete('/api/users/me/data', { timeout: DELETE_TIMEOUT_MS });
+    },
+
+    /**
+     * Delete the account: all its data, the profile, and the Firebase login.
+     * The caller still has to sign the device out (AuthContext.deleteAccount).
+     */
+    deleteAccount: async (): Promise<void> => {
+        await api.delete('/api/users/me', { timeout: DELETE_TIMEOUT_MS });
     },
 
     /**

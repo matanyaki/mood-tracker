@@ -26,15 +26,19 @@ export function useGoalsQuery() {
  * Separate from ['goals'] rather than folded into it because the two change for
  * different reasons: the goal list moves when a goal is created, edited or deleted,
  * and this moves every time a day is marked. The Diary reads both and joins them.
+ *
+ * Defined once so usePrefetchInsights warms the same key the mood score reads.
  */
+export const goalCompletionsQueryOptions = () => queryOptions<GoalCompletionsByGoal>({
+    queryKey: ['goalCompletions'],
+    queryFn: () => GoalService.getAllCompletions(actingUserId()),
+    staleTime: STALE_TIME_MS,
+    gcTime: GC_TIME_MS,
+    retry: retryTransportFailures,
+});
+
 export function useGoalCompletionsQuery() {
-    return useQuery<GoalCompletionsByGoal>({
-        queryKey: ['goalCompletions'],
-        queryFn: () => GoalService.getAllCompletions(actingUserId()),
-        staleTime: STALE_TIME_MS,
-        gcTime: GC_TIME_MS,
-        retry: retryTransportFailures,
-    });
+    return useQuery(goalCompletionsQueryOptions());
 }
 
 /**

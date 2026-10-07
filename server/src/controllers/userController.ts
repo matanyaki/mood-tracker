@@ -53,6 +53,31 @@ export const getProfile = asyncWrap(async (req: Request, res: Response) => {
     } as ApiResponse<UserProfile | null>);
 });
 
+export const deleteAllData = asyncWrap(async (req: Request, res: Response) => {
+    // Only ever the caller's own data: the uid comes from the verified token.
+    const userId = requireUid(req);
+
+    await userService.deleteAllData(userId);
+
+    return res.status(200).json({
+        success: true,
+        data: { deleted: true },
+        error: null
+    } as ApiResponse<{ deleted: boolean }>);
+});
+
+export const deleteAccount = asyncWrap(async (req: Request, res: Response) => {
+    const userId = requireUid(req);
+
+    await userService.deleteAccount(userId);
+
+    return res.status(200).json({
+        success: true,
+        data: { deleted: true },
+        error: null
+    } as ApiResponse<{ deleted: boolean }>);
+});
+
 export const updateProfile = asyncWrap(async (req: Request, res: Response) => {
     // Same rule as getProfile: the uid comes from the token, never the body.
     const uid = requireUid(req);

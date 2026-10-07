@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useIsRestoring, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import type { JournalEntry, EntryStats } from '@shared/types';
+import type { JournalEntry } from '@shared/types';
 import { resolveEmotionId } from '../../shared/types';
 import { useAuth } from '../context/AuthContext';
 import { entriesQueryOptions, useEntriesQuery } from '../hooks/useEntriesQuery';
-import { goalProgressQueryOptions } from '../hooks/useGoalsQuery';
+import { goalProgressQueryOptions, goalCompletionsQueryOptions } from '../hooks/useGoalsQuery';
 
 const NO_ENTRIES: JournalEntry[] = [];
 
@@ -23,7 +23,7 @@ function previousMonth(month: string): string {
 /**
  * The one aggregation the stats endpoint does not cover: collapse a day's entries
  * into a single point per emotion so EmotionWavesChart has one value per day.
- * Emotion *counts* are not computed here — those come from emotionCounts below.
+ * Per-emotion totals are not computed here — those come from emotionSummary below.
  */
 function aggregateByDay(rawEntries: JournalEntry[]) {
     if (!rawEntries || rawEntries.length === 0) return [];
@@ -91,28 +91,55 @@ function aggregateByDay(rawEntries: JournalEntry[]) {
     });
 }
 
+/** One emotion's month, as the breakdown card reads it. */
+export interface EmotionSummary {
+    /** Distinct days it was logged on -- five entries on one day still count once. */
+    daysFelt: number;
+    /** Mean intensity (1-5) over every time it was logged with a scale. */
+    avgIntensity: number;
+}
+
 /**
- * How many times each emotion was logged across the month's entries.
+ * Per emotion: the days it showed up on and how strongly it was felt.
  *
  * Counted here rather than fetched from GET /api/entries/stats: the screen already
  * holds every entry for the month to draw the chart, and the endpoint only re-read
- * those same documents to count them. One request instead of two, and the counts
+ * those same documents to count them. One request instead of two, and the numbers
  * come from the very list the chart and the entry total do, so they cannot disagree.
+ *
+ * Days, not logs: a single rough afternoon logged five times would otherwise
+ * outweigh a feeling that turned up quietly every day of the week. The average
+ * is taken over the raw logs rather than the per-day averages, so each check-in
+ * weighs the same.
  *
  * Retired ids fold into their replacement and unknown ones are skipped, the same
  * rule the server applied. API entries are already folded by the schema; guest
  * entries come straight off the device unparsed, so this resolves them too.
  */
-function countEmotions(rawEntries: JournalEntry[]): EntryStats {
-    const counts: EntryStats = {};
+function summarizeEmotions(rawEntries: JournalEntry[]): Record<string, EmotionSummary> {
+    const tally: Record<string, { days: Set<string>; scaleSum: number; scored: number }> = {};
+
     rawEntries.forEach(entry => {
         entry.emotions?.forEach(emotion => {
             const key = resolveEmotionId(emotion.id);
             if (!key) return;
-            counts[key] = (counts[key] || 0) + 1;
+            const t = (tally[key] ??= { days: new Set(), scaleSum: 0, scored: 0 });
+            if (entry.date) t.days.add(entry.date);
+            // Skipped rather than counted as 0: a log without a scale says nothing
+            // about intensity, and a zero would drag the average down for it.
+            if (emotion.scale > 0) {
+                t.scaleSum += emotion.scale;
+                t.scored++;
+            }
         });
     });
-    return counts;
+
+    return Object.fromEntries(
+        Object.entries(tally).map(([id, t]) => [id, {
+            daysFelt: t.days.size,
+            avgIntensity: t.scored > 0 ? t.scaleSum / t.scored : 0,
+        }])
+    );
 }
 
 export const useInsightsController = (month?: string) => {
@@ -122,7 +149,7 @@ export const useInsightsController = (month?: string) => {
     const rawEntries = entriesQuery.data ?? NO_ENTRIES;
 
     const aggregatedEntries = useMemo(() => aggregateByDay(rawEntries), [rawEntries]);
-    const emotionCounts = useMemo(() => countEmotions(rawEntries), [rawEntries]);
+    const emotionSummary = useMemo(() => summarizeEmotions(rawEntries), [rawEntries]);
 
     // Last month, read only for the mood score's change. Same query and cache
     // key as any other month, but kept out of loading/error below: the screen
@@ -150,7 +177,7 @@ export const useInsightsController = (month?: string) => {
         aggregatedEntries,
         // null until last month has loaded, and stays null if it fails.
         prevAggregatedEntries,
-        emotionCounts,
+        emotionSummary,
         refreshStats
     };
 };
@@ -182,5 +209,6 @@ export const usePrefetchInsights = () => {
         queryClient.prefetchQuery(entriesQueryOptions(month));
         queryClient.prefetchQuery(entriesQueryOptions(previousMonth(month)));
         queryClient.prefetchQuery(goalProgressQueryOptions());
+        queryClient.prefetchQuery(goalCompletionsQueryOptions());
     }, [isRestoring, queryClient, uid]);
 };

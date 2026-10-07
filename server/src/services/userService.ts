@@ -1,3 +1,4 @@
+import { admin } from '../config/firebase';
 import { userRepository } from '../repositories/userRepository';
 import { AppError, rethrow } from '../middleware/errorHandler';
 import type { UserProfile, CreateUserProfileDTO, UpdateProfileBody } from '../../../shared/types';
@@ -50,6 +51,39 @@ class UserService {
             return profile;
         } catch (error: unknown) {
             return rethrow(error, 'Failed to update user profile');
+        }
+    }
+
+    /**
+     * Wipe everything the user has logged, keeping the account and profile.
+     */
+    async deleteAllData(userId: string): Promise<void> {
+        try {
+            await userRepository.deleteAllData(userId);
+        } catch (error: unknown) {
+            rethrow(error, 'Failed to delete user data');
+        }
+    }
+
+    /**
+     * Delete the user's data, then their Firebase Auth account.
+     *
+     * Data first: if the auth delete then fails, the user is still signed in to an
+     * empty account and can simply retry. The other order could fail with the login
+     * gone and the data left behind, owned by an account nobody can sign in to.
+     *
+     * Done here with the Admin SDK rather than on the device, where Firebase refuses
+     * to delete an account whose last sign-in is not recent.
+     */
+    async deleteAccount(userId: string): Promise<void> {
+        try {
+            await userRepository.deleteUser(userId);
+            await admin.auth().deleteUser(userId).catch((error: { code?: string }) => {
+                // Already gone: a retry after the auth delete landed but the response didn't.
+                if (error?.code !== 'auth/user-not-found') throw error;
+            });
+        } catch (error: unknown) {
+            rethrow(error, 'Failed to delete account');
         }
     }
 
