@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Animated, Easing, Image, Pressable } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import PixelCard from '../ui/PixelCard';
 import { getEmotionImageKey } from '../../../shared/types/emotions';
@@ -26,6 +26,9 @@ interface EmotionBreakdownProps {
 /** Gutters drawn over the bar, which is what gives it its segmented meter look. */
 const BAR_SEGMENTS = 10;
 const SEGMENT_GUTTERS = Array.from({ length: BAR_SEGMENTS - 1 }, (_, i) => i);
+
+/** Rows shown before SHOW ALL. */
+const COLLAPSED_ROWS = 3;
 
 /** The intensity scale's top, one pip per step. */
 const MAX_INTENSITY = 5;
@@ -167,9 +170,15 @@ export default function EmotionBreakdown({ stats = [], loggedDays }: EmotionBrea
     // inks that every other surface in the app draws with, and a card that
     // swapped itself to navy would be the only one doing it.
 
+    const [expanded, setExpanded] = useState(false);
+
     // Data filtering: skip emotions not felt on any day
     const activeStats = (stats || []).filter(item => item && item.daysFelt > 0);
     const hasActiveEmotions = activeStats.length > 0;
+
+    // Rows arrive most-felt first, so the collapsed card is the month's top three.
+    const canExpand = activeStats.length > COLLAPSED_ROWS;
+    const shownStats = expanded ? activeStats : activeStats.slice(0, COLLAPSED_ROWS);
 
     return (
         <PixelCard padding={18} wrapperStyle={styles.cardWrapper}>
@@ -184,9 +193,22 @@ export default function EmotionBreakdown({ stats = [], loggedDays }: EmotionBrea
             {/* Active Emotion Rows flat list (No valence sections) */}
             {hasActiveEmotions ? (
                 <View style={styles.rowsContainer}>
-                    {activeStats.map((row) => (
+                    {shownStats.map((row) => (
                         <EmotionRowItem key={row.id} item={row} loggedDays={loggedDays} />
                     ))}
+
+                    {canExpand && (
+                        <Pressable
+                            onPress={() => setExpanded(e => !e)}
+                            style={({ pressed }) => [styles.toggleButton, pressed && styles.toggleButtonPressed]}
+                            accessibilityRole="button"
+                            accessibilityState={{ expanded }}
+                        >
+                            <Text style={styles.toggleText}>
+                                {expanded ? 'SHOW LESS' : `SHOW ALL EMOTIONS (${activeStats.length})`}
+                            </Text>
+                        </Pressable>
+                    )}
                 </View>
             ) : (
                 <View style={styles.emptyContainer}>
@@ -308,6 +330,25 @@ const styles = StyleSheet.create({
         // The last cell carries no gutter of its own -- one there would double up
         // with the track's own right border.
         flex: 1,
+    },
+    toggleButton: {
+        // The same paper button PixelAlert draws.
+        alignItems: 'center',
+        paddingVertical: 10,
+        backgroundColor: PAPER,
+        borderWidth: BORDER_W_INNER,
+        borderColor: OUTLINE,
+    },
+    toggleButtonPressed: {
+        // Sinks toward its own corner, the way every other pixel control answers a press.
+        transform: [{ translateX: 1 }, { translateY: 1 }],
+        backgroundColor: '#EDE9E0',
+    },
+    toggleText: {
+        fontSize: 11,
+        fontFamily: PIXEL_BOLD,
+        color: INK,
+        letterSpacing: 1,
     },
     emptyContainer: {
         paddingVertical: 20,

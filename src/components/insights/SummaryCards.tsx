@@ -21,8 +21,9 @@ interface SummaryCardsProps {
 
 /**
  * What goes into the score, in words rather than the formula. Each row maps to
- * one step of monthlyMoodScore / scoreDay in MonthlyReassurance, so if those
- * change, this has to too. The swatch only decorates the row.
+ * one step of monthlyMoodScore / scoreDay in MonthlyReassurance -- including the
+ * caps on the day and goal points -- so if those change, this has to too. The
+ * swatch only decorates the row.
  */
 const SCORE_FACTORS = [
     {
@@ -39,6 +40,16 @@ const SCORE_FACTORS = [
         title: 'EVERY DAY EQUALLY',
         body: "Each day you journal counts once, however many entries it holds, so one busy day can't outweigh the rest.",
         swatch: getEmotionColor('calm'),
+    },
+    {
+        title: 'SHOWING UP',
+        body: 'Each day you check in adds a point, and each day that passes without one takes a point off, up to 10 either way.',
+        swatch: getEmotionColor('confused'),
+    },
+    {
+        title: 'GOALS',
+        body: 'Each goal day you complete adds a point, up to 3 a month. A small bonus: the score is mostly about how you felt.',
+        swatch: getEmotionColor('tired'),
     },
     {
         title: 'THE ARROW',

@@ -10,9 +10,8 @@ import { OUTLINE, PAPER, BORDER_W_INNER } from '../../constants/pixel';
 // card on the screen, and a paper one would flash green when the month lands.
 const REASSURANCE_ACCENT = getEmotionColor('calm');
 
-// EmotionBreakdown renders one row per emotion felt on at least one day. Four is the
-// typical first paint for a month of entries.
-const BREAKDOWN_ROWS = [0, 1, 2, 3];
+// EmotionBreakdown shows the top three emotions until SHOW ALL is pressed.
+const BREAKDOWN_ROWS = [0, 1, 2];
 const LEGEND_ITEMS = [0, 1, 2, 3, 4, 5, 6, 7, 8]; // 9 emotions in EMOTIONS_CONFIG
 
 // Every box is square-cornered: a rounded placeholder that resolves into a

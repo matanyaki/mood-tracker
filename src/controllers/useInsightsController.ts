@@ -5,7 +5,7 @@ import type { JournalEntry } from '@shared/types';
 import { resolveEmotionId } from '../../shared/types';
 import { useAuth } from '../context/AuthContext';
 import { entriesQueryOptions, useEntriesQuery } from '../hooks/useEntriesQuery';
-import { goalProgressQueryOptions } from '../hooks/useGoalsQuery';
+import { goalProgressQueryOptions, goalCompletionsQueryOptions } from '../hooks/useGoalsQuery';
 
 const NO_ENTRIES: JournalEntry[] = [];
 
@@ -209,5 +209,6 @@ export const usePrefetchInsights = () => {
         queryClient.prefetchQuery(entriesQueryOptions(month));
         queryClient.prefetchQuery(entriesQueryOptions(previousMonth(month)));
         queryClient.prefetchQuery(goalProgressQueryOptions());
+        queryClient.prefetchQuery(goalCompletionsQueryOptions());
     }, [isRestoring, queryClient, uid]);
 };
