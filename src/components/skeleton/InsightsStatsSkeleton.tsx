@@ -10,7 +10,7 @@ import { OUTLINE, PAPER, BORDER_W_INNER } from '../../constants/pixel';
 // card on the screen, and a paper one would flash green when the month lands.
 const REASSURANCE_ACCENT = getEmotionColor('calm');
 
-// EmotionBreakdown renders one row per emotion with a count > 0. Four is the
+// EmotionBreakdown renders one row per emotion felt on at least one day. Four is the
 // typical first paint for a month of entries.
 const BREAKDOWN_ROWS = [0, 1, 2, 3];
 const LEGEND_ITEMS = [0, 1, 2, 3, 4, 5, 6, 7, 8]; // 9 emotions in EMOTIONS_CONFIG
@@ -131,15 +131,17 @@ export default function InsightsStatsSkeleton() {
                         <View key={`breakdown-${i}`}>
                             <View style={styles.breakdownTopRow}>
                                 <View style={styles.leftGroup}>
-                                    <SkeletonBox width={24} height={24} borderRadius={SQUARE} />
-                                    <SkeletonBox width={72} height={12} borderRadius={SQUARE} />
+                                    <SkeletonBox width={28} height={28} borderRadius={SQUARE} />
+                                    <View>
+                                        <SkeletonBox width={72} height={12} borderRadius={SQUARE} />
+                                        {/* The row of five intensity pips */}
+                                        <SkeletonBox width={52} height={8} borderRadius={SQUARE} style={styles.breakdownPips} />
+                                    </View>
                                 </View>
-                                <View style={styles.rightGroup}>
-                                    <SkeletonBox width={28} height={11} borderRadius={SQUARE} />
-                                    <SkeletonBox width={30} height={18} borderRadius={SQUARE} />
-                                </View>
+                                <SkeletonBox width={50} height={11} borderRadius={SQUARE} />
                             </View>
                             <SkeletonBox height={14} borderRadius={SQUARE} />
+                            <SkeletonBox width={80} height={10} borderRadius={SQUARE} style={styles.breakdownDays} />
                         </View>
                     ))}
                 </View>
@@ -272,9 +274,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
     },
-    rightGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
+    breakdownPips: {
+        marginTop: 5,
+    },
+    breakdownDays: {
+        marginTop: 6,
     },
 });

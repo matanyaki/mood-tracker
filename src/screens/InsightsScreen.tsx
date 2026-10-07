@@ -11,7 +11,7 @@ import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pix
 
 import FilterRow from '../components/insights/FilterRow';
 import SummaryCards, { MoodDelta } from '../components/insights/SummaryCards';
-import EmotionBreakdown from '../components/insights/EmotionBreakdown';
+import EmotionBreakdown, { EmotionStat } from '../components/insights/EmotionBreakdown';
 import EmotionWavesChart from '../components/insights/EmotionWavesChart';
 import ChartTooltipModal, { TooltipData } from '../components/insights/ChartTooltipModal';
 import GoalsProgress from '../components/insights/GoalsProgress';
@@ -27,7 +27,7 @@ export default function InsightsScreen({ navigation }: any) {
   const monthParam = `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
   const {
     loading, isFetching, error,
-    entries, aggregatedEntries, prevAggregatedEntries, emotionCounts, refreshStats,
+    entries, aggregatedEntries, prevAggregatedEntries, emotionSummary, refreshStats,
   } = useInsightsController(monthParam);
 
   // Not part of the month filter: each ring covers its goal's whole run.
@@ -115,25 +115,18 @@ export default function InsightsScreen({ navigation }: any) {
       }
     });
 
-    // Counts come from the controller, tallied off the month's entries -- this only
-    // shapes them for display (label, color, share of the month).
-    //
-    // Summed over the known taxonomy rather than over every key in the counts, so
-    // a key no row displays can never shrink the percentages on the card.
-    const totalEmotions = EMOTIONS_CONFIG.reduce(
-      (sum, emotion) => sum + (emotionCounts[emotion.id] || 0),
-      0
-    );
-
-    const stats = EMOTIONS_CONFIG.map(emotion => {
-      const count = emotionCounts[emotion.id] || 0;
-      return {
-        label: emotion.label,
-        count: count,
-        color: getEmotionColor(emotion.id),
-        percentage: totalEmotions > 0 ? (count / totalEmotions) * 100 : 0
-      };
-    }).filter(item => item.count > 0).sort((a, b) => b.count - a.count);
+    // Days felt and average intensity come from the controller, tallied off the
+    // month's entries -- this only shapes them for display. Most-felt first; a
+    // tie goes to the one felt more strongly.
+    const stats: EmotionStat[] = EMOTIONS_CONFIG.map(emotion => ({
+      id: emotion.id,
+      label: emotion.label,
+      color: getEmotionColor(emotion.id),
+      daysFelt: emotionSummary[emotion.id]?.daysFelt ?? 0,
+      avgIntensity: emotionSummary[emotion.id]?.avgIntensity ?? 0,
+    }))
+      .filter(item => item.daysFelt > 0)
+      .sort((a, b) => b.daysFelt - a.daysFelt || b.avgIntensity - a.avgIntensity);
 
     const filteredTotal = filteredRaw.length;
 
@@ -163,7 +156,7 @@ export default function InsightsScreen({ navigation }: any) {
       moodScore: scoreThis,
       moodDelta: delta
     };
-  }, [entries, aggregatedEntries, prevAggregatedEntries, emotionCounts, selectedMonth, selectedYear]);
+  }, [entries, aggregatedEntries, prevAggregatedEntries, emotionSummary, selectedMonth, selectedYear]);
 
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -266,7 +259,9 @@ export default function InsightsScreen({ navigation }: any) {
 
 
 
-            <EmotionBreakdown stats={filteredStats} />
+            {/* The same journaled-day count MonthlyReassurance shows as DAYS LOGGED,
+                so "3 of 12 days" here and "12 / 31" up there always agree. */}
+            <EmotionBreakdown stats={filteredStats} loggedDays={dayEntries.length} />
           </>
         )}
 
