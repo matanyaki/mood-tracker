@@ -134,15 +134,14 @@ export default function InsightsStatsSkeleton() {
                                     <SkeletonBox width={28} height={28} borderRadius={SQUARE} />
                                     <SkeletonBox width={72} height={12} borderRadius={SQUARE} />
                                 </View>
-                                {/* avg over days, stacked on the right */}
-                                <View style={styles.breakdownRight}>
-                                    <SkeletonBox width={50} height={11} borderRadius={SQUARE} />
-                                    <SkeletonBox width={80} height={10} borderRadius={SQUARE} style={styles.breakdownDays} />
-                                </View>
+                                <SkeletonBox width={80} height={10} borderRadius={SQUARE} />
                             </View>
                             <SkeletonBox height={14} borderRadius={SQUARE} />
-                            {/* The row of five intensity pips */}
-                            <SkeletonBox width={52} height={8} borderRadius={SQUARE} style={styles.breakdownPips} />
+                            {/* Five intensity pips, and the avg beside them */}
+                            <View style={styles.breakdownBottomRow}>
+                                <SkeletonBox width={52} height={8} borderRadius={SQUARE} />
+                                <SkeletonBox width={50} height={11} borderRadius={SQUARE} />
+                            </View>
                         </View>
                     ))}
                 </View>
@@ -275,13 +274,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
     },
-    breakdownRight: {
-        alignItems: 'flex-end',
-    },
-    breakdownPips: {
+    breakdownBottomRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginTop: 6,
-    },
-    breakdownDays: {
-        marginTop: 3,
     },
 });

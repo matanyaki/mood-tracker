@@ -116,12 +116,7 @@ const EmotionRowItem = ({ item, loggedDays }: { item: EmotionStat; loggedDays: n
                     </Text>
                 </View>
 
-                {/* Stacked rather than side by side: Silkscreen is wide, and a long
-                    name plus both readouts on one line crowds a phone-width card. */}
-                <View style={styles.rightGroup}>
-                    <Text style={styles.avgText}>avg {avg}</Text>
-                    <Text style={styles.daysText}>{daysText}</Text>
-                </View>
+                <Text style={styles.daysText}>{daysText}</Text>
             </View>
 
             {/* Segmented meter: share of logged days this emotion showed up on */}
@@ -148,16 +143,20 @@ const EmotionRowItem = ({ item, loggedDays }: { item: EmotionStat; loggedDays: n
                 </View>
             </View>
 
-            <View style={styles.pipRow}>
-                {PIPS.map(i => (
-                    <View
-                        key={i}
-                        style={[
-                            styles.pip,
-                            i < filledPips && { backgroundColor: item.color },
-                        ]}
-                    />
-                ))}
+            {/* Intensity as pips and as a number, side by side under the bar */}
+            <View style={styles.bottomRow}>
+                <View style={styles.pipRow}>
+                    {PIPS.map(i => (
+                        <View
+                            key={i}
+                            style={[
+                                styles.pip,
+                                i < filledPips && { backgroundColor: item.color },
+                            ]}
+                        />
+                    ))}
+                </View>
+                <Text style={styles.avgText}>avg {avg}</Text>
             </View>
         </View>
     );
@@ -248,13 +247,15 @@ const styles = StyleSheet.create({
         fontFamily: PIXEL_BOLD,
         letterSpacing: 1,
     },
-    rightGroup: {
-        alignItems: 'flex-end',
+    bottomRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 6,
     },
     pipRow: {
         flexDirection: 'row',
         gap: 3,
-        marginTop: 6,
     },
     pip: {
         // Square and outlined like every other pixel block; the filled ones take
@@ -276,7 +277,6 @@ const styles = StyleSheet.create({
         fontFamily: PIXEL,
         color: INK_MUTED,
         letterSpacing: 0.5,
-        marginTop: 3,
     },
     progressBarTrack: {
         // Tall enough to read as a drawn meter rather than a hairline: at the old
