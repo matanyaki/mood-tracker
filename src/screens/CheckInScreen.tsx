@@ -2,13 +2,13 @@ import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCheckInController } from '../controllers/useCheckInController';
-import { SCREEN_GUTTER, SPACE } from '../constants/layout';
+import { CARD_GAP, SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP, SPACE } from '../constants/layout';
 import { ScreenContainer, AppHeader, BackButton, EmotionRow, PrimaryButton } from '../components';
 
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { GOAL_TEXT } from '../constants/colors';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { TYPE } from '../constants/typography';
+import { OUTLINE, BORDER_W_INNER } from '../constants/pixel';
 
 export default function CheckInScreen({ navigation }: any) {
   const {
@@ -34,7 +34,6 @@ export default function CheckInScreen({ navigation }: any) {
   return (
     <ScreenContainer variant="focus">
       <AppHeader
-        emoji="💭"
         title="Check In"
         subtitle="How are you feeling today?"
         // goBack, not navigate('Today'): Check In is pushed over the tabs from
@@ -82,25 +81,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-    gap: 16,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingTop: SCREEN_TOP,
+    // Nothing floats over this list -- the footer sits below the scroll view, not
+    // on top of it -- so the plain bottom padding is enough.
+    paddingBottom: SCREEN_BOTTOM,
+    gap: CARD_GAP,
   },
   instructionBlock: {
-    gap: 6,
-    marginBottom: 2,
+    gap: SPACE.xs,
   },
   stepEyebrow: {
-    fontSize: 10,
-    fontFamily: PIXEL_BOLD,
+    ...TYPE.label,
     color: GOAL_TEXT, // The Continue button's green, dark enough to read as text
     letterSpacing: 2,
   },
   instructionText: {
-    fontSize: 12,
-    fontFamily: PIXEL,
-    color: INK_MUTED,
-    letterSpacing: 0.5,
+    ...TYPE.caption,
   },
   footer: {
     // paddingBottom is set inline: the home-indicator inset is added to it.

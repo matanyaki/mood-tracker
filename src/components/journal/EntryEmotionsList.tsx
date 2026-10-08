@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { MOOD_IMAGES } from '../../constants/images';
 import { getEmotionColor, getEmotionInk } from '../../constants/colors';
 import { getEmotionImageKey, type EmotionId } from '../../../shared/types/emotions';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { TYPE } from '../../constants/typography';
+import { SPACE } from '../../constants/layout';
 import { OUTLINE, PAPER, BORDER_W_INNER } from '../../constants/pixel';
 
 interface Emotion {
@@ -76,16 +77,18 @@ export default function EntryEmotionsList({ emotions }: EntryEmotionsListProps) 
 
 const styles = StyleSheet.create({
     container: {
-        paddingVertical: 10,
+        paddingVertical: SPACE.sm,
     },
     itemContainer: {
         flexDirection: 'row',
-        marginBottom: 4,
+        marginBottom: SPACE.xs,
     },
     timelineColumn: {
-        width: 50,
+        // Same column as DayEntryModal's greeting and goal timelines, so the three
+        // sections' icons share one vertical line.
+        width: 48,
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: SPACE.md,
     },
     imageWrapper: {
         width: 44,
@@ -105,43 +108,36 @@ const styles = StyleSheet.create({
         flex: 1,
         width: 2,
         backgroundColor: OUTLINE,
-        marginVertical: 4,
+        marginVertical: SPACE.xs,
     },
     contentColumn: {
         flex: 1,
-        paddingTop: 8,
-        paddingBottom: 24,
+        paddingTop: SPACE.sm,
+        paddingBottom: SPACE.xl,
     },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
+        gap: SPACE.sm,
         flexWrap: 'wrap',
-        marginBottom: 6,
+        marginBottom: SPACE.xs,
     },
     emotionTitle: {
-        fontSize: 14,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 2,
+        ...TYPE.h3,
     },
     scaleBadge: {
-        paddingHorizontal: 6,
-        paddingVertical: 3,
+        paddingHorizontal: SPACE.xs,
         // Square and outlined in the emotion's own colour, so the badge reads as
         // a drawn chip rather than the soft pill it was.
         borderWidth: BORDER_W_INNER,
     },
     scaleText: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        ...TYPE.label,
     },
     noteText: {
-        fontSize: 13,
-        fontFamily: PIXEL,
+        ...TYPE.bodyLg,
         color: '#475569',
         // No italic: Silkscreen ships one upright face per weight, so RN fakes the
         // slant by shearing the bitmap, which tears the pixel grid.
-        lineHeight: 22,
     },
 });

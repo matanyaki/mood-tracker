@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import type { Goal, TimeOfDay } from '@shared/types';
 import { computeEndDate } from '../../shared/types';
@@ -13,10 +14,9 @@ import { GOAL_TEXT, DANGER_TEXT } from '../constants/colors';
 import {
   WEEKDAY_LABELS, TIMES_OF_DAY, TIME_OF_DAY_LABELS, TIMES_PER_WEEK_OPTIONS,
 } from '../constants/goals';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import {
-  OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER,
-} from '../constants/pixel';
+import { TYPE } from '../constants/typography';
+import { SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP, SECTION_GAP, SPACE } from '../constants/layout';
+import { INK_MUTED } from '../constants/pixel';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -41,6 +41,7 @@ export default function GoalFormScreen({ route, navigation }: any) {
   const isEditing = !!existing;
 
   const { createGoal, updateGoal, isSaving } = useGoalsController();
+  const insets = useSafeAreaInsets();
 
   const today = new Date();
   const initialStart = existing?.startDate ?? `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
@@ -171,7 +172,7 @@ export default function GoalFormScreen({ route, navigation }: any) {
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: SCREEN_BOTTOM + insets.bottom }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -210,29 +211,33 @@ export default function GoalFormScreen({ route, navigation }: any) {
             />
           </View>
 
-          <View style={styles.row}>
-            <PixelField
-              eyebrow="[ MONTHS ]"
-              value={monthsText}
-              onChangeText={setMonthsText}
-              keyboardType="number-pad"
-              maxLength={2}
-              flex={1}
-            />
-            <PixelSelect
-              eyebrow="[ TIMES / WEEK ]"
-              options={timesPerWeekOptions}
-              value={String(timesPerWeek)}
-              onChange={handleTimesPerWeekChange}
-              flex={1.4}
-            />
-          </View>
+          {/* The end date reads off these two fields, so it sits with them rather
+              than floating between them and the next section. */}
+          <View style={styles.group}>
+            <View style={styles.row}>
+              <PixelField
+                eyebrow="[ MONTHS ]"
+                value={monthsText}
+                onChangeText={setMonthsText}
+                keyboardType="number-pad"
+                maxLength={2}
+                flex={1}
+              />
+              <PixelSelect
+                eyebrow="[ TIMES / WEEK ]"
+                options={timesPerWeekOptions}
+                value={String(timesPerWeek)}
+                onChange={handleTimesPerWeekChange}
+                flex={1.4}
+              />
+            </View>
 
-          {/* endDate is derived, never typed -- the server computes the stored value
-              the same way, so this is a preview of what will be saved. */}
-          <Text style={styles.endDate}>
-            ENDS: {endDate ?? '--'}
-          </Text>
+            {/* endDate is derived, never typed -- the server computes the stored value
+                the same way, so this is a preview of what will be saved. */}
+            <Text style={styles.endDate}>
+              ENDS: {endDate ?? '--'}
+            </Text>
+          </View>
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -283,11 +288,11 @@ export default function GoalFormScreen({ route, navigation }: any) {
 
           {/* Says which rule is unmet rather than just greying the button out --
               "Pick exactly 3 days" is answerable, a dead button is not. */}
-          {!!validationError && (
-            <Text style={styles.validationText}>{validationError}</Text>
-          )}
+          <View style={styles.group}>
+            {!!validationError && (
+              <Text style={styles.validationText}>{validationError}</Text>
+            )}
 
-          <View style={styles.footerContainer}>
             <PrimaryButton
               label={isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Goal'}
               onPress={handleSave}
@@ -296,8 +301,6 @@ export default function GoalFormScreen({ route, navigation }: any) {
               icon={!isSaving ? <Check size={18} color={primaryButtonInk()} strokeWidth={3} /> : undefined}
             />
           </View>
-
-          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -306,23 +309,23 @@ export default function GoalFormScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 20,
-    paddingTop: 10,
-    gap: 20,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingTop: SCREEN_TOP,
+    gap: SECTION_GAP,
+  },
+  group: {
+    gap: SPACE.sm,
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    gap: SPACE.md,
   },
   endDate: {
-    fontSize: 11,
-    fontFamily: PIXEL_BOLD,
+    ...TYPE.label,
     color: INK_MUTED,
-    letterSpacing: 1,
-    marginTop: -6,
   },
   section: {
-    gap: 10,
+    gap: SPACE.sm,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -330,23 +333,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   eyebrow: {
-    fontSize: 10,
-    fontFamily: PIXEL_BOLD,
-    color: INK_MUTED,
-    letterSpacing: 2,
+    ...TYPE.h2,
   },
   counter: {
-    fontSize: 10,
-    fontFamily: PIXEL_BOLD,
+    ...TYPE.label,
     color: INK_MUTED,
-    letterSpacing: 1,
   },
   counterDone: {
     color: GOAL_TEXT,
   },
   weekRow: {
     flexDirection: 'row',
-    gap: 4,
+    gap: SPACE.xs,
   },
   dayBox: {
     flex: 1,
@@ -354,7 +352,7 @@ const styles = StyleSheet.create({
   timesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: SPACE.sm,
   },
   timeBox: {
     // Two per row: "AFTERNOON" is nine characters of a face that draws ~0.76em
@@ -362,13 +360,7 @@ const styles = StyleSheet.create({
     width: '48%',
   },
   validationText: {
-    fontSize: 10,
-    fontFamily: PIXEL,
+    ...TYPE.caption,
     color: DANGER_TEXT,
-    letterSpacing: 0.5,
-    lineHeight: 16,
-  },
-  footerContainer: {
-    marginTop: 4,
   },
 });

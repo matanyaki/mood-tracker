@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Quote } from 'lucide-react-native';
 import SkeletonBox from '../skeleton/SkeletonBox';
+import PixelCard from '../ui/PixelCard';
 import { GC_TIME_MS } from '../../hooks/queryConfig';
 import { dayKeyFromMillis } from '../../../shared/utils/streak';
-import { CARD_PADDING } from '../../constants/layout';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { CARD_PADDING, SPACE } from '../../constants/layout';
+import { TYPE } from '../../constants/typography';
 
 interface ZenQuote {
     q: string; // Quote
@@ -55,41 +56,35 @@ export default function QuoteCard() {
     const quote = data ?? FALLBACK_QUOTE;
 
     return (
-        <View style={styles.wrapper}>
-            {/* Hard offset block = pixel-art drop shadow (no blur) */}
-            <View style={styles.pixelShadow} pointerEvents="none" />
+        // A plain card, not a touchable: it used to fade on a tap that did nothing.
+        // PixelCard in the card's own pink ink, at the shared 4px shadow (was 6).
+        <PixelCard padding={CARD_PADDING} outlineColor={INK} accentColor={ACCENT} style={styles.card}>
+            <View style={styles.headerRow}>
+                <Quote size={18} color={ACCENT} fill={ACCENT} strokeWidth={2.5} />
+                <Text style={styles.cardTitle}>[ DAILY INSPIRATION ]</Text>
+            </View>
 
-            <TouchableOpacity
-                style={styles.card}
-                activeOpacity={0.9}
-            >
-                <View style={styles.headerRow}>
-                    <Quote size={18} color={ACCENT} fill={ACCENT} strokeWidth={2.5} />
-                    <Text style={styles.cardTitle}>[ DAILY INSPIRATION ]</Text>
+            {isPending ? (
+                // Two quote lines and an author line, each at its real line height.
+                <View>
+                    <View style={styles.skeletonQuote}>
+                        <SkeletonBox height={14} borderRadius={0} />
+                        <SkeletonBox width="70%" height={14} borderRadius={0} />
+                    </View>
+                    <View style={styles.footerRow}>
+                        <SkeletonBox width={90} height={12} borderRadius={0} />
+                    </View>
                 </View>
+            ) : (
+                <View>
+                    <Text style={styles.quoteText}>"{quote.q}"</Text>
 
-                {isPending ? (
-                    // Two quote lines and an author line, each at its real line height.
-                    <View>
-                        <View style={styles.skeletonQuote}>
-                            <SkeletonBox height={13} borderRadius={0} />
-                            <SkeletonBox width="70%" height={13} borderRadius={0} />
-                        </View>
-                        <View style={styles.footerRow}>
-                            <SkeletonBox width={90} height={11} borderRadius={0} />
-                        </View>
+                    <View style={styles.footerRow}>
+                        <Text style={styles.authorText}>- {quote.a}</Text>
                     </View>
-                ) : (
-                    <View>
-                        <Text style={styles.quoteText}>"{quote.q}"</Text>
-
-                        <View style={styles.footerRow}>
-                            <Text style={styles.authorText}>- {quote.a}</Text>
-                        </View>
-                    </View>
-                )}
-            </TouchableOpacity>
-        </View>
+                </View>
+            )}
+        </PixelCard>
     );
 }
 
@@ -100,68 +95,44 @@ const ACCENT = '#DB2777';  // Pink accent
 const LABEL = '#BE185D';   // Title / author pink
 
 const styles = StyleSheet.create({
-    wrapper: {
-        // Room for the offset pixel shadow on both edges it falls on. The gap to the
-        // next card is CARD_GAP, applied once by the screen -- not here.
-        position: 'relative',
-        marginBottom: 6,
-        marginRight: 6,
-    },
-    pixelShadow: {
-        ...StyleSheet.absoluteFill,
-        backgroundColor: INK,
-        transform: [{ translateX: 6 }, { translateY: 6 }],
-    },
     card: {
         backgroundColor: PAPER,
-        padding: CARD_PADDING,
-        borderWidth: 3,
-        borderColor: INK,
-        borderLeftWidth: 10,
-        borderLeftColor: ACCENT,
     },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingBottom: 10,
-        marginBottom: 12,
-        gap: 8,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.md,
+        gap: SPACE.sm,
         borderBottomWidth: 3,
         borderBottomColor: INK,
     },
     cardTitle: {
-        fontSize: 10,
+        ...TYPE.label,
         color: LABEL,
-        fontFamily: PIXEL_BOLD,
-        textTransform: 'uppercase',
-        letterSpacing: 1.5,
     },
     quoteText: {
-        fontSize: 13,
+        ...TYPE.bodyLg,
         color: INK,
-        lineHeight: 22,
-        fontFamily: PIXEL,
-        marginBottom: 12,
+        marginBottom: SPACE.md,
     },
     skeletonQuote: {
         // Matches quoteText: two 22pt lines and the same gap above the footer.
-        gap: 9,
-        paddingVertical: 4,
-        marginBottom: 12,
+        gap: SPACE.sm,
+        paddingVertical: SPACE.xs,
+        marginBottom: SPACE.md,
     },
     footerRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        paddingTop: 10,
+        paddingTop: SPACE.md,
         borderTopWidth: 2,
         borderTopColor: ACCENT,
         borderStyle: 'dotted',
     },
     authorText: {
-        fontSize: 11,
+        ...TYPE.label,
         color: LABEL,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
     },
 });

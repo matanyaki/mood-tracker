@@ -6,8 +6,9 @@ import {
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react-native';
 import PixelCard from './PixelCard';
 import { AVATAR_IDS, AVATAR_IMAGES } from '../../constants/avatars';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../../constants/pixel';
+import { TYPE } from '../../constants/typography';
+import { MIN_TOUCH, SPACE } from '../../constants/layout';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER, PRESS_SINK } from '../../constants/pixel';
 
 const INDIGO = '#4F46E5';
 
@@ -228,17 +229,14 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.25)',
     },
     header: {
-        paddingBottom: 12,
-        marginBottom: 14,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.md,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
         borderStyle: 'dotted',
     },
     title: {
-        fontSize: 14,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
+        ...TYPE.h3,
     },
     grid: {
         flexDirection: 'row',
@@ -279,8 +277,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: 14,
-        marginBottom: 16,
+        marginTop: SPACE.md,
+        marginBottom: SPACE.lg,
     },
     pagerButton: {
         width: 32,
@@ -292,11 +290,12 @@ const styles = StyleSheet.create({
         borderColor: OUTLINE,
     },
     pagerButtonDisabled: {
-        backgroundColor: PRESSED,
+        // Recessed paper for a dead arrow -- the same fill as the read-only email box.
+        backgroundColor: '#EDE9E0',
     },
     dots: {
         flexDirection: 'row',
-        gap: 6,
+        gap: SPACE.xs,
     },
     dot: {
         width: 8,
@@ -308,13 +307,16 @@ const styles = StyleSheet.create({
     },
     buttons: {
         flexDirection: 'row',
-        gap: 10,
+        gap: SPACE.sm,
     },
     button: {
         flex: 1,
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 10,
+        justifyContent: 'center',
+        // A full touch target, the same as every SecondaryButton (it was ~38px).
+        minHeight: MIN_TOUCH,
+        paddingHorizontal: SPACE.md,
+        paddingVertical: SPACE.sm,
         backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
@@ -331,10 +333,7 @@ const styles = StyleSheet.create({
         transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     buttonText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
+        ...TYPE.label,
     },
     buttonTextPrimary: {
         color: '#fff',

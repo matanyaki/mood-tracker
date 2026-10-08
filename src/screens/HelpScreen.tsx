@@ -1,11 +1,16 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Linking } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronDown, ChevronUp, HeartHandshake, ExternalLink } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, BackButton, PixelCard } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { HELP_SECTIONS, CRISIS_SUPPORT, HelpItem } from '../constants/help';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../constants/pixel';
+import { TYPE } from '../constants/typography';
+import {
+    CARD_PADDING, HEADING_GAP, ROW_PADDING_H, ROW_PADDING_V, SCREEN_BOTTOM, SCREEN_GUTTER,
+    SCREEN_TOP, SECTION_GAP, SPACE, hitSlopFor,
+} from '../constants/layout';
+import { OUTLINE, PAPER, INK_MUTED, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../constants/pixel';
 
 const CYAN = '#0E7490';
 const ROSE = '#BE123C';
@@ -46,6 +51,8 @@ const HelpRow = ({ item, isOpen, onToggle, isLast }: {
  * at the top. The copy lives in constants/help.ts.
  */
 export default function HelpScreen({ navigation }: any) {
+    const insets = useSafeAreaInsets();
+
     // Keyed "section:question" -- question text alone could repeat across sections.
     const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
 
@@ -74,13 +81,13 @@ export default function HelpScreen({ navigation }: any) {
             />
 
             <ScrollView
-                contentContainerStyle={styles.content}
+                contentContainerStyle={[styles.content, { paddingBottom: SCREEN_BOTTOM + insets.bottom }]}
                 showsVerticalScrollIndicator={false}
             >
                 {/* First, not last: someone who opened Help on a bad day shouldn't
                     have to scroll past how streaks work to find this. */}
                 <PixelCard
-                    padding={16}
+                    padding={CARD_PADDING}
                     accentColor={ROSE}
                     style={styles.crisisCard}
                     wrapperStyle={styles.crisisCardWrapper}
@@ -94,6 +101,8 @@ export default function HelpScreen({ navigation }: any) {
                             <Text style={styles.crisisBody}>{CRISIS_SUPPORT.body}</Text>
                             <Pressable
                                 onPress={openHelpline}
+                                // The tag is 24px tall (16 line + 2x4 padding + 2x2 border); the slop takes it to 44.
+                                hitSlop={{ top: hitSlopFor(24), bottom: hitSlopFor(24) }}
                                 style={({ pressed }) => [styles.crisisLink, pressed && styles.crisisLinkPressed]}
                                 accessibilityRole="link"
                             >
@@ -130,14 +139,13 @@ export default function HelpScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
     content: {
-        padding: 20,
-        paddingTop: 10,
-        paddingBottom: 40,
+        paddingHorizontal: SCREEN_GUTTER,
+        paddingTop: SCREEN_TOP,
     },
 
     // --- Crisis card ---
     crisisCardWrapper: {
-        marginBottom: 24,
+        marginBottom: SECTION_GAP,
     },
     crisisCard: {
         // Soft rose paper, so it reads as set apart without shouting.
@@ -146,7 +154,7 @@ const styles = StyleSheet.create({
     crisisRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: 12,
+        gap: SPACE.md,
     },
     crisisIconBox: {
         width: 32,
@@ -161,26 +169,23 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     crisisTitle: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: '#9F1239',
         letterSpacing: 1.5,
-        marginBottom: 6,
+        marginBottom: SPACE.xs,
     },
     crisisBody: {
-        fontSize: 10,
-        fontFamily: PIXEL,
+        ...TYPE.body,
         color: '#9F1239',
-        lineHeight: 18,
     },
     crisisLink: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
-        gap: 6,
-        marginTop: 12,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        gap: SPACE.xs,
+        marginTop: SPACE.md,
+        paddingHorizontal: SPACE.sm,
+        paddingVertical: SPACE.xs,
         backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
@@ -190,22 +195,17 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFE4E6',
     },
     crisisLinkText: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: ROSE,
-        letterSpacing: 1,
     },
 
     // --- Questions ---
     sectionTitle: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED,
-        letterSpacing: 2,
-        marginBottom: 10,
+        ...TYPE.h2,
+        marginBottom: HEADING_GAP,
     },
     sectionCardWrapper: {
-        marginBottom: 24,
+        marginBottom: SECTION_GAP,
     },
     rowDivided: {
         borderBottomWidth: BORDER_W_INNER,
@@ -215,30 +215,23 @@ const styles = StyleSheet.create({
     questionRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        padding: 14,
+        gap: SPACE.md,
+        paddingVertical: ROW_PADDING_V,
+        paddingHorizontal: ROW_PADDING_H,
     },
     questionRowPressed: {
         backgroundColor: PRESSED,
     },
     question: {
+        ...TYPE.label,
         flex: 1,
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
-        lineHeight: 16,
     },
     questionOpen: {
         color: CYAN,
     },
     answer: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 18,
-        paddingHorizontal: 14,
-        paddingBottom: 14,
-        marginTop: -4,
+        ...TYPE.body,
+        paddingHorizontal: ROW_PADDING_H,
+        paddingBottom: ROW_PADDING_V,
     },
 });

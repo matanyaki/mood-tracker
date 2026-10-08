@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, ScrollView, Pressable,
     KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, KeyRound } from 'lucide-react-native';
 import {
     ScreenContainer, AppHeader, BackButton, MenuRow, PrimaryButton, primaryButtonInk, PixelField, PixelCard, PixelAvatar, AvatarPicker,
@@ -10,8 +11,9 @@ import {
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { useEditProfileController } from '../controllers/useEditProfileController';
 import { DANGER_TEXT } from '../constants/colors';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESS_SINK } from '../constants/pixel';
+import { TYPE } from '../constants/typography';
+import { HEADING_GAP, SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP, SECTION_GAP, SPACE } from '../constants/layout';
+import { OUTLINE, INK, BORDER_W_INNER, PRESS_SINK } from '../constants/pixel';
 
 const INDIGO = '#4F46E5';
 
@@ -26,6 +28,7 @@ export default function EditProfileScreen({ navigation }: any) {
         email, name, setName, avatarId, setAvatarId, validationError, hasChanges,
         isSaving, saveProfile, isSendingReset, sendPasswordReset,
     } = useEditProfileController();
+    const insets = useSafeAreaInsets();
 
     const [isPickerOpen, setPickerOpen] = useState(false);
 
@@ -72,7 +75,7 @@ export default function EditProfileScreen({ navigation }: any) {
                 style={{ flex: 1 }}
             >
                 <ScrollView
-                    contentContainerStyle={styles.scrollContent}
+                    contentContainerStyle={[styles.scrollContent, { paddingBottom: SCREEN_BOTTOM + insets.bottom }]}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
@@ -110,17 +113,21 @@ export default function EditProfileScreen({ navigation }: any) {
                         </View>
                     </View>
 
-                    {!!validationError && (
-                        <Text style={styles.validationText}>{validationError}</Text>
-                    )}
+                    {/* The error sits right above the button it is holding back, the
+                        same way the goal form shows it -- no negative margin needed. */}
+                    <View style={styles.group}>
+                        {!!validationError && (
+                            <Text style={styles.validationText}>{validationError}</Text>
+                        )}
 
-                    <PrimaryButton
-                        label={isSaving ? 'Saving...' : 'Save Changes'}
-                        onPress={handleSave}
-                        loading={isSaving}
-                        disabled={!hasChanges || isSaving}
-                        icon={!isSaving ? <Check size={18} color={primaryButtonInk()} strokeWidth={3} /> : undefined}
-                    />
+                        <PrimaryButton
+                            label={isSaving ? 'Saving...' : 'Save Changes'}
+                            onPress={handleSave}
+                            loading={isSaving}
+                            disabled={!hasChanges || isSaving}
+                            icon={!isSaving ? <Check size={18} color={primaryButtonInk()} strokeWidth={3} /> : undefined}
+                        />
+                    </View>
 
                     <View>
                         <Text style={styles.eyebrow}>[ SECURITY ]</Text>
@@ -137,8 +144,6 @@ export default function EditProfileScreen({ navigation }: any) {
                             />
                         </PixelCard>
                     </View>
-
-                    <View style={{ height: 40 }} />
                 </ScrollView>
             </KeyboardAvoidingView>
         </ScreenContainer>
@@ -147,37 +152,35 @@ export default function EditProfileScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
     scrollContent: {
-        padding: 20,
-        paddingTop: 10,
-        gap: 20,
+        paddingHorizontal: SCREEN_GUTTER,
+        paddingTop: SCREEN_TOP,
+        gap: SECTION_GAP,
+    },
+    group: {
+        gap: SPACE.sm,
     },
     avatarRow: {
         alignItems: 'center',
     },
     avatarButton: {
         alignItems: 'center',
-        gap: 8,
+        gap: SPACE.sm,
     },
     avatarButtonPressed: {
         transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     avatarHint: {
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: INDIGO,
-        letterSpacing: 1,
     },
     eyebrow: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED,
-        letterSpacing: 2,
-        marginBottom: 8,
+        ...TYPE.h2,
+        marginBottom: HEADING_GAP,
     },
     readOnlyBox: {
         minHeight: 40, // Matches PixelField; a floor, so a large font grows it
         justifyContent: 'center',
-        paddingHorizontal: 12,
+        paddingHorizontal: SPACE.md,
         // Recessed rather than raised: no hard shadow, and a darker paper, so it
         // doesn't read as a field you can type into.
         backgroundColor: '#EDE9E0',
@@ -185,19 +188,14 @@ const styles = StyleSheet.create({
         borderColor: OUTLINE,
     },
     readOnlyText: {
-        fontSize: 12,
-        fontFamily: PIXEL,
+        ...TYPE.body,
         // INK, not INK_MUTED: on the recessed paper INK_MUTED was 3.9:1. The darker
         // fill and the missing shadow already say "not editable".
         color: INK,
         letterSpacing: 1,
     },
     validationText: {
-        fontSize: 10,
-        fontFamily: PIXEL,
+        ...TYPE.caption,
         color: DANGER_TEXT,
-        letterSpacing: 0.5,
-        lineHeight: 16,
-        marginTop: -8,
     },
 });

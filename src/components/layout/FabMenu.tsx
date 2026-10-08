@@ -13,8 +13,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Plus } from 'lucide-react-native';
-import { PIXEL_BOLD } from '../../constants/typography';
-import { FAB_SIZE, FAB_BOTTOM } from '../../constants/layout';
+import { TYPE } from '../../constants/typography';
+import { FAB_SIZE, FAB_BOTTOM, SCREEN_GUTTER, SPACE } from '../../constants/layout';
 import { SHADOW_OFFSET } from '../../constants/pixel';
 
 export interface FabAction {
@@ -267,7 +267,8 @@ const styles = StyleSheet.create({
     fabWrapper: {
         position: 'absolute',
         bottom: FAB_BOTTOM,
-        right: 20,
+        // On the screen's own right edge, the same line the cards end on.
+        right: SCREEN_GUTTER,
         width: FAB_SIZE,
         height: FAB_SIZE,
     },
@@ -296,10 +297,11 @@ const styles = StyleSheet.create({
     },
     actionWrapper: {
         position: 'absolute',
-        // Sits just above the FAB (20 bottom + 60 tall - 12 overlap trim), centered on its column:
-        // FAB is 60 wide at right:20, mini FAB is 56 -> 2px inset keeps the two columns aligned.
+        // Sits just above the FAB (20 bottom + 60 tall - 12 overlap trim), centred on
+        // its column: the mini FAB is 4px narrower, so it sits 2px further in. (It was
+        // at 26 against the FAB's 20 -- 4px off centre.)
         bottom: 68,
-        right: 26,
+        right: SCREEN_GUTTER + (FAB_SIZE - MINI_FAB_SIZE) / 2,
     },
     actionRow: {
         flexDirection: 'row',
@@ -308,7 +310,7 @@ const styles = StyleSheet.create({
     },
     labelWrapper: {
         position: 'relative',
-        marginRight: 12,
+        marginRight: SPACE.md,
     },
     labelShadow: {
         position: 'absolute',
@@ -323,13 +325,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFF',
         borderWidth: 2,
         borderColor: BORDER,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingVertical: SPACE.xs,
+        paddingHorizontal: SPACE.md,
     },
     actionLabel: {
+        ...TYPE.label,
         color: '#333',
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
     },
     miniFabWrapper: {
         position: 'relative',

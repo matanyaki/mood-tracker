@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, ScrollView, Text, Pressable } from 'react-native';
-import { ScreenContainer, AppHeader, PixelCard } from '../components';
+import { StyleSheet, ScrollView } from 'react-native';
+import { AlertTriangle } from 'lucide-react-native';
+import { ScreenContainer, AppHeader, EmptyState } from '../components';
 import { InsightsStatsSkeleton } from '../components/skeleton';
 import { useInsightsController } from '../controllers/useInsightsController';
 import { format } from 'date-fns';
@@ -8,8 +9,8 @@ import { useGoalProgressQuery, useGoalCompletionsQuery } from '../hooks/useGoals
 import { useProfileQuery } from '../hooks/useProfileQuery';
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { getEmotionColor } from '../constants/colors';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../constants/pixel';
+import { CARD_GAP, SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP } from '../constants/layout';
+import { INK_MUTED } from '../constants/pixel';
 
 import FilterRow from '../components/insights/FilterRow';
 import SummaryCards, { MoodDelta } from '../components/insights/SummaryCards';
@@ -248,18 +249,13 @@ export default function InsightsScreen({ navigation }: any) {
         ) : error ? (
           // A failed month used to render as an empty one -- same blank chart, same
           // zero counts, no way to tell "nothing happened" from "nothing loaded".
-          <PixelCard padding={24} style={styles.errorCard}>
-            <Text style={styles.errorTitle}>COULD NOT LOAD</Text>
-            <Text style={styles.errorText}>
-              {(error as Error)?.message ?? 'Something went wrong.'}
-            </Text>
-            <Pressable
-              onPress={refreshStats}
-              style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
-            >
-              <Text style={styles.retryText}>[ TRY AGAIN ]</Text>
-            </Pressable>
-          </PixelCard>
+          <EmptyState
+            icon={<AlertTriangle size={32} color={INK_MUTED} strokeWidth={2.5} />}
+            title="COULD NOT LOAD"
+            subtitle={(error as Error)?.message ?? 'Something went wrong.'}
+            buttonLabel="[ TRY AGAIN ]"
+            onButtonPress={refreshStats}
+          />
         ) : (
           <>
             {/* First on the screen on purpose: the cards below it report the
@@ -316,44 +312,11 @@ export default function InsightsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   content: {
-    padding: 20,
-    paddingTop: 10,
-    paddingBottom: 40,
-  },
-  errorCard: {
-    alignItems: 'center',
-  },
-  errorTitle: {
-    fontSize: 14,
-    fontFamily: PIXEL_BOLD,
-    color: INK,
-    letterSpacing: 2,
-    marginBottom: 12,
-  },
-  errorText: {
-    fontSize: 11,
-    fontFamily: PIXEL,
-    color: INK_MUTED,
-    lineHeight: 20,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: PAPER,
-    borderWidth: BORDER_W_INNER,
-    borderColor: OUTLINE,
-  },
-  retryButtonPressed: {
-    // Sinks toward its own corner, the way every other pixel control answers a press.
-    transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
-    backgroundColor: PRESSED,
-  },
-  retryText: {
-    fontSize: 11,
-    fontFamily: PIXEL_BOLD,
-    color: INK,
-    letterSpacing: 1,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingTop: SCREEN_TOP,
+    paddingBottom: SCREEN_BOTTOM,
+    // The one thing that spaces this column; the cards carry no margins of their
+    // own (they used to: 20 here, 24 there, 6 on top of one).
+    gap: CARD_GAP,
   },
 });

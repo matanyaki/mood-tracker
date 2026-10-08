@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardTypeOptions } from 'react-native';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { TYPE } from '../../constants/typography';
+import { HEADING_GAP, SPACE } from '../../constants/layout';
 import {
-    OUTLINE, PAPER, INK, INK_MUTED,
-    SHADOW_OFFSET, BORDER_W_INNER,
+    OUTLINE, PAPER, INK, SHADOW_OFFSET, BORDER_W_INNER,
 } from '../../constants/pixel';
 
 interface PixelFieldProps {
@@ -55,11 +55,8 @@ export default function PixelField({
 
 const styles = StyleSheet.create({
     eyebrow: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED,
-        letterSpacing: 2,
-        marginBottom: 8,
+        ...TYPE.h2,
+        marginBottom: HEADING_GAP,
     },
     wrapper: {
         position: 'relative',
@@ -73,12 +70,14 @@ const styles = StyleSheet.create({
     input: {
         minHeight: 40, // A floor: a large system font grows the field instead of clipping
         paddingVertical: 0, // Cleared before the box sets its own metrics
-        paddingHorizontal: 12,
+        paddingHorizontal: SPACE.md,
         backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
-        fontSize: 12,
-        fontFamily: PIXEL,
+        // The body face and size, without its lineHeight: a single-line input
+        // with an explicit lineHeight sits off-centre on Android.
+        fontSize: TYPE.body.fontSize,
+        fontFamily: TYPE.body.fontFamily,
         color: INK,
         letterSpacing: 1,
         // Android's default font padding pushes the text off the centre line of a

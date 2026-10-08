@@ -1,11 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Sparkles } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, BackButton, PixelCard, ToggleBox } from '../components';
 import { TIP_CATEGORIES, TipCategory, getTipOfTheDay } from '../constants/tips';
-import { hitSlopFor } from '../constants/layout';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import {
+    CARD_PADDING, HEADING_GAP, ROW_PADDING_H, ROW_PADDING_V, SCREEN_BOTTOM, SCREEN_GUTTER,
+    SCREEN_TOP, SECTION_GAP, SPACE, hitSlopFor,
+} from '../constants/layout';
+import { TYPE } from '../constants/typography';
+import { OUTLINE, BORDER_W_INNER } from '../constants/pixel';
 
 const ALL = 'all';
 
@@ -49,6 +53,7 @@ const CategoryCard = ({ category }: { category: TipCategory }) => {
  */
 export default function TipsScreen({ navigation }: any) {
     const [filter, setFilter] = useState<string>(ALL);
+    const insets = useSafeAreaInsets();
 
     // Fixed for the life of the screen: re-picking on every render would swap the
     // tip out from under someone who stayed past midnight.
@@ -67,11 +72,11 @@ export default function TipsScreen({ navigation }: any) {
             />
 
             <ScrollView
-                contentContainerStyle={styles.content}
+                contentContainerStyle={[styles.content, { paddingBottom: SCREEN_BOTTOM + insets.bottom }]}
                 showsVerticalScrollIndicator={false}
             >
                 <PixelCard
-                    padding={16}
+                    padding={CARD_PADDING}
                     accentColor={tipOfTheDay.category.color}
                     style={styles.featuredCard}
                     wrapperStyle={styles.featuredCardWrapper}
@@ -135,14 +140,13 @@ export default function TipsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
     content: {
-        padding: 20,
-        paddingTop: 10,
-        paddingBottom: 40,
+        paddingHorizontal: SCREEN_GUTTER,
+        paddingTop: SCREEN_TOP,
     },
 
     // --- Tip of the day ---
     featuredCardWrapper: {
-        marginBottom: 20,
+        marginBottom: SECTION_GAP,
     },
     featuredCard: {
         backgroundColor: '#FFFBEB',
@@ -150,19 +154,18 @@ const styles = StyleSheet.create({
     featuredEyebrowRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        marginBottom: 12,
+        gap: SPACE.xs,
+        marginBottom: SPACE.md,
     },
     featuredEyebrow: {
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: '#A16207',
         letterSpacing: 2,
     },
     featuredRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: 12,
+        gap: SPACE.md,
     },
     featuredIconBox: {
         width: 40,
@@ -176,47 +179,40 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     featuredTitle: {
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
-        lineHeight: 18,
-        marginBottom: 6,
+        ...TYPE.label,
+        marginBottom: SPACE.xs,
     },
     featuredBody: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 18,
+        ...TYPE.body,
     },
 
     // --- Filter ---
     filterScroll: {
-        marginHorizontal: -20,
-        marginVertical: -CHIP_SLOP.top,
-        marginBottom: 20 - CHIP_SLOP.bottom,
+        marginHorizontal: -SCREEN_GUTTER,
+        marginTop: -CHIP_SLOP.top,
+        marginBottom: SECTION_GAP - CHIP_SLOP.bottom,
     },
     filterRow: {
-        paddingHorizontal: 20,
+        paddingHorizontal: SCREEN_GUTTER,
         // Room inside the scroll view for the chips' hitSlop -- Android drops touches
         // outside a parent's bounds -- given back by filterScroll's negative margin.
         paddingVertical: CHIP_SLOP.top,
-        gap: 8,
+        gap: SPACE.sm,
     },
     filterChip: {
         // The goal form's boxes are 44 tall to be easy day targets; a filter row
         // that scrolls sideways reads better slimmer. CHIP_SLOP makes up the
         // difference to the touch target, and minHeight lets a large font grow it.
         minHeight: CHIP_H,
-        paddingHorizontal: 12,
+        paddingHorizontal: SPACE.md,
     },
 
     // --- Categories ---
     categoryHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        marginBottom: 10,
+        gap: SPACE.sm,
+        marginBottom: HEADING_GAP,
     },
     iconBox: {
         width: 28,
@@ -227,22 +223,20 @@ const styles = StyleSheet.create({
         borderColor: OUTLINE,
     },
     categoryTitle: {
+        ...TYPE.label,
         flex: 1,
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
         letterSpacing: 1.5,
     },
     categoryCount: {
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED,
-        letterSpacing: 1,
+        ...TYPE.label,
+        color: TYPE.caption.color,
     },
     categoryCardWrapper: {
-        marginBottom: 24,
+        marginBottom: SECTION_GAP,
     },
     tip: {
-        padding: 14,
+        paddingVertical: ROW_PADDING_V,
+        paddingHorizontal: ROW_PADDING_H,
     },
     tipDivided: {
         borderBottomWidth: BORDER_W_INNER,
@@ -250,26 +244,16 @@ const styles = StyleSheet.create({
         borderStyle: 'dotted',
     },
     tipTitle: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
-        lineHeight: 16,
-        marginBottom: 6,
+        ...TYPE.label,
+        marginBottom: SPACE.xs,
     },
     tipBody: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 18,
+        ...TYPE.body,
     },
 
     footnote: {
+        ...TYPE.caption,
         textAlign: 'center',
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 16,
-        paddingHorizontal: 12,
+        paddingHorizontal: SPACE.md,
     },
 });

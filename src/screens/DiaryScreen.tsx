@@ -4,13 +4,14 @@ import { View, Text, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
 import { Calendar } from 'react-native-calendars';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, EmptyState, DayEntryModal } from '../components';
+import { ScreenContainer, AppHeader, EmptyState, DayEntryModal, PixelCard } from '../components';
 import { CalendarSkeleton } from '../components/skeleton';
 import { useDiaryController } from '../controllers/useDiaryController';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { PIXEL, PIXEL_BOLD, TYPE } from '../constants/typography';
+import { CARD_GAP, SCREEN_GUTTER, SCREEN_TOP, SPACE } from '../constants/layout';
 import {
   OUTLINE, PAPER, INK, INK_MUTED,
-  SHADOW_OFFSET, BORDER_W, BORDER_W_INNER,
+  SHADOW_OFFSET, BORDER_W_INNER,
 } from '../constants/pixel';
 
 const TODAY_ACCENT = '#4F46E5';
@@ -39,8 +40,8 @@ const CALENDAR_THEME = {
   textDayFontFamily: PIXEL,
   textMonthFontFamily: PIXEL_BOLD,
   textDayHeaderFontFamily: PIXEL_BOLD,
-  textDayFontSize: 14, // Silkscreen is wide -- 16 crowded the day cells
-  textDayHeaderFontSize: 11,
+  textDayFontSize: TYPE.bodyLg.fontSize, // 14: Silkscreen is wide -- 16 crowded the day cells
+  textDayHeaderFontSize: TYPE.caption.fontSize, // 12, up from 11; "SUN" is ~27px of a 34px cell
   'stylesheet.calendar.header': {
     header: {
       flexDirection: 'row',
@@ -117,6 +118,7 @@ export default function DiaryScreen({ navigation }: any) {
     entries,
     loading,
     refreshing,
+    isError,
     selectedDate,
     seedMonth,
     calendarKey,
@@ -172,52 +174,58 @@ export default function DiaryScreen({ navigation }: any) {
         rightAction={headerRightAction}
       />
 
-      <View style={styles.calendarWrapper}>
-        {/* Hard offset shadow: a solid block, not a blur */}
-        <View style={styles.calendarShadow} pointerEvents="none" />
+      <PixelCard padding={0} style={styles.calendarCard} wrapperStyle={styles.calendarWrapper}>
+        {loading ? (
+          <CalendarSkeleton />
+        ) : (
+          <Calendar
+            // Remounts only when the controller deliberately moves the calendar
+            // (the Today button). Paging with the arrows leaves both untouched,
+            // which is what keeps the month out of a parent/child feedback loop.
+            key={calendarKey}
+            initialDate={seedMonth}
+            // Dimmed, not replaced: the grid has to stay mounted through a month
+            // whose entries are still in flight, or it forgets where it was.
+            style={refreshing ? styles.calendarRefreshing : undefined}
+            onDayPress={handleDayPress}
+            onMonthChange={handleMonthChange}
+            markingType="multi-dot"
+            markedDates={markedDates}
+            renderHeader={renderCalendarHeader}
+            theme={CALENDAR_THEME as any}
+            renderArrow={renderCalendarArrow}
+            enableSwipeMonths={true}
+            hideExtraDays={false}
+            firstDay={0}
+          />
+        )}
 
-        <View style={styles.calendarCard}>
-          {loading ? (
-            <CalendarSkeleton />
-          ) : (
-            <Calendar
-              // Remounts only when the controller deliberately moves the calendar
-              // (the Today button). Paging with the arrows leaves both untouched,
-              // which is what keeps the month out of a parent/child feedback loop.
-              key={calendarKey}
-              initialDate={seedMonth}
-              // Dimmed, not replaced: the grid has to stay mounted through a month
-              // whose entries are still in flight, or it forgets where it was.
-              style={refreshing ? styles.calendarRefreshing : undefined}
-              onDayPress={handleDayPress}
-              onMonthChange={handleMonthChange}
-              markingType="multi-dot"
-              markedDates={markedDates}
-              renderHeader={renderCalendarHeader}
-              theme={CALENDAR_THEME as any}
-              renderArrow={renderCalendarArrow}
-              enableSwipeMonths={true}
-              hideExtraDays={false}
-              firstDay={0}
-            />
-          )}
-
-          <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: MOOD_COLOR }]} />
-              <Text style={styles.legendText}>MOOD</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: GREETING_COLOR }]} />
-              <Text style={styles.legendText}>GREETING</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: GOAL_COLOR }]} />
-              <Text style={styles.legendText}>GOAL</Text>
-            </View>
+        <View style={styles.legend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: MOOD_COLOR }]} />
+            <Text style={styles.legendText}>MOOD</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: GREETING_COLOR }]} />
+            <Text style={styles.legendText}>GREETING</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: GOAL_COLOR }]} />
+            <Text style={styles.legendText}>GOAL</Text>
           </View>
         </View>
-      </View>
+      </PixelCard>
+
+      {/* Under the grid, not instead of it: the calendar has to stay mounted to
+          keep its month (see useDiaryController). React Query retries on its own
+          when the app refocuses or the connection returns. */}
+      {isError && !loading && (
+        <EmptyState
+          title="COULD NOT LOAD"
+          subtitle="Some days may be missing their dots. This retries on its own when you're back online."
+          style={styles.errorCard}
+        />
+      )}
 
       {/* {entries.length === 0 && (
         <EmptyState
@@ -244,44 +252,43 @@ export default function DiaryScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   calendarWrapper: {
-    position: 'relative',
-    margin: 20,
-    marginRight: 20 + SHADOW_OFFSET, // Room for the offset shadow
-  },
-  calendarShadow: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: OUTLINE,
-    transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
+    marginTop: SCREEN_TOP,
+    marginLeft: SCREEN_GUTTER,
+    // Explicit rather than marginHorizontal: PixelCard reserves SHADOW_OFFSET on
+    // the right, and a specific side beats the shorthand.
+    marginRight: SCREEN_GUTTER + SHADOW_OFFSET,
   },
   calendarCard: {
-    backgroundColor: PAPER,
-    borderWidth: BORDER_W,
-    borderColor: OUTLINE,
     // Horizontal padding is deliberately tight: seven 34px day cells plus the
     // card's own borders need ~250px, which is more than a 320px-wide phone has
-    // to spare at the old 16.
-    paddingHorizontal: 8,
-    paddingVertical: 16,
+    // to spare at the usual 16.
+    paddingHorizontal: SPACE.sm,
+    paddingVertical: SPACE.lg,
   },
   calendarRefreshing: {
     opacity: 0.45,
+  },
+  errorCard: {
+    marginTop: CARD_GAP,
+    marginLeft: SCREEN_GUTTER,
+    marginRight: SCREEN_GUTTER + SHADOW_OFFSET,
   },
   customHeaderContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: SPACE.xs,
   },
   titleRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: SPACE.sm,
   },
   monthTitle: {
-    // Silkscreen runs ~0.76em per character. The gap between the two arrows is
+    // A documented exception to the type scale. The gap between the two arrows is
     // ~188px on a narrow phone, and "September 2026" is the widest month label:
     // 173px at this size, 207px at 18. Left in sentence case and without extra
     // letterSpacing for the same reason -- there is no room for either.
@@ -306,19 +313,19 @@ const styles = StyleSheet.create({
     borderColor: OUTLINE,
   },
   legend: {
-    marginTop: 20,
+    marginTop: SPACE.lg,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 18,
+    gap: SPACE.lg,
     borderTopWidth: BORDER_W_INNER,
     borderTopColor: OUTLINE,
     borderStyle: 'dotted',
-    paddingTop: 14,
+    paddingTop: SPACE.md,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: SPACE.xs,
   },
   legendSwatch: {
     width: 10,
@@ -327,9 +334,6 @@ const styles = StyleSheet.create({
     borderColor: OUTLINE,
   },
   legendText: {
-    fontSize: 10,
-    fontFamily: PIXEL,
-    color: INK_MUTED,
-    letterSpacing: 1,
+    ...TYPE.caption,
   },
 });

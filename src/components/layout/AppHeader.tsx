@@ -7,7 +7,6 @@ import { OUTLINE, PAPER, PRESSED, PRESS_SINK, BORDER_W_INNER } from '../../const
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
-  emoji?: string;
   rightAction?: {
     label: string;
     onPress: () => void;
@@ -27,7 +26,6 @@ interface AppHeaderProps {
 export default function AppHeader({
   title,
   subtitle,
-  emoji,
   rightAction,
   leftAction,
 }: AppHeaderProps) {
@@ -40,7 +38,6 @@ export default function AppHeader({
       )}
 
       <View style={styles.headerContent}>
-        {emoji && <Text style={styles.emoji}>{emoji}</Text>}
         <View style={styles.textContainer}>
           <Text style={styles.title} numberOfLines={1} accessibilityRole="header">{title}</Text>
           {subtitle && (
@@ -82,9 +79,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACE.md,
-  },
-  emoji: {
-    fontSize: 32,
   },
   textContainer: {
     flex: 1,

@@ -10,9 +10,9 @@ import { EMOTIONS } from '../../constants/emotions';
 import { getEmotionColor } from '../../constants/colors';
 import { MOOD_IMAGES } from '../../constants/images';
 import { getEmotionImageKey } from '../../../shared/types/emotions';
-import { CARD_PADDING } from '../../constants/layout';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { INK, INK_MUTED, PRESS_SINK } from '../../constants/pixel';
+import { CARD_PADDING, SPACE } from '../../constants/layout';
+import { TYPE } from '../../constants/typography';
+import { INK_MUTED, PRESS_SINK } from '../../constants/pixel';
 
 /**
  * The colour the Diary already uses for an emotion pip, so an un-logged day is
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     loggedBody: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: SPACE.md,
     },
     bodyPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
@@ -195,16 +195,13 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     headline: {
-        fontSize: 13,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
+        ...TYPE.h3,
+        // Tighter than h3's 2: "How are you feeling?" plus the chevron has to fit
+        // one line of a narrow phone at 14px.
         letterSpacing: 0.5,
     },
     meta: {
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
+        ...TYPE.caption,
     },
     emoji: {
         width: EMOJI,
@@ -212,11 +209,11 @@ const styles = StyleSheet.create({
     },
     loggedText: {
         flex: 1,
-        gap: 4,
+        gap: SPACE.xs,
     },
     teaser: {
         flexDirection: 'row',
-        gap: 2,
+        gap: SPACE.xs,
     },
     teaserEmoji: {
         width: TEASER_EMOJI,

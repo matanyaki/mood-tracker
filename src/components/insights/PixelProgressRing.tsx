@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
-import { PIXEL_BOLD } from '../../constants/typography';
-import { INK } from '../../constants/pixel';
+import { TYPE } from '../../constants/typography';
 import { GOAL_TEXT } from '../../constants/colors';
 
 /** Filled blocks while the goal is under way: the app's indigo accent. */
@@ -90,8 +89,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     percent: {
-        fontSize: 14,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
+        ...TYPE.h3,
+        letterSpacing: 0,
     },
 });

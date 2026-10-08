@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertTriangle, Plus, Target } from 'lucide-react-native';
 import { format } from 'date-fns';
@@ -8,16 +8,18 @@ import {
   pauseLastDay, resumeDay, currentPause, isGoalPaused, goalLastDay, plannedDayCount, endPause,
 } from '../../shared/types';
 import { countScheduledDaysThrough } from '../../shared/utils/goalProgress';
-import { ScreenContainer, AppHeader, BackButton, EmptyState, GoalCard } from '../components';
+import {
+  ScreenContainer, AppHeader, BackButton, EmptyState, GoalCard, PrimaryButton, primaryButtonInk,
+} from '../components';
+import { GoalListSkeleton } from '../components/skeleton';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { useGoalsQuery, useGoalCompletionsQuery } from '../hooks/useGoalsQuery';
 import { useGoalsController } from '../controllers/useGoalsController';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { SCREEN_GUTTER, SPACE } from '../constants/layout';
+import { TYPE } from '../constants/typography';
 import {
-  OUTLINE, PAPER, INK, INK_MUTED,
-  SHADOW_OFFSET, BORDER_W, BORDER_W_INNER,
-} from '../constants/pixel';
+  CARD_GAP, HEADING_GAP, SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP, SECTION_GAP, SPACE,
+} from '../constants/layout';
+import { OUTLINE, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
 
 /**
  * The goal list: everything the user is working on, with the way in to the form.
@@ -162,16 +164,14 @@ export default function GoalsScreen({ navigation }: any) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {isLoading && (
-          <ActivityIndicator style={styles.loader} color={INK} />
-        )}
+        {isLoading && <GoalListSkeleton />}
 
         {isError && !isLoading && (
           <EmptyState
             icon={<AlertTriangle size={32} color={INK_MUTED} strokeWidth={2.5} />}
-            title="Could not load goals"
+            title="COULD NOT LOAD GOALS"
             subtitle="Check your connection and try again."
-            buttonLabel="Retry"
+            buttonLabel="[ TRY AGAIN ]"
             onButtonPress={refetch}
           />
         )}
@@ -179,47 +179,51 @@ export default function GoalsScreen({ navigation }: any) {
         {!isLoading && !isError && goals?.length === 0 && (
           <EmptyState
             icon={<Target size={32} color={INK_MUTED} strokeWidth={2.5} />}
-            title="No goals yet"
+            title="NO GOALS YET"
             subtitle="Set one and pick the days you want to show up for it."
-            buttonLabel="New Goal"
+            buttonLabel="[ NEW GOAL ]"
             onButtonPress={handleCreate}
           />
         )}
 
         {!isLoading && !isError && !!goals?.length && (
+          // Each heading travels with its cards: closer to them (HEADING_GAP) than
+          // the two sections are to each other (SECTION_GAP).
           <>
             {activeGoals.length > 0 && (
-              <Text style={styles.countEyebrow}>
-                [ ACTIVE ]
-              </Text>
+              <View style={styles.section}>
+                <Text style={styles.countEyebrow}>[ ACTIVE ]</Text>
+                <View style={styles.cards}>
+                  {activeGoals.map(goal => (
+                    <GoalCard
+                      key={goal.id}
+                      goal={goal}
+                      onEdit={handleEdit}
+                      // A goal past its last day has no days left to pause.
+                      onPause={goalLastDay(goal) >= today ? handlePause : undefined}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </View>
+              </View>
             )}
-
-            {activeGoals.map(goal => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                onEdit={handleEdit}
-                // A goal past its last day has no days left to pause.
-                onPause={goalLastDay(goal) >= today ? handlePause : undefined}
-                onDelete={handleDelete}
-              />
-            ))}
 
             {pausedGoals.length > 0 && (
-              <Text style={[styles.countEyebrow, activeGoals.length > 0 && styles.sectionGap]}>
-                [ PAUSED ]
-              </Text>
+              <View style={styles.section}>
+                <Text style={styles.countEyebrow}>[ PAUSED ]</Text>
+                <View style={styles.cards}>
+                  {pausedGoals.map(goal => (
+                    <GoalCard
+                      key={goal.id}
+                      goal={goal}
+                      onEdit={handleEdit}
+                      onResume={handleResume}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </View>
+              </View>
             )}
-
-            {pausedGoals.map(goal => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                onEdit={handleEdit}
-                onResume={handleResume}
-                onDelete={handleDelete}
-              />
-            ))}
           </>
         )}
       </ScrollView>
@@ -227,16 +231,13 @@ export default function GoalsScreen({ navigation }: any) {
       {/* Pinned rather than scrolled with the list: the way to add a goal should not
           move further away the more goals there are. */}
       <View style={[styles.footer, { paddingBottom: SPACE.lg + insets.bottom }]}>
-        <View style={styles.newButtonWrapper}>
-          <View style={styles.newButtonShadow} pointerEvents="none" />
-          <Pressable
-            onPress={handleCreate}
-            style={({ pressed }) => [styles.newButton, pressed && styles.newButtonPressed]}
-          >
-            <Plus size={18} color="#FFF" strokeWidth={3} />
-            <Text style={styles.newButtonText}>NEW GOAL</Text>
-          </Pressable>
-        </View>
+        {/* The screen's one primary action -- the same PrimaryButton as everywhere
+            else, rather than the hand-drawn copy of it this used to be. */}
+        <PrimaryButton
+          label="NEW GOAL"
+          onPress={handleCreate}
+          icon={<Plus size={18} color={primaryButtonInk()} strokeWidth={3} />}
+        />
       </View>
     </ScreenContainer>
   );
@@ -244,21 +245,19 @@ export default function GoalsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-    gap: 14,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingTop: SCREEN_TOP,
+    paddingBottom: SCREEN_BOTTOM,
+    gap: SECTION_GAP,
   },
-  loader: {
-    marginTop: 40,
+  section: {
+    gap: HEADING_GAP,
+  },
+  cards: {
+    gap: CARD_GAP,
   },
   countEyebrow: {
-    fontSize: 10,
-    fontFamily: PIXEL_BOLD,
-    color: INK_MUTED,
-    letterSpacing: 2,
-  },
-  sectionGap: {
-    marginTop: 10,
+    ...TYPE.h2,
   },
   footer: {
     // paddingBottom is set inline: the home-indicator inset is added to it.
@@ -269,37 +268,5 @@ const styles = StyleSheet.create({
     borderTopWidth: BORDER_W_INNER,
     borderTopColor: OUTLINE,
     backgroundColor: 'rgba(255,253,248,0.92)',
-  },
-  newButtonWrapper: {
-    alignSelf: 'stretch',
-    position: 'relative',
-    marginRight: SHADOW_OFFSET,
-    marginBottom: SHADOW_OFFSET,
-  },
-  newButtonShadow: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: OUTLINE,
-    transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
-  },
-  newButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    backgroundColor: '#10B981',
-    borderWidth: BORDER_W,
-    borderColor: OUTLINE,
-  },
-  newButtonPressed: {
-    // Sinks onto its own shadow block, which is the press feedback PrimaryButton
-    // uses -- the travel has to equal the offset or the face lands off the block.
-    transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
-  },
-  newButtonText: {
-    fontSize: 13,
-    fontFamily: PIXEL_BOLD,
-    color: '#FFF',
-    letterSpacing: 1,
   },
 });

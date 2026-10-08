@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import { TrendingUp, Smile, ArrowUp, ArrowDown, Minus, Info } from 'lucide-react-native';
 import PixelCard from '../ui/PixelCard';
 import { getEmotionColor } from '../../constants/colors';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { TYPE } from '../../constants/typography';
+import { CARD_GAP, CARD_PADDING, SPACE } from '../../constants/layout';
 import { OUTLINE, INK, INK_MUTED, BORDER_W_INNER, PRESS_SINK } from '../../constants/pixel';
 
 /**
@@ -67,7 +68,7 @@ export default function SummaryCards({ filteredTotalEntries, moodScore, delta }:
 
     return (
         <View style={styles.container}>
-            <PixelCard padding={16} wrapperStyle={styles.cardWrapper} style={styles.card}>
+            <PixelCard padding={CARD_PADDING} wrapperStyle={styles.cardWrapper} style={styles.card}>
                 <View style={[styles.iconBox, { backgroundColor: '#E0E7FF' }]}>
                     <TrendingUp size={18} color="#4F46E5" strokeWidth={3} />
                 </View>
@@ -82,7 +83,7 @@ export default function SummaryCards({ filteredTotalEntries, moodScore, delta }:
                 accessibilityRole="button"
                 accessibilityLabel={`Mood score ${moodScore ?? 'not available'}. Tap to see how it is worked out.`}
             >
-                <PixelCard padding={16} wrapperStyle={styles.fill} style={[styles.card, styles.fill]}>
+                <PixelCard padding={CARD_PADDING} wrapperStyle={styles.fill} style={[styles.card, styles.fill]}>
                     {/* The only hint the card is tappable -- the face is otherwise
                         drawn the same as the journals card beside it. */}
                     <View style={styles.infoBadge} pointerEvents="none">
@@ -165,9 +166,7 @@ export default function SummaryCards({ filteredTotalEntries, moodScore, delta }:
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
-        gap: 16,
-        marginBottom: 20,
-        marginTop: 6,
+        gap: CARD_GAP,
     },
     cardWrapper: {
         flex: 1,
@@ -186,8 +185,8 @@ const styles = StyleSheet.create({
     },
     infoBadge: {
         position: 'absolute',
-        top: 6,
-        right: 6,
+        top: SPACE.xs,
+        right: SPACE.xs,
     },
     iconBox: {
         // Square and outlined -- the 18px radius this used to carry was the only
@@ -198,17 +197,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
-        marginBottom: 10,
+        marginBottom: SPACE.sm,
     },
     numberRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: SPACE.xs,
     },
     summaryNumber: {
-        fontSize: 26,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
+        ...TYPE.stat,
     },
     delta: {
         flexDirection: 'row',
@@ -216,25 +213,19 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     deltaText: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        ...TYPE.label,
     },
     summaryLabel: {
         // Split across two lines by the caller: Silkscreen is wide enough that
         // "TOTAL JOURNALS" on one line overflows a half-width card.
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
-        marginTop: 3,
+        ...TYPE.caption,
     },
     // Explainer dialog -- the same frame as ChartTooltipModal and PixelAlert.
     overlay: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 24,
+        paddingHorizontal: SPACE.xl,
         backgroundColor: 'rgba(0,0,0,0.5)',
     },
     dialog: {
@@ -243,36 +234,31 @@ const styles = StyleSheet.create({
     },
     dialogHeader: {
         alignItems: 'center',
-        padding: 18,
+        padding: CARD_PADDING,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
     },
     dialogTitle: {
-        fontSize: 15,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
-        marginBottom: 6,
+        ...TYPE.h3,
+        marginBottom: SPACE.xs,
     },
     dialogSubtitle: {
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 0.5,
+        ...TYPE.caption,
         textAlign: 'center',
     },
     dialogBody: {
-        padding: 18,
-        gap: 14,
+        padding: CARD_PADDING,
+        gap: SPACE.md,
     },
     factor: {
         flexDirection: 'row',
-        gap: 10,
+        gap: SPACE.sm,
     },
     swatch: {
         width: 12,
         height: 12,
-        marginTop: 2,
+        // Centred on the factor title's first 16px line.
+        marginTop: (TYPE.label.lineHeight - 12) / 2,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
     },
@@ -280,41 +266,29 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     factorTitle: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
-        marginBottom: 4,
+        ...TYPE.label,
+        marginBottom: SPACE.xs,
     },
     factorBody: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 16,
+        ...TYPE.body,
     },
     note: {
-        paddingTop: 12,
+        paddingTop: SPACE.md,
         borderTopWidth: BORDER_W_INNER,
         borderTopColor: OUTLINE,
         borderStyle: 'dotted',
     },
     noteText: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        lineHeight: 16,
+        ...TYPE.label,
         textAlign: 'center',
     },
     footer: {
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: SPACE.md,
         borderTopWidth: BORDER_W_INNER,
         borderTopColor: OUTLINE,
     },
     footerText: {
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
+        ...TYPE.caption,
     },
 });

@@ -3,10 +3,10 @@ import {
     View, Text, StyleSheet, Pressable, ScrollView, Modal, Dimensions,
 } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
-import { PIXEL, PIXEL_BOLD, TIGHT_FONT_SCALE } from '../../constants/typography';
-import { MIN_TOUCH } from '../../constants/layout';
+import { PIXEL_BOLD, TYPE, TIGHT_FONT_SCALE } from '../../constants/typography';
+import { HEADING_GAP, MIN_TOUCH, SPACE } from '../../constants/layout';
 import {
-    OUTLINE, PAPER, INK, INK_MUTED, SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, PRESSED,
+    OUTLINE, PAPER, INK, SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, PRESSED,
 } from '../../constants/pixel';
 
 const screenHeight = Dimensions.get('window').height;
@@ -220,11 +220,8 @@ export default function PixelSelect({ eyebrow, options, value, onChange, flex }:
 
 const styles = StyleSheet.create({
     eyebrow: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED,
-        letterSpacing: 2,
-        marginBottom: 8,
+        ...TYPE.h2,
+        marginBottom: HEADING_GAP,
     },
     triggerWrapper: {
         position: 'relative',
@@ -240,8 +237,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 8,
-        paddingHorizontal: 12,
+        gap: SPACE.sm,
+        paddingHorizontal: SPACE.md,
         backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
@@ -255,11 +252,8 @@ const styles = StyleSheet.create({
         backgroundColor: PRESSED,
     },
     triggerText: {
+        ...TYPE.label,
         flex: 1,
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
     },
     caretOpen: {
         // Whole-pixel flip, no rotation: an arbitrary angle would resample the
@@ -292,8 +286,8 @@ const styles = StyleSheet.create({
         height: ITEM_H,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        paddingHorizontal: 12,
+        gap: SPACE.sm,
+        paddingHorizontal: SPACE.md,
     },
     itemDivided: {
         borderBottomWidth: BORDER_W_INNER,
@@ -319,11 +313,8 @@ const styles = StyleSheet.create({
         borderColor: PAPER,
     },
     itemText: {
+        ...TYPE.caption,
         flex: 1,
-        fontSize: 11,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
     },
     itemTextSelected: {
         fontFamily: PIXEL_BOLD,

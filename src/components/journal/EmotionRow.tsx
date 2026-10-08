@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { getEmotionColor, getEmotionInk, textOnFill } from '../../constants/colors';
 import { MOOD_IMAGES } from '../../constants/images';
-import { MIN_TOUCH } from '../../constants/layout';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { CARD_PADDING, MIN_TOUCH, SPACE } from '../../constants/layout';
+import { PIXEL, PIXEL_BOLD, TYPE } from '../../constants/typography';
 import {
-    OUTLINE, PAPER, INK, INK_MUTED, SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W, PRESSED,
+    OUTLINE, PAPER, INK_MUTED, SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W, PRESSED,
 } from '../../constants/pixel';
 
 export interface EmotionRowProps {
@@ -112,8 +112,8 @@ const styles = StyleSheet.create({
     emotionRow: {
         flexDirection: 'column',
         backgroundColor: 'rgba(255,255,255,0.72)',
-        padding: 16,
-        gap: 16,
+        padding: CARD_PADDING,
+        gap: SPACE.md,
         borderWidth: BORDER_W,
         borderColor: OUTLINE,
         borderLeftWidth: ACCENT_BAR_W,
@@ -124,27 +124,24 @@ const styles = StyleSheet.create({
     emotionInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: SPACE.md,
     },
     emotionImage: {
         width: 40,
         height: 40,
     },
     emotionLabel: {
-        fontSize: 16,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.h3,
         color: '#334155',
         letterSpacing: 1,
     },
     scaleReadout: {
+        ...TYPE.label,
         marginLeft: 'auto',
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
     },
     scaleContainer: {
         flexDirection: 'row',
-        gap: 8,
+        gap: SPACE.sm,
     },
     scaleButton: {
         flex: 1,
@@ -159,8 +156,9 @@ const styles = StyleSheet.create({
         backgroundColor: PRESSED,
     },
     scaleText: {
-        fontSize: 15,
+        ...TYPE.h3,
         fontFamily: PIXEL,
+        letterSpacing: 0,
         color: INK_MUTED,
     },
     scaleTextActive: {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import PixelSelect from '../ui/PixelSelect';
+import { SPACE } from '../../constants/layout';
 
 interface FilterRowProps {
     selectedMonth: string;
@@ -67,7 +68,6 @@ export default FilterRow;
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
-        gap: 12,
-        marginBottom: 20,
+        gap: SPACE.md,
     },
 });

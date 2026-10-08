@@ -2,8 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
 import PixelCard from '../ui/PixelCard';
 import { getEmotionColor, getEmotionInk } from '../../constants/colors';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
+import { TYPE } from '../../constants/typography';
+import { CARD_PADDING, SCREEN_GUTTER, SPACE } from '../../constants/layout';
+import { OUTLINE, PAPER, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -93,52 +94,44 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20
+        padding: SCREEN_GUTTER,
     },
     cardWrapper: {
         width: Math.min(screenWidth * 0.85, 340),
     },
     modalHeader: {
         alignItems: 'center',
-        padding: 18,
+        padding: CARD_PADDING,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
     },
     modalTitle: {
-        fontSize: 16,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
-        marginBottom: 6
+        ...TYPE.h3,
+        marginBottom: SPACE.xs,
     },
     modalSubtitle: {
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
+        ...TYPE.caption,
         letterSpacing: 2,
     },
     modalBody: {
-        padding: 18,
-        gap: 12
+        padding: CARD_PADDING,
+        gap: SPACE.md,
     },
     emotionItem: {
-        marginBottom: 4,
+        marginBottom: SPACE.xs,
     },
     emotionRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8
+        marginBottom: SPACE.sm,
     },
     emotionName: {
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        ...TYPE.label,
     },
     scaleText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED
+        ...TYPE.label,
+        color: INK_MUTED,
     },
     scaleTrack: {
         flexDirection: 'row',
@@ -146,7 +139,7 @@ const styles = StyleSheet.create({
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
         backgroundColor: '#F1F5F9',
-        marginBottom: 8
+        marginBottom: SPACE.sm,
     },
     scaleCell: {
         flex: 1,
@@ -158,32 +151,25 @@ const styles = StyleSheet.create({
         borderRightWidth: 0,
     },
     noteText: {
-        fontSize: 11,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 18,
-        marginTop: 2,
-        marginBottom: 4
+        ...TYPE.body,
+        marginBottom: SPACE.xs,
         // No italic: RN fakes the slant on Silkscreen by shearing the bitmap.
     },
     dividerSmall: {
         borderTopWidth: BORDER_W_INNER,
         borderTopColor: OUTLINE,
         borderStyle: 'dotted',
-        marginTop: 12,
-        marginBottom: 4,
+        marginTop: SPACE.md,
+        marginBottom: SPACE.xs,
         width: '100%',
     },
     footer: {
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: SPACE.md,
         borderTopWidth: BORDER_W_INNER,
         borderTopColor: OUTLINE,
     },
     footerText: {
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
+        ...TYPE.caption,
     },
 });

@@ -4,9 +4,9 @@ import { Flame } from 'lucide-react-native';
 import PixelCard from '../ui/PixelCard';
 import SkeletonBox from '../skeleton/SkeletonBox';
 import { useStreaksQuery } from '../../hooks/useStreaksQuery';
-import { PIXEL_BOLD, TIGHT_FONT_SCALE } from '../../constants/typography';
-import { CARD_PADDING } from '../../constants/layout';
-import { INK, INK_MUTED, PRESS_SINK } from '../../constants/pixel';
+import { TYPE, TIGHT_FONT_SCALE } from '../../constants/typography';
+import { CARD_PADDING, SPACE } from '../../constants/layout';
+import { INK_MUTED, PRESS_SINK } from '../../constants/pixel';
 
 /** Streak orange. The flame is the streak's icon, so it keeps this colour on both
  *  tiles -- the tile LABEL says which kind of entry it counts, not the colour. */
@@ -148,13 +148,14 @@ export default function StreakCard({ onPressEmotions, onPressGreetings }: Streak
 const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
-        gap: 8,
+        gap: SPACE.sm,
     },
     tile: {
         flex: 1,
     },
     tileBody: {
-        // One fixed height for every state, so the column below never moves.
+        // One height for every state, so the column below never moves -- a floor,
+        // so a large system font grows the tile rather than clipping it.
         minHeight: TILE_H,
         justifyContent: 'space-between',
     },
@@ -165,23 +166,21 @@ const styles = StyleSheet.create({
     labelRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: SPACE.xs,
     },
     label: {
+        ...TYPE.label,
         flex: 1,
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
+        // Half of label's tracking: at 12px "GREETINGS" plus the flame is ~100px of
+        // a tile that has ~111 inside its padding on a 360dp phone.
+        letterSpacing: 0.5,
     },
     value: {
-        fontSize: 16,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
+        ...TYPE.h3,
+        letterSpacing: 0,
     },
     valueDormant: {
-        fontSize: 10,
+        ...TYPE.label,
         color: INK_MUTED,
-        letterSpacing: 1,
     },
 });

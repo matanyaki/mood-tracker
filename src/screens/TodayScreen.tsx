@@ -4,7 +4,7 @@ import { PixelAlert } from '../components/ui/PixelAlert';
 import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard, EmotionCheckInCard } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
-import { CARD_GAP, FAB_CLEARANCE } from '../constants/layout';
+import { CARD_GAP, FAB_CLEARANCE, SCREEN_GUTTER, SCREEN_TOP } from '../constants/layout';
 
 export default function TodayScreen({ navigation }: any) {
     const [isGratitudeVisible, setIsGratitudeVisible] = useState(false);
@@ -69,7 +69,6 @@ export default function TodayScreen({ navigation }: any) {
             <AppHeader
                 title="Today"
                 subtitle={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                emoji="☀️"
             />
 
             <ScrollView contentContainerStyle={styles.content}>
@@ -114,7 +113,8 @@ export default function TodayScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
     content: {
-        padding: 20,
+        paddingHorizontal: SCREEN_GUTTER,
+        paddingTop: SCREEN_TOP,
         // The ONE thing that spaces this column. Every card reserves room for its own
         // shadow and nothing else carries a margin, so the gaps are all this value.
         gap: CARD_GAP,

@@ -5,12 +5,13 @@ import { Rect } from 'react-native-svg';
 import { Droplets } from 'lucide-react-native';
 import PixelCard from '../ui/PixelCard';
 import PixelSelect from '../ui/PixelSelect';
+import EmptyState from '../ui/EmptyState';
 import { EMOTIONS_CONFIG, type EmotionId } from '../../constants/emotions';
 import { getEmotionColor } from '../../constants/colors';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { PIXEL, TYPE } from '../../constants/typography';
+import { CARD_PADDING, SCREEN_GUTTER, SPACE } from '../../constants/layout';
 import {
-    OUTLINE, INK, INK_MUTED,
-    SHADOW_OFFSET, BORDER_W, BORDER_W_INNER,
+    OUTLINE, INK_MUTED, SHADOW_OFFSET, BORDER_W, BORDER_W_INNER,
 } from '../../constants/pixel';
 
 const screenWidth = Dimensions.get('window').width;
@@ -60,7 +61,7 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
     // The card no longer breaks out of the screen's padding with a negative
     // margin: it draws a hard shadow block on its right edge now, and a card
     // hanging over the screen edge would take that block off with it.
-    const SCREEN_PADDING = 40;      // InsightsScreen content padding, both sides
+    const SCREEN_PADDING = SCREEN_GUTTER * 2; // InsightsScreen content padding, both sides
     const CARD_BORDERS = BORDER_W * 2;
     const CHART_RIGHT_GUTTER = 16;  // Room for the last day label
     const chartWidth = screenWidth
@@ -184,18 +185,16 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
 
     if (showEmptyState) {
         return (
-            <PixelCard padding={24} wrapperStyle={styles.cardWrapper} style={styles.emptyCard}>
-                <Droplets size={40} color={INK_MUTED} strokeWidth={2.5} />
-                <Text style={styles.emptyTitle}>NO WAVES YET</Text>
-                <Text style={styles.emptyText}>
-                    Start journaling to see your emotion wave take shape.
-                </Text>
-            </PixelCard>
+            <EmptyState
+                icon={<Droplets size={40} color={INK_MUTED} strokeWidth={2.5} />}
+                title="NO WAVES YET"
+                subtitle="Start journaling to see your emotion wave take shape."
+            />
         );
     }
 
     return (
-        <PixelCard padding={0} wrapperStyle={styles.cardWrapper} style={styles.chartCard}>
+        <PixelCard padding={0} style={styles.chartCard}>
             {/* No spinner here. It was fed by `isFetching`, which is true for the
                 first load and every background refetch, so it span on a screen that
                 was not waiting for anything the user had asked for -- and it was the
@@ -270,7 +269,7 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                             // face has to be passed in here rather than via a style.
                             propsForLabels: {
                                 fontFamily: PIXEL,
-                                fontSize: 9, // Silkscreen is wide -- the default crowds the axis
+                                fontSize: TYPE.caption.fontSize, // 12, the type floor (was 9)
                             },
                         }}
                         // No `bezier`: a smoothed curve is the one shape a pixel grid
@@ -286,35 +285,30 @@ export default function EmotionWavesChart({ chartData, handleDataPointClick, isF
                     />
                 </View>
             ) : (
-                <View style={styles.noSeries}>
-                    <Text style={styles.noSeriesTitle}>
-                        NO {selectedLabel.toUpperCase()} DAYS THIS MONTH
-                    </Text>
-                    <Text style={styles.noSeriesText}>
-                        Pick another emotion to see its wave.
-                    </Text>
-                </View>
+                <EmptyState
+                    bare
+                    title={`NO ${selectedLabel.toUpperCase()} DAYS THIS MONTH`}
+                    subtitle="Pick another emotion to see its wave."
+                    style={styles.noSeries}
+                />
             )}
         </PixelCard>
     );
 }
 
 const styles = StyleSheet.create({
-    cardWrapper: {
-        marginBottom: 20,
-    },
     chartCard: {
         alignItems: 'center',
         minHeight: 220,
-        paddingBottom: 10,
+        paddingBottom: SPACE.sm,
     },
     headerContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         width: '100%',
-        padding: 14,
-        paddingBottom: 12,
+        padding: CARD_PADDING,
+        paddingBottom: SPACE.md,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
         borderStyle: 'dotted',
@@ -323,80 +317,33 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     chartTitle: {
-        fontSize: 13,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
+        ...TYPE.h3,
     },
     chartSubtitle: {
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
-        marginTop: 6,
+        ...TYPE.caption,
+        marginTop: SPACE.xs,
     },
     selectorRow: {
         flexDirection: 'row',
         width: '100%',
-        paddingHorizontal: 14,
-        paddingTop: 14,
+        paddingHorizontal: CARD_PADDING,
+        paddingTop: CARD_PADDING,
     },
     noSeries: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 44,
-        paddingHorizontal: 20,
-    },
-    noSeriesTitle: {
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
-        textAlign: 'center',
-        marginBottom: 10,
-    },
-    noSeriesText: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 0.5,
-        textAlign: 'center',
+        alignSelf: 'stretch',
+        paddingVertical: SPACE.xxl,
+        paddingHorizontal: CARD_PADDING,
     },
     singleEntryHint: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 0.5,
-        marginTop: 12,
+        ...TYPE.caption,
+        marginTop: SPACE.md,
         alignSelf: 'flex-start',
-        paddingHorizontal: 14,
+        paddingHorizontal: CARD_PADDING,
         // No italic: Silkscreen ships one upright face per weight, so RN fakes the
         // slant by shearing the bitmap, which tears the pixel grid.
     },
     chart: {
-        marginVertical: 10,
+        marginVertical: SPACE.sm,
         paddingRight: 16, // The gutter reserved out of chartWidth above
-    },
-    emptyCard: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 40,
-        minHeight: 220,
-    },
-    emptyTitle: {
-        fontSize: 14,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
-        marginTop: 16,
-        marginBottom: 10,
-    },
-    emptyText: {
-        fontSize: 11,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        textAlign: 'center',
-        lineHeight: 20,
-        paddingHorizontal: 10,
     },
 });

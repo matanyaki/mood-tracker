@@ -3,12 +3,14 @@ import {
   View, Text, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, BackButton, ReflectionCard, PrimaryButton } from '../components';
 import { useReflectionController } from '../controllers/useReflectionController';
 import { getEmotionColor } from '../constants/colors';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { PAPER, INK, INK_MUTED } from '../constants/pixel';
+import { TYPE } from '../constants/typography';
+import { CARD_GAP, SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP, SPACE } from '../constants/layout';
+import { INK } from '../constants/pixel';
 
 export default function ReflectionScreen({ route, navigation }: any) {
   const {
@@ -18,6 +20,7 @@ export default function ReflectionScreen({ route, navigation }: any) {
     handleTextChange,
     handleSave
   } = useReflectionController(route, navigation);
+  const insets = useSafeAreaInsets();
 
   // Which emotion is on screen. Pure presentation, so it lives here rather than in
   // the controller: notes stay keyed by emotion id there, and Save still sends all
@@ -40,7 +43,9 @@ export default function ReflectionScreen({ route, navigation }: any) {
         {/* `handled` so Next / Save fire on the first tap while the keyboard is
             open, instead of that tap only dismissing it. */}
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          // Runs to the bottom edge with nothing pinned under it, so the last
+          // button clears the home indicator itself.
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: SCREEN_BOTTOM + insets.bottom }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -123,37 +128,29 @@ export default function ReflectionScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 20,
-    paddingTop: 10,
-    paddingBottom: 30, // Bottom safe area, now that nothing is pinned below the scroll
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingTop: SCREEN_TOP,
+    gap: CARD_GAP,
   },
   introBlock: {
-    gap: 6,
-    marginBottom: 20,
+    gap: SPACE.xs,
   },
   stepEyebrow: {
-    fontSize: 10,
-    fontFamily: PIXEL_BOLD,
-    color: INK,
+    ...TYPE.label,
     letterSpacing: 2,
   },
   subtitle: {
-    fontSize: 12,
-    fontFamily: PIXEL,
-    color: INK_MUTED,
-    letterSpacing: 0.5,
-    lineHeight: 20,
+    ...TYPE.body,
   },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
+    gap: SPACE.md,
   },
   progressBar: {
     flex: 1,
     flexDirection: 'row',
-    gap: 4,
+    gap: SPACE.xs,
   },
   progressSegment: {
     flex: 1,
@@ -164,14 +161,11 @@ const styles = StyleSheet.create({
     backgroundColor: INK,
   },
   progressCount: {
-    fontSize: 10,
-    fontFamily: PIXEL_BOLD,
-    color: INK,
-    letterSpacing: 1,
+    ...TYPE.label,
   },
   navRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: SPACE.md,
   },
   navButton: {
     // PrimaryButton's wrapper stretches to its parent, so each one gets a column

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { Pressable, Text, StyleSheet, StyleProp, ViewStyle, AccessibilityState } from 'react-native';
 import { TYPE } from '../../constants/typography';
 import { MIN_TOUCH, SPACE } from '../../constants/layout';
 import { OUTLINE, PAPER, PRESSED, PRESS_SINK, BORDER_W_INNER } from '../../constants/pixel';
@@ -11,6 +11,8 @@ interface SecondaryButtonProps {
     /** Layout only -- width, flex, alignSelf, margins. The face is fixed. */
     style?: StyleProp<ViewStyle>;
     accessibilityLabel?: string;
+    /** Extra state for a toggle, e.g. { expanded } on SHOW ALL. */
+    accessibilityState?: AccessibilityState;
 }
 
 /**
@@ -27,6 +29,7 @@ export default function SecondaryButton({
     disabled = false,
     style,
     accessibilityLabel,
+    accessibilityState,
 }: SecondaryButtonProps) {
     return (
         <Pressable
@@ -34,7 +37,7 @@ export default function SecondaryButton({
             disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel}
-            accessibilityState={{ disabled }}
+            accessibilityState={{ ...accessibilityState, disabled }}
             style={({ pressed }) => [
                 styles.button,
                 pressed && !disabled && styles.pressed,
