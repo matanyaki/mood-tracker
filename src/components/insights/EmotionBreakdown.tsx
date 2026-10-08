@@ -4,6 +4,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import PixelCard from '../ui/PixelCard';
 import { getEmotionImageKey } from '../../../shared/types/emotions';
 import { MOOD_IMAGES } from '../../constants/images';
+import { darkInk } from '../../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
 
@@ -33,22 +34,6 @@ const COLLAPSED_ROWS = 3;
 /** The intensity scale's top, one pip per step. */
 const MAX_INTENSITY = 5;
 const PIPS = Array.from({ length: MAX_INTENSITY }, (_, i) => i);
-
-/**
- * The emotion colour darkened enough to set text in.
- *
- * Several fills are pale (Happy's amber sits at 1.5:1 on paper), so the name is
- * drawn in this instead. Channels x 0.45 clears WCAG AA (4.5:1) on PAPER for all
- * nine emotions -- the weakest, Happy, lands at 6.4:1.
- */
-const darkInk = (hexColor: string) => {
-    let hex = hexColor.replace('#', '');
-    if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-    }
-    const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.substring(i, i + 2), 16) || 0);
-    return `rgb(${Math.round(r * 0.45)}, ${Math.round(g * 0.45)}, ${Math.round(b * 0.45)})`;
-};
 
 const daysLabel = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
 

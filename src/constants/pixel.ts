@@ -30,6 +30,15 @@ export const PAPER = '#FFFDF8';
 export const INK_MUTED = '#64748B';
 
 /**
+ * Fill a pressed control or row takes on. There used to be two (this and a cooler
+ * #DDE3EA), picked per file; one tint is what makes a press read the same everywhere.
+ */
+export const PRESSED = '#EDE9E0';
+
+/** How far a small outlined control sinks when pressed -- toward its own corner. */
+export const PRESS_SINK = 1;
+
+/**
  * Hard-shadow displacement, in px. Also the distance a pressable travels when it
  * is pushed in: a pixel button sinks *onto* its own shadow, so the two values
  * have to be the same one or the face lands off the block.
