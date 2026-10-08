@@ -3,10 +3,15 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, BackButton, PixelCard, ToggleBox } from '../components';
 import { TIP_CATEGORIES, TipCategory, getTipOfTheDay } from '../constants/tips';
+import { hitSlopFor } from '../constants/layout';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
 
 const ALL = 'all';
+
+/** Filter chip height, and the vertical slop that takes it to MIN_TOUCH. */
+const CHIP_H = 34;
+const CHIP_SLOP = { top: hitSlopFor(CHIP_H), bottom: hitSlopFor(CHIP_H) };
 
 /** One category: its header, then every tip in it on one card. */
 const CategoryCard = ({ category }: { category: TipCategory }) => {
@@ -100,6 +105,8 @@ export default function TipsScreen({ navigation }: any) {
                         selected={filter === ALL}
                         onPress={() => setFilter(ALL)}
                         style={styles.filterChip}
+                        hitSlop={CHIP_SLOP}
+                        accessibilityRole="radio"
                     />
                     {TIP_CATEGORIES.map(category => (
                         <ToggleBox
@@ -108,6 +115,8 @@ export default function TipsScreen({ navigation }: any) {
                             selected={filter === category.id}
                             onPress={() => setFilter(category.id)}
                             style={styles.filterChip}
+                            hitSlop={CHIP_SLOP}
+                            accessibilityRole="radio"
                         />
                     ))}
                 </ScrollView>
@@ -184,16 +193,21 @@ const styles = StyleSheet.create({
     // --- Filter ---
     filterScroll: {
         marginHorizontal: -20,
-        marginBottom: 20,
+        marginVertical: -CHIP_SLOP.top,
+        marginBottom: 20 - CHIP_SLOP.bottom,
     },
     filterRow: {
         paddingHorizontal: 20,
+        // Room inside the scroll view for the chips' hitSlop -- Android drops touches
+        // outside a parent's bounds -- given back by filterScroll's negative margin.
+        paddingVertical: CHIP_SLOP.top,
         gap: 8,
     },
     filterChip: {
         // The goal form's boxes are 44 tall to be easy day targets; a filter row
-        // that scrolls sideways reads better slimmer.
-        height: 34,
+        // that scrolls sideways reads better slimmer. CHIP_SLOP makes up the
+        // difference to the touch target, and minHeight lets a large font grow it.
+        minHeight: CHIP_H,
         paddingHorizontal: 12,
     },
 

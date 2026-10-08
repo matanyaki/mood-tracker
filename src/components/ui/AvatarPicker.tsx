@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Check } from 'lucide-react-native';
 import PixelCard from './PixelCard';
 import { AVATAR_IDS, AVATAR_IMAGES } from '../../constants/avatars';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER } from '../../constants/pixel';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../../constants/pixel';
 
 const INDIGO = '#4F46E5';
 
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#C7D2FE',
     },
     cellPressed: {
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     cellImage: {
         width: '84%',
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
         borderColor: OUTLINE,
     },
     pagerButtonDisabled: {
-        backgroundColor: '#EDE9E0',
+        backgroundColor: PRESSED,
     },
     dots: {
         flexDirection: 'row',
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     },
     buttonPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     buttonText: {
         fontSize: 11,

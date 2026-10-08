@@ -9,7 +9,7 @@ import { useProfileQuery } from '../hooks/useProfileQuery';
 import { EMOTIONS_CONFIG } from '../constants/emotions';
 import { getEmotionColor } from '../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../constants/pixel';
 
 import FilterRow from '../components/insights/FilterRow';
 import SummaryCards, { MoodDelta } from '../components/insights/SummaryCards';
@@ -347,8 +347,8 @@ const styles = StyleSheet.create({
   },
   retryButtonPressed: {
     // Sinks toward its own corner, the way every other pixel control answers a press.
-    transform: [{ translateX: 1 }, { translateY: 1 }],
-    backgroundColor: '#EDE9E0',
+    transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+    backgroundColor: PRESSED,
   },
   retryText: {
     fontSize: 11,

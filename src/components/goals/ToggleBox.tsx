@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text, StyleSheet, Pressable, StyleProp, ViewStyle } from 'react-native';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { Text, StyleSheet, Pressable, StyleProp, ViewStyle, Insets } from 'react-native';
+import { PIXEL, TYPE, TIGHT_FONT_SCALE } from '../../constants/typography';
+import { MIN_TOUCH } from '../../constants/layout';
 import {
-    OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER,
+    OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESSED,
 } from '../../constants/pixel';
 
 interface ToggleBoxProps {
@@ -12,8 +13,18 @@ interface ToggleBoxProps {
     /** Greyed and inert -- the weekday boxes use it once the week is full. */
     disabled?: boolean;
     style?: StyleProp<ViewStyle>;
-    /** Long labels ("AFTERNOON") need to come down a point to fit their box. */
-    fontSize?: number;
+    /**
+     * No letter spacing, for a box too narrow for it: seven weekday boxes across a
+     * phone leave ~30px each, and "MON" at 12px is ~27px before any tracking.
+     */
+    tight?: boolean;
+    /** For a box drawn shorter than MIN_TOUCH (the Tips filter chips). */
+    hitSlop?: Insets;
+    /**
+     * `checkbox` for a set where several can be on (weekdays, times of day),
+     * `radio` for a pick-one row (the Tips filter).
+     */
+    accessibilityRole?: 'checkbox' | 'radio';
 }
 
 /**
@@ -30,12 +41,22 @@ export default function ToggleBox({
     onPress,
     disabled = false,
     style,
-    fontSize = 9,
+    tight = false,
+    hitSlop,
+    accessibilityRole = 'checkbox',
 }: ToggleBoxProps) {
     return (
         <Pressable
             onPress={onPress}
             disabled={disabled}
+            hitSlop={hitSlop}
+            accessibilityRole={accessibilityRole}
+            accessibilityLabel={label}
+            accessibilityState={
+                accessibilityRole === 'radio'
+                    ? { selected, disabled }
+                    : { checked: selected, disabled }
+            }
             style={({ pressed }) => [
                 styles.box,
                 selected && styles.boxSelected,
@@ -47,11 +68,12 @@ export default function ToggleBox({
             <Text
                 style={[
                     styles.label,
-                    { fontSize },
+                    tight && styles.labelTight,
                     selected && styles.labelSelected,
                     disabled && !selected && styles.labelDisabled,
                 ]}
                 numberOfLines={1}
+                maxFontSizeMultiplier={TIGHT_FONT_SCALE}
             >
                 {label}
             </Text>
@@ -61,7 +83,8 @@ export default function ToggleBox({
 
 const styles = StyleSheet.create({
     box: {
-        height: 44,
+        // A floor, not a height: a large system font gets a taller box, not a clipped label.
+        minHeight: MIN_TOUCH,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 4,
@@ -74,7 +97,7 @@ const styles = StyleSheet.create({
         borderColor: INK,
     },
     boxPressed: {
-        backgroundColor: '#DDE3EA',
+        backgroundColor: PRESSED,
     },
     boxDisabled: {
         // Keep the outline at full strength -- fading it would soften the pixel
@@ -83,9 +106,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#E8EAEE',
     },
     label: {
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
+        ...TYPE.label,
+    },
+    labelTight: {
+        letterSpacing: 0,
     },
     labelSelected: {
         color: PAPER,

@@ -3,7 +3,7 @@ import { Modal, View, Text, Pressable, StyleSheet, Animated, Easing, ActivityInd
 import * as Haptics from 'expo-haptics';
 import PixelCard from './PixelCard';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../../constants/pixel';
 
 /** How long the delete button has to be held down. */
 const HOLD_MS = 5000;
@@ -340,8 +340,8 @@ const styles = StyleSheet.create({
     },
     buttonPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+        backgroundColor: PRESSED,
     },
     buttonDisabled: {
         opacity: 0.4,

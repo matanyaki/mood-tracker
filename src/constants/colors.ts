@@ -32,6 +32,27 @@ export const darkInk = (hexColor: string): string => {
 /** Text colour for an emotion's name or value. Fills keep getEmotionColor. */
 export const getEmotionInk = (id: string): string => darkInk(getEmotionColor(id));
 
+const relativeLuminance = (hexColor: string): number => {
+    const hex = hexColor.replace('#', '');
+    const [r, g, b] = [0, 2, 4]
+        .map(i => parseInt(hex.substring(i, i + 2), 16) / 255)
+        .map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+/**
+ * Navy or white, whichever reads better on a filled `hexColor` -- for a label drawn
+ * ON an emotion colour (the selected intensity digit). The light fills take navy
+ * (Happy 11:1), the dark ones white (Tired 4.8:1). Angry is the one fill neither
+ * clears 4.5:1 on; white gets it to 4.2.
+ */
+export const textOnFill = (hexColor: string): string => {
+    const l = relativeLuminance(hexColor);
+    const onNavy = (l + 0.05) / (relativeLuminance('#1A1A2E') + 0.05);
+    const onWhite = 1.05 / (l + 0.05);
+    return onNavy >= onWhite ? '#1A1A2E' : '#FFFFFF';
+};
+
 /**
  * Text colours for the app's status hues. The fills stay as they are (goal green
  * #10B981, danger #EF4444, warning #D97706); these are the darker shades already in

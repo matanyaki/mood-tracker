@@ -5,7 +5,7 @@ import { ScreenContainer, AppHeader, BackButton, PixelCard } from '../components
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { HELP_SECTIONS, CRISIS_SUPPORT, HelpItem } from '../constants/help';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../constants/pixel';
 
 const CYAN = '#0E7490';
 const ROSE = '#BE123C';
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
         borderColor: OUTLINE,
     },
     crisisLinkPressed: {
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
         backgroundColor: '#FFE4E6',
     },
     crisisLinkText: {
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
         padding: 14,
     },
     questionRowPressed: {
-        backgroundColor: '#EDE9E0',
+        backgroundColor: PRESSED,
     },
     question: {
         flex: 1,

@@ -5,12 +5,13 @@ import {
 } from 'react-native';
 import { Check, KeyRound } from 'lucide-react-native';
 import {
-    ScreenContainer, AppHeader, BackButton, MenuRow, PrimaryButton, PixelField, PixelCard, PixelAvatar, AvatarPicker,
+    ScreenContainer, AppHeader, BackButton, MenuRow, PrimaryButton, primaryButtonInk, PixelField, PixelCard, PixelAvatar, AvatarPicker,
 } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { useEditProfileController } from '../controllers/useEditProfileController';
+import { DANGER_TEXT } from '../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESS_SINK } from '../constants/pixel';
 
 const INDIGO = '#4F46E5';
 
@@ -118,8 +119,7 @@ export default function EditProfileScreen({ navigation }: any) {
                         onPress={handleSave}
                         loading={isSaving}
                         disabled={!hasChanges || isSaving}
-                        icon={!isSaving ? <Check size={18} color="#fff" strokeWidth={3} /> : undefined}
-                        style={{ backgroundColor: '#10B981' }}
+                        icon={!isSaving ? <Check size={18} color={primaryButtonInk()} strokeWidth={3} /> : undefined}
                     />
 
                     <View>
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     avatarButtonPressed: {
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     avatarHint: {
         fontSize: 9,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     readOnlyBox: {
-        height: 40,
+        minHeight: 40, // Matches PixelField; a floor, so a large font grows it
         justifyContent: 'center',
         paddingHorizontal: 12,
         // Recessed rather than raised: no hard shadow, and a darker paper, so it
@@ -187,13 +187,15 @@ const styles = StyleSheet.create({
     readOnlyText: {
         fontSize: 12,
         fontFamily: PIXEL,
-        color: INK_MUTED,
+        // INK, not INK_MUTED: on the recessed paper INK_MUTED was 3.9:1. The darker
+        // fill and the missing shadow already say "not editable".
+        color: INK,
         letterSpacing: 1,
     },
     validationText: {
         fontSize: 10,
         fontFamily: PIXEL,
-        color: '#EF4444',
+        color: DANGER_TEXT,
         letterSpacing: 0.5,
         lineHeight: 16,
         marginTop: -8,

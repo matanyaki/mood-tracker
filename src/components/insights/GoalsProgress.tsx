@@ -5,7 +5,7 @@ import PixelCard from '../ui/PixelCard';
 import SkeletonBox from '../skeleton/SkeletonBox';
 import PixelProgressRing from './PixelProgressRing';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../../constants/pixel';
 
 /**
  * Three rings to a row once the screen is wide enough to fit them, two below that.
@@ -200,8 +200,8 @@ const styles = StyleSheet.create({
     },
     buttonPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+        backgroundColor: PRESSED,
     },
     buttonText: {
         fontSize: 11,

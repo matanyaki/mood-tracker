@@ -18,11 +18,13 @@ import { ProfileScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useProfileQuery } from '../hooks/useProfileQuery';
 import { getAuthErrorMessage, validateAuthForm } from '../utils/authErrors';
+import { DANGER_TEXT } from '../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESS_SINK } from '../constants/pixel';
 
 const INDIGO = '#4F46E5';
-const DANGER = '#EF4444';
+// Danger rows draw icon and label in one colour, so it is the text-safe red (4.8:1).
+const DANGER = DANGER_TEXT;
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -222,7 +224,7 @@ export default function ProfileScreen({ navigation }: any) {
                                     loading={authLoading}
                                     disabled={authLoading}
                                     // Navy face; the button draws its own hard shadow.
-                                    style={{ backgroundColor: INK }}
+                                    tone="navy"
                                 />
                             </View>
 
@@ -279,6 +281,9 @@ export default function ProfileScreen({ navigation }: any) {
                 <Pressable
                     onPress={() => navigation.navigate('EditProfile')}
                     style={({ pressed }) => pressed && styles.userCardPressed}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${profile?.displayName || 'Your profile'}, ${user?.email ?? ''}`}
+                    accessibilityHint="Opens Edit Profile"
                 >
                     <PixelCard padding={18} accentColor={INDIGO} wrapperStyle={styles.userCardWrapper}>
                         <View style={styles.userRow}>
@@ -487,7 +492,7 @@ const styles = StyleSheet.create({
     },
     switchButtonPressed: {
         // Sinks toward its own corner, the way every pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     switchText: {
         fontSize: 10,
@@ -525,7 +530,7 @@ const styles = StyleSheet.create({
     },
     userCardPressed: {
         // Sinks toward its own corner, the way every pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     metaText: {
         fontSize: 9,

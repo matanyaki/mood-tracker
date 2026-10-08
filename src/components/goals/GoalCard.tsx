@@ -4,10 +4,10 @@ import { Pencil, Pause, Play, Trash2 } from 'lucide-react-native';
 import type { Goal } from '@shared/types';
 import { currentPause, goalLastDay } from '../../../shared/types';
 import { WEEKDAY_LABELS, TIME_OF_DAY_LABELS } from '../../constants/goals';
+import { GOAL_TEXT } from '../../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import {
-    OUTLINE, PAPER, INK, INK_MUTED,
-    SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W,
+    OUTLINE, PAPER, INK, INK_MUTED, SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W, PRESSED, PRESS_SINK,
 } from '../../constants/pixel';
 
 interface GoalCardProps {
@@ -68,6 +68,7 @@ export default function GoalCard({ goal, onEdit, onPause, onResume, onDelete }: 
                                 onPress={() => onEdit(goal)}
                                 hitSlop={8}
                                 style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
+                                accessibilityRole="button"
                                 accessibilityLabel={`Edit ${goal.name}`}
                             >
                                 <Pencil size={14} color={INK} strokeWidth={2.5} />
@@ -78,6 +79,7 @@ export default function GoalCard({ goal, onEdit, onPause, onResume, onDelete }: 
                                 onPress={() => onPause(goal)}
                                 hitSlop={8}
                                 style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
+                                accessibilityRole="button"
                                 accessibilityLabel={`Pause ${goal.name}`}
                             >
                                 <Pause size={14} color={INK} strokeWidth={2.5} />
@@ -88,6 +90,7 @@ export default function GoalCard({ goal, onEdit, onPause, onResume, onDelete }: 
                                 onPress={() => onResume(goal)}
                                 hitSlop={8}
                                 style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
+                                accessibilityRole="button"
                                 accessibilityLabel={`Resume ${goal.name}`}
                             >
                                 <Play size={14} color={GOAL_ACCENT} strokeWidth={2.5} />
@@ -97,6 +100,7 @@ export default function GoalCard({ goal, onEdit, onPause, onResume, onDelete }: 
                             onPress={() => onDelete(goal)}
                             hitSlop={8}
                             style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
+                            accessibilityRole="button"
                             accessibilityLabel={`Delete ${goal.name}`}
                         >
                             <Trash2 size={14} color="#EF4444" strokeWidth={2.5} />
@@ -192,8 +196,8 @@ const styles = StyleSheet.create({
     actionButtonPressed: {
         // Sinks toward its own corner, matching how every other pixel control
         // answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+        backgroundColor: PRESSED,
     },
     meta: {
         fontSize: 10,
@@ -230,7 +234,7 @@ const styles = StyleSheet.create({
         marginLeft: 6,
         fontSize: 9,
         fontFamily: PIXEL_BOLD,
-        color: GOAL_ACCENT,
+        color: GOAL_TEXT, // The accent green is 2.5:1 as text
         letterSpacing: 1,
     },
     times: {

@@ -1,9 +1,12 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCheckInController } from '../controllers/useCheckInController';
+import { SCREEN_GUTTER, SPACE } from '../constants/layout';
 import { ScreenContainer, AppHeader, BackButton, EmotionRow, PrimaryButton } from '../components';
 
 import { EMOTIONS_CONFIG } from '../constants/emotions';
+import { GOAL_TEXT } from '../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
 
@@ -14,6 +17,7 @@ export default function CheckInScreen({ navigation }: any) {
     getScale,
     canSubmit
   } = useCheckInController();
+  const insets = useSafeAreaInsets();
 
   const handleComplete = useCallback(() => {
     const data = submitCheckIn();
@@ -62,7 +66,7 @@ export default function CheckInScreen({ navigation }: any) {
         ))}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: SPACE.lg + insets.bottom }]}>
         <PrimaryButton
           label={canSubmit ? 'Continue to Reflection' : 'Select at least one emotion'}
           onPress={handleComplete}
@@ -89,7 +93,7 @@ const styles = StyleSheet.create({
   stepEyebrow: {
     fontSize: 10,
     fontFamily: PIXEL_BOLD,
-    color: '#10B981', // Matches the Continue button -- the eyebrow points at it
+    color: GOAL_TEXT, // The Continue button's green, dark enough to read as text
     letterSpacing: 2,
   },
   instructionText: {
@@ -99,8 +103,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   footer: {
-    padding: 20,
-    paddingBottom: 30, // Extra padding for bottom safe area
+    // paddingBottom is set inline: the home-indicator inset is added to it.
+    paddingTop: SPACE.lg,
+    paddingHorizontal: SCREEN_GUTTER,
     // Flat rule instead of a gradient fade: the footer is a separate pixel plane
     // sitting over the scroll, and it needs a hard edge to say so.
     borderTopWidth: BORDER_W_INNER,

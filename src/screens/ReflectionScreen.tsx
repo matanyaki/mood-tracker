@@ -90,8 +90,7 @@ export default function ReflectionScreen({ route, navigation }: any) {
                   label="< Back"
                   onPress={() => setStep(step - 1)}
                   disabled={loading}
-                  style={{ backgroundColor: PAPER }}
-                  textStyle={{ color: INK }}
+                  tone="paper"
                 />
               </View>
             )}
@@ -104,15 +103,14 @@ export default function ReflectionScreen({ route, navigation }: any) {
                   loading={loading}
                   disabled={loading}
                   icon={!loading ? <Check size={18} color="#fff" strokeWidth={3} /> : undefined}
-                  // Navy face; the button draws its own hard shadow, so the blurred
-                  // `shadowColor` this used to pass has nothing left to colour.
-                  style={{ backgroundColor: INK }}
+                  // Navy face; the button draws its own hard shadow.
+                  tone="navy"
                 />
               ) : (
                 <PrimaryButton
                   label="Next >"
                   onPress={() => setStep(step + 1)}
-                  style={{ backgroundColor: INK }}
+                  tone="navy"
                 />
               )}
             </View>

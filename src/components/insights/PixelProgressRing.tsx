@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { PIXEL_BOLD } from '../../constants/typography';
 import { INK } from '../../constants/pixel';
+import { GOAL_TEXT } from '../../constants/colors';
 
 /** Filled blocks while the goal is under way: the app's indigo accent. */
 const RING_ACCENT = '#4F46E5';
@@ -70,7 +71,7 @@ export default function PixelProgressRing({ percent }: PixelProgressRingProps) {
             {/* Laid over the SVG as a native Text rather than an SVG <Text>, so it
                 uses the loaded Silkscreen face the same way every other label does. */}
             <View style={styles.center} pointerEvents="none">
-                <Text style={[styles.percent, percent === 100 && { color: RING_SUCCESS }]}>
+                <Text style={[styles.percent, percent === 100 && { color: GOAL_TEXT }]}>
                     {percent}%
                 </Text>
             </View>

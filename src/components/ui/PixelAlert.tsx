@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import PixelCard from './PixelCard';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, BORDER_W_INNER } from '../../constants/pixel';
+import { OUTLINE, PAPER, INK, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../../constants/pixel';
 
 export interface PixelAlertButton {
     text: string;
@@ -154,8 +154,8 @@ const styles = StyleSheet.create({
     },
     buttonPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+        backgroundColor: PRESSED,
     },
     buttonText: {
         fontSize: 11,

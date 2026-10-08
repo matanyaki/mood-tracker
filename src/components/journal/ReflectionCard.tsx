@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, TextInput, Image } from 'react-native';
 import { MOOD_IMAGES } from '../../constants/images';
 import { getEmotionImageKey, type EmotionId } from '../../../shared/types/emotions';
-import { getEmotionColor } from '../../constants/colors';
+import { getEmotionColor, getEmotionInk } from '../../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import {
-    OUTLINE, PAPER, INK,
+    OUTLINE, PAPER, INK, INK_MUTED,
     SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W,
 } from '../../constants/pixel';
 
@@ -48,7 +48,7 @@ const ReflectionCard: React.FC<ReflectionCardProps> = React.memo(({
                         style={styles.emotionImage}
                         resizeMode="contain"
                     />
-                    <Text style={[styles.emotionTitle, { color }]}>{label.toUpperCase()}</Text>
+                    <Text style={[styles.emotionTitle, { color: getEmotionInk(rootEmotionId) }]}>{label.toUpperCase()}</Text>
                     <Text style={styles.helperText}>[ WHY DO YOU FEEL THIS WAY? ]</Text>
                 </View>
 
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     helperText: {
         fontSize: 10,
         fontFamily: PIXEL,
-        color: '#7C8698',
+        color: INK_MUTED, // Was #7C8698, 3.6:1
         letterSpacing: 1,
     },
     input: {

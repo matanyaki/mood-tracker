@@ -4,7 +4,7 @@ import { TrendingUp, Smile, ArrowUp, ArrowDown, Minus, Info } from 'lucide-react
 import PixelCard from '../ui/PixelCard';
 import { getEmotionColor } from '../../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
+import { OUTLINE, INK, INK_MUTED, BORDER_W_INNER, PRESS_SINK } from '../../constants/pixel';
 
 /**
  * Mood score points against last month. 'new' when last month had nothing to
@@ -173,7 +173,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     cardPressed: {
-        opacity: 0.85,
+        // Sinks toward its own corner, the way every other pixel control answers a
+        // press -- it used to fade to 0.85 instead.
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     fill: {
         // Keeps the tappable card the same height as the plain one beside it.

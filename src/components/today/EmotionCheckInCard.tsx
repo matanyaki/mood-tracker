@@ -12,7 +12,7 @@ import { MOOD_IMAGES } from '../../constants/images';
 import { getEmotionImageKey } from '../../../shared/types/emotions';
 import { CARD_PADDING } from '../../constants/layout';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { INK, INK_MUTED } from '../../constants/pixel';
+import { INK, INK_MUTED, PRESS_SINK } from '../../constants/pixel';
 
 /**
  * The colour the Diary already uses for an emotion pip, so an un-logged day is
@@ -113,6 +113,9 @@ export default function EmotionCheckInCard({ onPress }: EmotionCheckInCardProps)
             <PixelCard padding={CARD_PADDING} accentColor={getEmotionColor(emotion.id)}>
                 <Pressable
                     onPress={onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Feeling ${emotion.label.toLowerCase()}${others > 0 ? ` and ${others} more` : ''}, logged at ${format(new Date(todaysEntry.timestamp), 'h:mm a')}`}
+                    accessibilityHint="Opens check-in to update it"
                     style={({ pressed }) => [styles.body, styles.loggedBody, pressed && styles.bodyPressed]}
                 >
                     <Image
@@ -143,6 +146,8 @@ export default function EmotionCheckInCard({ onPress }: EmotionCheckInCardProps)
         <PixelCard padding={CARD_PADDING} accentColor={MOOD_ACCENT}>
             <Pressable
                 onPress={onPress}
+                accessibilityRole="button"
+                accessibilityLabel="How are you feeling? Check in"
                 style={({ pressed }) => [styles.body, pressed && styles.bodyPressed]}
             >
                 <View style={styles.headlineRow}>
@@ -170,8 +175,9 @@ export default function EmotionCheckInCard({ onPress }: EmotionCheckInCardProps)
 const styles = StyleSheet.create({
     body: {
         // One height for both states, so the column below does not move when today
-        // gets logged.
-        height: BODY_H,
+        // gets logged. A floor rather than a height, so a large system font grows
+        // the card instead of clipping the headline.
+        minHeight: BODY_H,
         justifyContent: 'space-between',
     },
     loggedBody: {
@@ -181,7 +187,7 @@ const styles = StyleSheet.create({
     },
     bodyPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     headlineRow: {
         flexDirection: 'row',

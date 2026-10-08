@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Keyboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Target, Check, Pencil } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { CARD_PADDING } from '../../constants/layout';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { PRESS_SINK } from '../../constants/pixel';
 
 // One note per day: the card resets each morning, which is the point of "today's focus".
 const STORAGE_PREFIX = '@mindbright_intentions_';
@@ -144,24 +145,32 @@ export default function IntentionCard() {
                     </Text>
 
                     {isEditing ? (
-                        <TouchableOpacity
-                            style={[styles.button, styles.saveButton, !canSave && styles.buttonDisabled]}
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.button,
+                                styles.saveButton,
+                                !canSave && styles.buttonDisabled,
+                                pressed && styles.buttonPressed,
+                            ]}
                             onPress={handleSave}
                             disabled={!canSave}
-                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Save intention"
+                            accessibilityState={{ disabled: !canSave }}
                         >
-                            <Check size={14} color={PAPER} strokeWidth={3} />
+                            <Check size={14} color={BROWN} strokeWidth={3} />
                             <Text style={styles.saveButtonText}>SAVE</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                     ) : (
-                        <TouchableOpacity
-                            style={[styles.button, styles.editButton]}
+                        <Pressable
+                            style={({ pressed }) => [styles.button, styles.editButton, pressed && styles.buttonPressed]}
                             onPress={handleEdit}
-                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Edit intention"
                         >
                             <Pencil size={14} color={INK} strokeWidth={2.5} />
                             <Text style={styles.editButtonText}>EDIT</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                     )}
                 </View>
             </View>
@@ -175,6 +184,8 @@ const PAPER = '#FFFDF3';   // Warm off-white paper
 const RULE = '#E7C98F';    // Muted amber, used only for the locked (read-only) rule
 const ACCENT = '#F59E0B';  // Amber accent, used for dividers -- darker, like QuoteCard's footer rule
 const BRIGHT = '#FCD34D';  // Bright gold, used only for the active writing rule so it doesn't read as a divider
+const BROWN = '#3F2A12';   // Ink-brown: typed text, and the label on the amber SAVE (6.3:1)
+const EYEBROW = '#B45309'; // Burnt amber for small text on this paper (4.9:1)
 
 const styles = StyleSheet.create({
     wrapper: {
@@ -211,7 +222,7 @@ const styles = StyleSheet.create({
     },
     headerEyebrow: {
         fontSize: 10,
-        color: '#B45309',
+        color: EYEBROW,
         fontFamily: PIXEL_BOLD,
         letterSpacing: 1,
     },
@@ -265,7 +276,7 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE,
         lineHeight: LINE_HEIGHT,
         fontFamily: PIXEL,
-        color: '#3F2A12',       // Ink-brown text
+        color: BROWN,
         includeFontPadding: false, // Android: this padding is what pushed text off the rule
     },
     inputLocked: {
@@ -285,7 +296,7 @@ const styles = StyleSheet.create({
     footerHint: {
         flex: 1,
         fontSize: 10,
-        color: '#B79A5E',
+        color: EYEBROW, // Was #B79A5E, 2.6:1 on this paper
         fontFamily: PIXEL,
         letterSpacing: 1,
     },
@@ -301,11 +312,16 @@ const styles = StyleSheet.create({
     buttonDisabled: {
         opacity: 0.4,
     },
+    buttonPressed: {
+        // Sinks toward its own corner, the way every other pixel control answers a press.
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+    },
     saveButton: {
         backgroundColor: ACCENT,
     },
     saveButtonText: {
-        color: PAPER,
+        // Brown, not the paper colour: paper on this amber was 2.1:1.
+        color: BROWN,
         fontSize: 12,
         fontFamily: PIXEL_BOLD,
         letterSpacing: 1,

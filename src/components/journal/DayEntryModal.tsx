@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { X, SmilePlus, Edit, Sparkles, Target, Check, Minus, Clock } from 'lucide-react-native';
@@ -7,7 +7,11 @@ import EntryEmotionsList from './EntryEmotionsList';
 import { TIME_OF_DAY_LABELS } from '../../constants/goals';
 import type { GoalDayStatus } from '@shared/types';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER } from '../../constants/pixel';
+import {
+    OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER, PRESSED, PRESS_SINK,
+} from '../../constants/pixel';
+import { GOAL_TEXT, DANGER_TEXT, WARNING_TEXT } from '../../constants/colors';
+import { hitSlopFor } from '../../constants/layout';
 
 interface DayEntryModalProps {
     visible: boolean;
@@ -37,11 +41,13 @@ const GOAL_COLOR = '#10B981';
  * the plain target for a day that hasn't arrived -- the shape says it before the
  * colour does, which is what keeps done and missed apart for a red/green eye.
  */
-const GOAL_STATUS: Record<GoalDayStatus, { label: string; color: string; tint: string; Icon: typeof Target }> = {
-    done: { label: 'DONE', color: GOAL_COLOR, tint: '#D1FAE5', Icon: Check },
-    missed: { label: 'MISSED', color: '#DC2626', tint: '#FEE2E2', Icon: Minus },
-    pending: { label: 'PENDING', color: '#D97706', tint: '#FEF3C7', Icon: Clock },
-    upcoming: { label: 'UPCOMING', color: INK_MUTED, tint: '#EDE9E0', Icon: Target },
+const GOAL_STATUS: Record<GoalDayStatus, { label: string; color: string; text: string; tint: string; Icon: typeof Target }> = {
+    // `color` draws the icon and the badge outline; `text` is the badge label, the
+    // same hue darkened until it reads at 4.5:1 on paper.
+    done: { label: 'DONE', color: GOAL_COLOR, text: GOAL_TEXT, tint: '#D1FAE5', Icon: Check },
+    missed: { label: 'MISSED', color: '#DC2626', text: DANGER_TEXT, tint: '#FEE2E2', Icon: Minus },
+    pending: { label: 'PENDING', color: '#D97706', text: WARNING_TEXT, tint: '#FEF3C7', Icon: Clock },
+    upcoming: { label: 'UPCOMING', color: INK_MUTED, text: INK_MUTED, tint: '#EDE9E0', Icon: Target },
 };
 
 export default function DayEntryModal({ visible, onClose, selectedDate, entries, greetings = [], goals = [], onEditEntry }: DayEntryModalProps) {
@@ -70,9 +76,15 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                 {format(new Date(selectedDate), 'EEEE, MMMM d')}
                             </Text>
                         </View>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <Pressable
+                            onPress={onClose}
+                            hitSlop={hitSlopFor(32)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Close"
+                            style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
+                        >
                             <X size={20} color={INK} strokeWidth={3} />
-                        </TouchableOpacity>
+                        </Pressable>
                     </View>
 
                     <ScrollView style={styles.modalScroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -88,7 +100,7 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                     <View style={styles.sectionContainer}>
                                         <View style={styles.sectionHeader}>
                                             <Sparkles size={18} color="#0099ffff" />
-                                            <Text style={[styles.sectionTitle, { color: '#0099ffff' }]}>GREETINGS</Text>
+                                            <Text style={styles.sectionTitle}>GREETINGS</Text>
                                         </View>
                                         {greetings.map((greeting, index) => {
                                             const isLast = index === greetings.length - 1;
@@ -138,7 +150,7 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                     <View style={styles.sectionContainer}>
                                         <View style={styles.sectionHeader}>
                                             <SmilePlus size={18} color="#A78BFA" />
-                                            <Text style={[styles.sectionTitle, { color: '#A78BFA' }]}>EMOTIONS</Text>
+                                            <Text style={styles.sectionTitle}>EMOTIONS</Text>
                                         </View>
                                         {entries.map((entry, index) => {
                                             const emotions = entry.emotions;
@@ -178,11 +190,11 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                     <View style={styles.sectionContainer}>
                                         <View style={styles.sectionHeader}>
                                             <Target size={18} color={GOAL_COLOR} />
-                                            <Text style={[styles.sectionTitle, { color: GOAL_COLOR }]}>GOALS</Text>
+                                            <Text style={styles.sectionTitle}>GOALS</Text>
                                         </View>
                                         {goals.map(({ goal, status }, index) => {
                                             const isLast = index === goals.length - 1;
-                                            const { label, color, tint, Icon } = GOAL_STATUS[status];
+                                            const { label, color, text, tint, Icon } = GOAL_STATUS[status];
                                             return (
                                                 <View key={goal.id} style={styles.timelineItem}>
                                                     <View style={styles.timelineColumn}>
@@ -196,7 +208,7 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                                             badge on one row would each squeeze the other, and the status
                                                             is what the eye is scanning the column for. */}
                                                         <View style={[styles.goalBadge, { borderColor: color }]}>
-                                                            <Text style={[styles.goalBadgeText, { color }]}>{label}</Text>
+                                                            <Text style={[styles.goalBadgeText, { color: text }]}>{label}</Text>
                                                         </View>
                                                         <Text style={styles.goalName}>{goal.name}</Text>
                                                         <Text style={styles.goalTimes}>
@@ -277,6 +289,10 @@ const styles = StyleSheet.create({
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
     },
+    closeButtonPressed: {
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+        backgroundColor: PRESSED,
+    },
     modalScroll: {
         // flex: 1, // Removed to allow auto-height behavior within maxHeight container
     },
@@ -288,7 +304,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: {
-        color: INK_MUTED,
+        color: INK, // INK_MUTED on this sheet was 4.1:1
         fontSize: 13,
         fontFamily: PIXEL,
         letterSpacing: 1,
@@ -330,6 +346,9 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontFamily: PIXEL_BOLD,
         letterSpacing: 2,
+        // Ink, not the section hue: the sky blue, violet and green read at 2.5-3:1
+        // as text. The icon beside the title still carries the colour.
+        color: INK,
     },
     timelineItem: {
         flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -15,6 +15,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Plus } from 'lucide-react-native';
 import { PIXEL_BOLD } from '../../constants/typography';
 import { FAB_SIZE, FAB_BOTTOM } from '../../constants/layout';
+import { SHADOW_OFFSET } from '../../constants/pixel';
 
 export interface FabAction {
     label: string;
@@ -29,7 +30,6 @@ interface FabMenuProps {
 
 // Pixel-art palette: flat black outline + hard offset shadow (no blur, no radius)
 const BORDER = '#000000';
-const SHADOW_OFFSET = 4;
 
 // FAB_SIZE and FAB_BOTTOM live in constants/layout so a scroll view can leave
 // room for this button without guessing at it -- see FAB_CLEARANCE.
@@ -135,7 +135,16 @@ const FabActionRow: React.FC<FabActionRowProps> = ({
         >
             {/* The whole row is one target -- tapping the label used to do nothing. */}
             <GestureDetector gesture={tap}>
-                <View style={styles.actionRow}>
+                <View
+                    style={styles.actionRow}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={action.label}
+                    // A screen reader activates rather than taps, which the gesture
+                    // detector never sees -- route that to the same handler.
+                    accessibilityActions={[{ name: 'activate' }]}
+                    onAccessibilityAction={onSelect}
+                >
                     <View style={styles.labelWrapper}>
                         <View style={styles.labelShadow} pointerEvents="none" />
                         <View style={styles.labelContainer}>
@@ -225,19 +234,22 @@ export const FabMenu: React.FC<FabMenuProps> = ({ actions }) => {
                 />
             ))}
 
-            {/* Main FAB. Still a TouchableOpacity: it never translates, so none of the
-                moving-hit-rect problem the rows were migrated to solve applies to it. */}
+            {/* Main FAB. A plain Pressable: it never fans out, so none of the
+                moving-hit-rect problem the rows were migrated to solve applies to it.
+                A press sinks the face onto its own shadow block, like PrimaryButton. */}
             <View style={styles.fabWrapper}>
                 <View style={styles.fabShadow} pointerEvents="none" />
-                <TouchableOpacity
-                    style={styles.fab}
+                <Pressable
+                    style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
                     onPress={toggleMenu}
-                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={isOpen ? 'Close menu' : 'Open add menu'}
+                    accessibilityState={{ expanded: isOpen }}
                 >
                     <Animated.View style={iconStyle}>
                         <Plus color="#FFF" size={32} />
                     </Animated.View>
-                </TouchableOpacity>
+                </Pressable>
             </View>
         </View>
     );
@@ -266,7 +278,9 @@ const styles = StyleSheet.create({
         width: FAB_SIZE,
         height: FAB_SIZE,
         backgroundColor: BORDER,
-        transform: [{ translateX: SHADOW_OFFSET + 1 }, { translateY: SHADOW_OFFSET + 1 }],
+        // Exactly SHADOW_OFFSET (it was +1): a press sinks the face by this much, and
+        // anything else lands the face off its own block.
+        transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
     },
     fab: {
         width: FAB_SIZE,
@@ -276,6 +290,9 @@ const styles = StyleSheet.create({
         borderColor: BORDER,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    fabPressed: {
+        transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
     },
     actionWrapper: {
         position: 'absolute',
@@ -300,7 +317,7 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         backgroundColor: BORDER,
-        transform: [{ translateX: SHADOW_OFFSET - 1 }, { translateY: SHADOW_OFFSET - 1 }],
+        transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
     },
     labelContainer: {
         backgroundColor: '#FFF',

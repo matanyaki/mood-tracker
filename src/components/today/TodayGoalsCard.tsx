@@ -10,10 +10,11 @@ import SkeletonBox from '../skeleton/SkeletonBox';
 import { useGoalsQuery, useGoalCompletionsQuery } from '../../hooks/useGoalsQuery';
 import { useGoalsController } from '../../controllers/useGoalsController';
 import { TIMES_OF_DAY, TIME_OF_DAY_LABELS } from '../../constants/goals';
+import { GOAL_TEXT } from '../../constants/colors';
 import { CARD_PADDING } from '../../constants/layout';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import {
-    OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER,
+    OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER, PRESS_SINK,
 } from '../../constants/pixel';
 
 /** The goal accent, matching GoalCard, the calendar's goal pip and the Fab's Goals action. */
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     eyebrow: {
         fontSize: 10,
         fontFamily: PIXEL_BOLD,
-        color: GOAL_ACCENT,
+        color: GOAL_TEXT, // The accent green is 2.5:1 as text
         letterSpacing: 2,
         marginBottom: 14,
     },
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
     },
     rowPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     addRow: {
         // No border or fill: the card's own outline is already around it, and a box
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     addText: {
         fontSize: 11,
         fontFamily: PIXEL_BOLD,
-        color: GOAL_ACCENT,
+        color: GOAL_TEXT, // The accent green is 2.5:1 as text
         letterSpacing: 1,
     },
     checkbox: {
@@ -356,7 +357,7 @@ const styles = StyleSheet.create({
         borderColor: OUTLINE,
     },
     retryButtonPressed: {
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
         backgroundColor: '#B8EFD6',
     },
     retryText: {

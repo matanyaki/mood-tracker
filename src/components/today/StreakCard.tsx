@@ -4,9 +4,9 @@ import { Flame } from 'lucide-react-native';
 import PixelCard from '../ui/PixelCard';
 import SkeletonBox from '../skeleton/SkeletonBox';
 import { useStreaksQuery } from '../../hooks/useStreaksQuery';
-import { PIXEL_BOLD } from '../../constants/typography';
+import { PIXEL_BOLD, TIGHT_FONT_SCALE } from '../../constants/typography';
 import { CARD_PADDING } from '../../constants/layout';
-import { INK, INK_MUTED } from '../../constants/pixel';
+import { INK, INK_MUTED, PRESS_SINK } from '../../constants/pixel';
 
 /** Streak orange. The flame is the streak's icon, so it keeps this colour on both
  *  tiles -- the tile LABEL says which kind of entry it counts, not the colour. */
@@ -55,14 +55,28 @@ function StreakTile({ label, streak, onPress }: StreakTileProps) {
         >
             <Pressable
                 onPress={onPress}
+                accessibilityRole="button"
+                accessibilityLabel={
+                    streak === null
+                        ? `${label} streak could not load. Retry`
+                        : isActive
+                            ? `${label} streak: ${streak} ${streak === 1 ? 'day' : 'days'}`
+                            : `${label} streak: none yet. Start one`
+                }
                 style={({ pressed }) => [styles.tileBody, pressed && styles.tileBodyPressed]}
             >
                 <View style={styles.labelRow}>
                     <Flame size={14} color={isActive ? FLAME : COLD} strokeWidth={3} />
-                    <Text style={styles.label} numberOfLines={1}>{label}</Text>
+                    {/* Capped: "GREETINGS" already fills a half-width tile at 12px. */}
+                    <Text style={styles.label} numberOfLines={1} maxFontSizeMultiplier={TIGHT_FONT_SCALE}>
+                        {label}
+                    </Text>
                 </View>
 
-                <Text style={[styles.value, !isActive && styles.valueDormant]}>
+                <Text
+                    style={[styles.value, !isActive && styles.valueDormant]}
+                    maxFontSizeMultiplier={TIGHT_FONT_SCALE}
+                >
                     {streak === null ? 'RETRY' : isActive ? `${streak}d` : 'START'}
                 </Text>
             </Pressable>
@@ -141,12 +155,12 @@ const styles = StyleSheet.create({
     },
     tileBody: {
         // One fixed height for every state, so the column below never moves.
-        height: TILE_H,
+        minHeight: TILE_H,
         justifyContent: 'space-between',
     },
     tileBodyPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     labelRow: {
         flexDirection: 'row',

@@ -1,15 +1,32 @@
 import React, { useState } from 'react';
-import { Pressable, View, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
-import { PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, SHADOW_OFFSET, BORDER_W } from '../../constants/pixel';
+import { Pressable, View, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
+import { TYPE } from '../../constants/typography';
+import { OUTLINE, INK, PAPER, SHADOW_OFFSET, BORDER_W } from '../../constants/pixel';
+import { MIN_TOUCH, SPACE } from '../../constants/layout';
+
+/**
+ * The face colours a PrimaryButton comes in, each with the text colour that reads
+ * on it. Green carries navy text: white on this green was 2.5:1.
+ */
+const TONES = {
+    green: { face: '#10B981', text: INK },   // 6.7:1
+    navy: { face: INK, text: '#FFFFFF' },    // 17:1
+    paper: { face: PAPER, text: INK },       // 17:1 -- a step back, e.g. Reflection's < Back
+} as const;
+
+export type PrimaryButtonTone = keyof typeof TONES;
+
+/** The colour to draw an icon in, so it matches the label beside it. */
+export const primaryButtonInk = (tone: PrimaryButtonTone = 'green') => TONES[tone].text;
 
 interface PrimaryButtonProps {
     onPress: () => void;
     label: string;
     disabled?: boolean;
     loading?: boolean;
+    tone?: PrimaryButtonTone;
+    /** Layout only -- the face colour comes from `tone`. */
     style?: ViewStyle;
-    textStyle?: TextStyle;
     icon?: React.ReactNode;
 }
 
@@ -26,13 +43,14 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
     label,
     disabled = false,
     loading = false,
+    tone = 'green',
     style,
-    textStyle,
     icon
 }) => {
     const [pressed, setPressed] = useState(false);
     const isInert = disabled || loading;
     const sunk = pressed && !isInert;
+    const colors = TONES[tone];
 
     return (
         <View style={styles.wrapper}>
@@ -43,6 +61,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
             <Pressable
                 style={[
                     styles.button,
+                    { backgroundColor: colors.face },
                     style,
                     isInert && styles.disabled,
                     sunk && styles.sunk,
@@ -51,13 +70,22 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
                 onPressIn={() => setPressed(true)}
                 onPressOut={() => setPressed(false)}
                 disabled={isInert}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+                accessibilityState={{ disabled: isInert, busy: loading }}
             >
                 {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={colors.text} />
                 ) : (
                     <>
                         {icon && icon}
-                        <Text style={[styles.text, textStyle, icon ? { marginLeft: 8 } : undefined]}>
+                        <Text
+                            style={[
+                                styles.text,
+                                { color: isInert ? INK : colors.text },
+                                icon ? styles.textWithIcon : undefined,
+                            ]}
+                        >
                             {label}
                         </Text>
                     </>
@@ -82,9 +110,9 @@ const styles = StyleSheet.create({
         transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
     },
     button: {
-        backgroundColor: '#10B981', // Default green (CheckIn); Reflection overrides to navy
-        paddingVertical: 16,
-        paddingHorizontal: 24,
+        minHeight: MIN_TOUCH,
+        paddingVertical: SPACE.lg,
+        paddingHorizontal: SPACE.xl,
         borderWidth: BORDER_W,
         borderColor: OUTLINE,
         flexDirection: 'row',
@@ -101,9 +129,11 @@ const styles = StyleSheet.create({
         borderColor: '#94A3B8',
     },
     text: {
-        color: '#FFF',
-        fontSize: 15,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.h3,
         letterSpacing: 1,
+        textAlign: 'center',
+    },
+    textWithIcon: {
+        marginLeft: SPACE.sm,
     },
 });

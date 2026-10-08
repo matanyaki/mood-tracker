@@ -12,7 +12,7 @@ export { default as EntryEmotionsList } from './journal/EntryEmotionsList';
 export { default as ReflectionCard } from './journal/ReflectionCard';
 export type { BackgroundVariant } from './layout/AppBackground';
 export { EmotionRow } from './journal/EmotionRow';
-export { PrimaryButton } from './ui/PrimaryButton';
+export { PrimaryButton, primaryButtonInk } from './ui/PrimaryButton';
 export { default as PixelSelect } from './ui/PixelSelect';
 export { default as PixelAvatar } from './ui/PixelAvatar';
 export { default as AvatarPicker } from './ui/AvatarPicker';

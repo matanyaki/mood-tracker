@@ -4,7 +4,7 @@ import {
     View,
     Text,
     TextInput,
-    TouchableOpacity,
+    Pressable,
     StyleSheet,
     Platform,
     Modal,
@@ -17,6 +17,7 @@ import {
 import { Lightbulb, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { PIXEL, PIXEL_BOLD, PIXEL_BULLET } from '../../constants/typography';
+import { PRESS_SINK } from '../../constants/pixel';
 
 // Gratitude prompts for the suggestion feature
 const GRATITUDE_PROMPTS = [
@@ -167,13 +168,15 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
                             <View style={styles.paper}>
 
                                 {/* Close Button (X) */}
-                                <TouchableOpacity
-                                    style={styles.closeButton}
+                                <Pressable
+                                    style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
                                     onPress={onClose}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Close gratitude note"
                                 >
-                                    <X size={20} color="#78350F" strokeWidth={2.5} />
-                                </TouchableOpacity>
+                                    <X size={20} color={INK} strokeWidth={2.5} />
+                                </Pressable>
 
                                 <View style={styles.header}>
                                     <Text style={styles.headerEyebrow}>[ GRATITUDE ]</Text>
@@ -216,22 +219,24 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
 
                                 {/* Footer Actions */}
                                 <View style={styles.footer}>
-                                    <TouchableOpacity
-                                        style={styles.suggestionButton}
+                                    <Pressable
+                                        style={({ pressed }) => [styles.suggestionButton, pressed && styles.pressed]}
                                         onPress={handleSuggestionPress}
-                                        activeOpacity={0.7}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Show a gratitude prompt"
                                     >
-                                        <Lightbulb size={16} color="#D97706" />
+                                        <Lightbulb size={16} color={EYEBROW} />
                                         <Text style={styles.suggestionText}>HINT</Text>
-                                    </TouchableOpacity>
+                                    </Pressable>
 
-                                    <TouchableOpacity
-                                        style={styles.saveButton}
+                                    <Pressable
+                                        style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}
                                         onPress={handleSave}
-                                        activeOpacity={0.8}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Save gratitude note"
                                     >
                                         <Text style={styles.saveButtonText}>SAVE</Text>
-                                    </TouchableOpacity>
+                                    </Pressable>
                                 </View>
 
                                 {/* Suggestion Popup Overlay */}
@@ -273,6 +278,11 @@ const INK = '#78350F';       // Dark amber "ink" outline
 const PAPER = '#FFF7DB';     // Warm cream paper
 const RULE = '#E7C98F';      // Ruled-line amber
 const ACCENT = '#D97706';    // Amber accent
+const BROWN = '#3F2A12';     // Ink-brown: typed text, and the SAVE label
+const EYEBROW = '#B45309';   // Burnt amber for small text on this paper (4.7:1; the accent was 3.0:1)
+// The SAVE face is the Intention card's amber, so the two SAVE buttons on Today are one
+// button. On the darker #D97706 accent no text colour in this palette reached 4.5:1.
+const SAVE_FACE = '#F59E0B';
 
 const styles = StyleSheet.create({
     modalOverlay: {
@@ -312,6 +322,10 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         zIndex: 1,
     },
+    pressed: {
+        // Sinks toward its own corner, the way every other pixel control answers a press.
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+    },
     closeButton: {
         position: 'absolute',
         top: 12,
@@ -335,7 +349,7 @@ const styles = StyleSheet.create({
     },
     headerEyebrow: {
         fontSize: 10,
-        color: ACCENT,
+        color: EYEBROW,
         fontFamily: PIXEL_BOLD,
         letterSpacing: 2,
         marginBottom: 6,
@@ -386,7 +400,7 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE,
         lineHeight: LINE_HEIGHT,
         fontFamily: PIXEL,
-        color: '#3F2A12',       // Ink-brown text
+        color: BROWN,
         includeFontPadding: false, // Android: this padding is what pushed text off the rules
     },
     footer: {
@@ -410,13 +424,13 @@ const styles = StyleSheet.create({
     },
     suggestionText: {
         marginLeft: 6,
-        color: ACCENT,
+        color: EYEBROW,
         fontSize: 12,
         fontFamily: PIXEL_BOLD,
         letterSpacing: 1,
     },
     saveButton: {
-        backgroundColor: ACCENT,
+        backgroundColor: SAVE_FACE,
         paddingVertical: 10,
         paddingHorizontal: 26,
         borderRadius: 6,
@@ -424,7 +438,7 @@ const styles = StyleSheet.create({
         borderColor: INK,
     },
     saveButtonText: {
-        color: '#FFF7DB',
+        color: BROWN,
         fontSize: 12,
         fontFamily: PIXEL_BOLD,
         letterSpacing: 1,

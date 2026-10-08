@@ -3,16 +3,19 @@ import {
     View, Text, StyleSheet, Pressable, ScrollView, Modal, Dimensions,
 } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { PIXEL, PIXEL_BOLD, TIGHT_FONT_SCALE } from '../../constants/typography';
+import { MIN_TOUCH } from '../../constants/layout';
 import {
-    OUTLINE, PAPER, INK, INK_MUTED,
-    SHADOW_OFFSET, BORDER_W, BORDER_W_INNER,
+    OUTLINE, PAPER, INK, INK_MUTED, SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, PRESSED,
 } from '../../constants/pixel';
 
 const screenHeight = Dimensions.get('window').height;
 
-/** One option row. Fixed, so the open panel can scroll to a row by arithmetic. */
-const ITEM_H = 38;
+/**
+ * One option row. Fixed, so the open panel can scroll to a row by arithmetic, and
+ * MIN_TOUCH tall so every row is a full touch target (it was 38).
+ */
+const ITEM_H = MIN_TOUCH;
 /** Roughly six rows -- past that the panel starts covering the screen it filters. */
 const PANEL_MAX_H = 240;
 /** Air between the trigger and the panel it drops. */
@@ -98,13 +101,20 @@ export default function PixelSelect({ eyebrow, options, value, onChange, flex }:
 
                 <Pressable
                     onPress={handleOpen}
+                    // 40 tall to line up with PixelField beside it; the slop takes it to 44.
+                    hitSlop={{ top: 2, bottom: 2 }}
+                    accessibilityRole="button"
+                    // "[ MONTH ]" reads aloud as "Month: September".
+                    accessibilityLabel={`${eyebrow.replace(/[[\]]/g, '').trim()}: ${selectedLabel}`}
+                    accessibilityHint="Opens a list to choose from"
+                    accessibilityState={{ expanded: open }}
                     style={({ pressed }) => [
                         styles.trigger,
                         open && styles.triggerOpen,
                         pressed && !open && styles.triggerPressed,
                     ]}
                 >
-                    <Text style={styles.triggerText} numberOfLines={1}>
+                    <Text style={styles.triggerText} numberOfLines={1} maxFontSizeMultiplier={TIGHT_FONT_SCALE}>
                         {selectedLabel.toUpperCase()}
                     </Text>
                     {/* Silkscreen has no triangle glyph -- a typed one renders as a
@@ -165,6 +175,9 @@ export default function PixelSelect({ eyebrow, options, value, onChange, flex }:
                                                 onChange(option.value);
                                                 setOpen(false);
                                             }}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={option.label}
+                                            accessibilityState={{ selected: isSelected }}
                                             style={({ pressed }) => [
                                                 styles.item,
                                                 !isLast && styles.itemDivided,
@@ -187,6 +200,9 @@ export default function PixelSelect({ eyebrow, options, value, onChange, flex }:
                                                     isSelected && styles.itemTextSelected,
                                                 ]}
                                                 numberOfLines={1}
+                                                // Rows are a fixed height (the scroll-to
+                                                // arithmetic depends on it), so cap the growth.
+                                                maxFontSizeMultiplier={TIGHT_FONT_SCALE}
                                             >
                                                 {option.label.toUpperCase()}
                                             </Text>
@@ -220,7 +236,7 @@ const styles = StyleSheet.create({
         transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
     },
     trigger: {
-        height: 40,
+        minHeight: 40, // A floor: a large system font grows the box instead of clipping
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -233,10 +249,10 @@ const styles = StyleSheet.create({
     triggerOpen: {
         // Held down for as long as the panel hangs off it, so the two read as one
         // object rather than a button and a floating list.
-        backgroundColor: '#EDE9E0',
+        backgroundColor: PRESSED,
     },
     triggerPressed: {
-        backgroundColor: '#DDE3EA',
+        backgroundColor: PRESSED,
     },
     triggerText: {
         flex: 1,
@@ -290,7 +306,7 @@ const styles = StyleSheet.create({
         backgroundColor: INK,
     },
     itemPressed: {
-        backgroundColor: '#DDE3EA',
+        backgroundColor: PRESSED,
     },
     itemMarker: {
         width: 8,

@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
         transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
     },
     input: {
-        height: 40,
+        minHeight: 40, // A floor: a large system font grows the field instead of clipping
         paddingVertical: 0, // Cleared before the box sets its own metrics
         paddingHorizontal: 12,
         backgroundColor: PAPER,

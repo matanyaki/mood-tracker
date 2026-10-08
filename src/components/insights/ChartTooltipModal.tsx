@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
 import PixelCard from '../ui/PixelCard';
-import { getEmotionColor } from '../../constants/colors';
+import { getEmotionColor, getEmotionInk } from '../../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
 
@@ -46,7 +46,7 @@ export default function ChartTooltipModal({ visible, data, onClose }: ChartToolt
                             return (
                                 <View key={idx} style={styles.emotionItem}>
                                     <View style={styles.emotionRow}>
-                                        <Text style={[styles.emotionName, { color: emotionColor }]}>
+                                        <Text style={[styles.emotionName, { color: getEmotionInk(eItem.emotionKey) }]}>
                                             {eItem.emotion.toUpperCase()}
                                         </Text>
                                         <Text style={styles.scaleText}>{eItem.scale}/5</Text>

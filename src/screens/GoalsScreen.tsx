@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertTriangle, Plus, Target } from 'lucide-react-native';
 import { format } from 'date-fns';
 import type { Goal } from '@shared/types';
@@ -12,6 +13,7 @@ import { PixelAlert } from '../components/ui/PixelAlert';
 import { useGoalsQuery, useGoalCompletionsQuery } from '../hooks/useGoalsQuery';
 import { useGoalsController } from '../controllers/useGoalsController';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
+import { SCREEN_GUTTER, SPACE } from '../constants/layout';
 import {
   OUTLINE, PAPER, INK, INK_MUTED,
   SHADOW_OFFSET, BORDER_W, BORDER_W_INNER,
@@ -32,6 +34,7 @@ export default function GoalsScreen({ navigation }: any) {
   const { data: goals, isLoading, isError, refetch } = useGoalsQuery();
   const { data: completions } = useGoalCompletionsQuery();
   const { deleteGoal, pauseGoal, resumeGoal } = useGoalsController();
+  const insets = useSafeAreaInsets();
 
   // Read once per mount, like the Today card and the Diary: which day is "today"
   // must not move under a confirmation dialog that is already open.
@@ -223,7 +226,7 @@ export default function GoalsScreen({ navigation }: any) {
 
       {/* Pinned rather than scrolled with the list: the way to add a goal should not
           move further away the more goals there are. */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: SPACE.lg + insets.bottom }]}>
         <View style={styles.newButtonWrapper}>
           <View style={styles.newButtonShadow} pointerEvents="none" />
           <Pressable
@@ -258,8 +261,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   footer: {
-    padding: 20,
-    paddingBottom: 30,
+    // paddingBottom is set inline: the home-indicator inset is added to it.
+    paddingTop: SPACE.lg,
+    paddingHorizontal: SCREEN_GUTTER,
     // Flat rule instead of a gradient fade, the same way CheckIn separates its
     // footer: this is a separate pixel plane sitting over the scroll.
     borderTopWidth: BORDER_W_INNER,

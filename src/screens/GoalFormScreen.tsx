@@ -6,9 +6,10 @@ import {
 import { Check } from 'lucide-react-native';
 import type { Goal, TimeOfDay } from '@shared/types';
 import { computeEndDate } from '../../shared/types';
-import { ScreenContainer, AppHeader, BackButton, PrimaryButton, PixelSelect, PixelField, ToggleBox } from '../components';
+import { ScreenContainer, AppHeader, BackButton, PrimaryButton, primaryButtonInk, PixelSelect, PixelField, ToggleBox } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { useGoalsController } from '../controllers/useGoalsController';
+import { GOAL_TEXT, DANGER_TEXT } from '../constants/colors';
 import {
   WEEKDAY_LABELS, TIMES_OF_DAY, TIME_OF_DAY_LABELS, TIMES_PER_WEEK_OPTIONS,
 } from '../constants/goals';
@@ -257,7 +258,7 @@ export default function GoalFormScreen({ route, navigation }: any) {
                     disabled={!selected && daysOfWeek.length >= timesPerWeek}
                     onPress={() => toggleDay(index)}
                     style={styles.dayBox}
-                    fontSize={8}
+                    tight
                   />
                 );
               })}
@@ -292,8 +293,7 @@ export default function GoalFormScreen({ route, navigation }: any) {
               onPress={handleSave}
               loading={isSaving}
               disabled={!!validationError || isSaving}
-              icon={!isSaving ? <Check size={18} color="#fff" strokeWidth={3} /> : undefined}
-              style={{ backgroundColor: '#10B981' }}
+              icon={!isSaving ? <Check size={18} color={primaryButtonInk()} strokeWidth={3} /> : undefined}
             />
           </View>
 
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   counterDone: {
-    color: '#10B981',
+    color: GOAL_TEXT,
   },
   weekRow: {
     flexDirection: 'row',
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   validationText: {
     fontSize: 10,
     fontFamily: PIXEL,
-    color: '#EF4444',
+    color: DANGER_TEXT,
     letterSpacing: 0.5,
     lineHeight: 16,
   },

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { MOOD_IMAGES } from '../../constants/images';
-import { getEmotionColor } from '../../constants/colors';
+import { getEmotionColor, getEmotionInk } from '../../constants/colors';
 import { getEmotionImageKey, type EmotionId } from '../../../shared/types/emotions';
 import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
 import { OUTLINE, PAPER, BORDER_W_INNER } from '../../constants/pixel';
@@ -26,6 +26,7 @@ export default function EntryEmotionsList({ emotions }: EntryEmotionsListProps) 
                 const { id, label, scale } = emotion;
 
                 const color = getEmotionColor(id);
+                const ink = getEmotionInk(id);
                 const imageSource = MOOD_IMAGES[getEmotionImageKey(id)];
 
                 const isLast = index === emotions.length - 1;
@@ -47,12 +48,12 @@ export default function EntryEmotionsList({ emotions }: EntryEmotionsListProps) 
                         {/* Content */}
                         <View style={styles.contentColumn}>
                             <View style={styles.headerRow}>
-                                <Text style={[styles.emotionTitle, { color }]}>
+                                <Text style={[styles.emotionTitle, { color: ink }]}>
                                     {label.toUpperCase()}
                                 </Text>
                                 {scale !== undefined && scale > 0 && (
                                     <View style={[styles.scaleBadge, { backgroundColor: color + '20', borderColor: color }]}>
-                                        <Text style={[styles.scaleText, { color }]}>
+                                        <Text style={[styles.scaleText, { color: ink }]}>
                                             [{scale}/5]
                                         </Text>
                                     </View>
