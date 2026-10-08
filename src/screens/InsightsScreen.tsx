@@ -221,13 +221,9 @@ export default function InsightsScreen({ navigation }: any) {
 
   return (
     <ScreenContainer variant="calm">
-      {/* AppHeader is shared with four other screens, so the pixel treatment is
-          passed in here rather than baked into the component. */}
       <AppHeader
         title="Insights"
         subtitle="Track your emotion waves"
-        titleStyle={styles.headerTitle}
-        subtitleStyle={styles.headerSubtitle}
       />
 
       <ScrollView
@@ -319,16 +315,6 @@ export default function InsightsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  headerTitle: {
-    fontSize: 18,
-    letterSpacing: 2,
-    color: INK,
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    letterSpacing: 1,
-    color: INK_MUTED,
-  },
   content: {
     padding: 20,
     paddingTop: 10,

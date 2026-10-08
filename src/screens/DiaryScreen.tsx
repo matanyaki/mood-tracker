@@ -138,8 +138,6 @@ export default function DiaryScreen({ navigation }: any) {
   const headerRightAction = useMemo(() => ({
     label: 'Today',
     onPress: goToToday,
-    style: styles.todayButton,
-    textStyle: styles.todayButtonText,
   }), [goToToday]);
 
   const renderCalendarHeader = useCallback((date: any) => {
@@ -169,11 +167,8 @@ export default function DiaryScreen({ navigation }: any) {
 
   return (
     <ScreenContainer variant="calm">
-      {/* AppHeader is shared with four other screens, so the pixel treatment is
-          passed in here rather than baked into the component. */}
       <AppHeader
         title="Calendar"
-        titleStyle={styles.headerTitle}
         rightAction={headerRightAction}
       />
 
@@ -248,24 +243,6 @@ export default function DiaryScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  headerTitle: {
-    fontSize: 18,
-    letterSpacing: 2,
-    color: INK,
-  },
-  todayButton: {
-    backgroundColor: PAPER,
-    borderWidth: BORDER_W_INNER,
-    borderColor: OUTLINE,
-    borderRadius: 0, // Overrides AppHeader's pill radius
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  todayButtonText: {
-    fontSize: 11,
-    color: INK,
-    letterSpacing: 1,
-  },
   calendarWrapper: {
     position: 'relative',
     margin: 20,

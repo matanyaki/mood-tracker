@@ -3,9 +3,9 @@ import {
     View, Text, StyleSheet, ScrollView, Pressable,
     KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { ArrowLeft, Check, KeyRound } from 'lucide-react-native';
+import { Check, KeyRound } from 'lucide-react-native';
 import {
-    ScreenContainer, AppHeader, PrimaryButton, PixelField, PixelCard, PixelAvatar, AvatarPicker,
+    ScreenContainer, AppHeader, BackButton, MenuRow, PrimaryButton, PixelField, PixelCard, PixelAvatar, AvatarPicker,
 } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { useEditProfileController } from '../controllers/useEditProfileController';
@@ -63,16 +63,7 @@ export default function EditProfileScreen({ navigation }: any) {
         <ScreenContainer variant="calm">
             <AppHeader
                 title="Edit Profile"
-                titleStyle={styles.headerTitle}
-                leftAction={
-                    <Pressable
-                        onPress={() => navigation.goBack()}
-                        style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-                        hitSlop={8}
-                    >
-                        <ArrowLeft color={INK} size={20} strokeWidth={2.5} />
-                    </Pressable>
-                }
+                leftAction={<BackButton onPress={() => navigation.goBack()} />}
             />
 
             <KeyboardAvoidingView
@@ -134,18 +125,16 @@ export default function EditProfileScreen({ navigation }: any) {
                     <View>
                         <Text style={styles.eyebrow}>[ SECURITY ]</Text>
                         <PixelCard padding={0}>
-                            <Pressable
-                                style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}
+                            <MenuRow
+                                icon={KeyRound}
+                                label={isSendingReset ? 'SENDING...' : 'RESET PASSWORD'}
+                                color={INDIGO}
+                                tint="#E0E7FF"
                                 onPress={handlePasswordReset}
                                 disabled={isSendingReset}
-                            >
-                                <View style={styles.iconBox}>
-                                    <KeyRound size={18} color={INDIGO} strokeWidth={2.5} />
-                                </View>
-                                <Text style={styles.menuLabel}>
-                                    {isSendingReset ? 'SENDING...' : 'RESET PASSWORD'}
-                                </Text>
-                            </Pressable>
+                                showChevron={false}
+                                isLast
+                            />
                         </PixelCard>
                     </View>
 
@@ -157,24 +146,6 @@ export default function EditProfileScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-    headerTitle: {
-        fontSize: 18,
-        letterSpacing: 2,
-        color: INK,
-    },
-    backButton: {
-        width: 36,
-        height: 36,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: PAPER,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    backButtonPressed: {
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
-    },
     scrollContent: {
         padding: 20,
         paddingTop: 10,
@@ -226,30 +197,5 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
         lineHeight: 16,
         marginTop: -8,
-    },
-    menuRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        padding: 14,
-    },
-    menuRowPressed: {
-        backgroundColor: '#EDE9E0',
-    },
-    iconBox: {
-        width: 32,
-        height: 32,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#E0E7FF',
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    menuLabel: {
-        flex: 1,
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
-        color: INDIGO,
     },
 });

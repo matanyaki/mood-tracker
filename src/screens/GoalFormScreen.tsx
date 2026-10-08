@@ -1,12 +1,12 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable,
+  View, Text, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { ArrowLeft, Check } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import type { Goal, TimeOfDay } from '@shared/types';
 import { computeEndDate } from '../../shared/types';
-import { ScreenContainer, AppHeader, PrimaryButton, PixelSelect, PixelField, ToggleBox } from '../components';
+import { ScreenContainer, AppHeader, BackButton, PrimaryButton, PixelSelect, PixelField, ToggleBox } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { useGoalsController } from '../controllers/useGoalsController';
 import {
@@ -162,16 +162,7 @@ export default function GoalFormScreen({ route, navigation }: any) {
     <ScreenContainer variant="focus">
       <AppHeader
         title={isEditing ? 'Edit Goal' : 'New Goal'}
-        titleStyle={styles.headerTitle}
-        leftAction={
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-            hitSlop={8}
-          >
-            <ArrowLeft color={INK} size={20} strokeWidth={2.5} />
-          </Pressable>
-        }
+        leftAction={<BackButton onPress={() => navigation.goBack()} />}
       />
 
       <KeyboardAvoidingView
@@ -314,24 +305,6 @@ export default function GoalFormScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  headerTitle: {
-    fontSize: 18,
-    letterSpacing: 2,
-    color: INK,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PAPER,
-    borderWidth: BORDER_W_INNER,
-    borderColor: OUTLINE,
-  },
-  backButtonPressed: {
-    transform: [{ translateX: 1 }, { translateY: 1 }],
-    backgroundColor: '#EDE9E0',
-  },
   scrollContent: {
     padding: 20,
     paddingTop: 10,

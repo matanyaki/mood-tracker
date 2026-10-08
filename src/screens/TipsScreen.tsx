@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { ArrowLeft, Sparkles } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, PixelCard, ToggleBox } from '../components';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Sparkles } from 'lucide-react-native';
+import { ScreenContainer, AppHeader, BackButton, PixelCard, ToggleBox } from '../components';
 import { TIP_CATEGORIES, TipCategory, getTipOfTheDay } from '../constants/tips';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
 import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
@@ -58,16 +58,7 @@ export default function TipsScreen({ navigation }: any) {
         <ScreenContainer variant="calm">
             <AppHeader
                 title="Tips"
-                titleStyle={styles.headerTitle}
-                leftAction={
-                    <Pressable
-                        onPress={() => navigation.goBack()}
-                        style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-                        hitSlop={8}
-                    >
-                        <ArrowLeft color={INK} size={20} strokeWidth={2.5} />
-                    </Pressable>
-                }
+                leftAction={<BackButton onPress={() => navigation.goBack()} />}
             />
 
             <ScrollView
@@ -134,24 +125,6 @@ export default function TipsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-    headerTitle: {
-        fontSize: 18,
-        letterSpacing: 2,
-        color: INK,
-    },
-    backButton: {
-        width: 36,
-        height: 36,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: PAPER,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    backButtonPressed: {
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
-    },
     content: {
         padding: 20,
         paddingTop: 10,

@@ -4,6 +4,7 @@ import {
     OUTLINE, PAPER,
     SHADOW_OFFSET, BORDER_W, ACCENT_BAR_W,
 } from '../../constants/pixel';
+import { CARD_PADDING } from '../../constants/layout';
 
 interface PixelCardProps {
     children: React.ReactNode;
@@ -19,6 +20,12 @@ interface PixelCardProps {
      * outlined surface -- a second block just crowds the first one's edge.
      */
     shadow?: boolean;
+    /**
+     * Outline and shadow colour. The Today cards that carry their own palette
+     * (the pink quote, the amber intention) draw in their own ink; everything else
+     * keeps the default.
+     */
+    outlineColor?: string;
 }
 
 /**
@@ -36,18 +43,25 @@ export default function PixelCard({
     children,
     style,
     wrapperStyle,
-    padding = 16,
+    padding = CARD_PADDING,
     accentColor,
     shadow = true,
+    outlineColor,
 }: PixelCardProps) {
     return (
         <View style={[styles.wrapper, shadow && styles.wrapperWithShadow, wrapperStyle]}>
-            {shadow && <View style={styles.shadow} pointerEvents="none" />}
+            {shadow && (
+                <View
+                    style={[styles.shadow, outlineColor ? { backgroundColor: outlineColor } : null]}
+                    pointerEvents="none"
+                />
+            )}
 
             <View
                 style={[
                     styles.face,
                     { padding },
+                    outlineColor ? { borderColor: outlineColor } : null,
                     accentColor
                         ? { borderLeftWidth: ACCENT_BAR_W, borderLeftColor: accentColor }
                         : null,

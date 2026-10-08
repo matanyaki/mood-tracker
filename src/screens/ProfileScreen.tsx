@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import Constants from 'expo-constants';
 import { format } from 'date-fns';
-import { ScreenContainer, AppHeader, PixelCard, PrimaryButton, PixelAvatar } from '../components';
+import { ScreenContainer, AppHeader, PixelCard, PrimaryButton, PixelAvatar, MenuRow } from '../components';
 import { useQueryClient } from '@tanstack/react-query';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import HoldToConfirmDialog from '../components/ui/HoldToConfirmDialog';
@@ -32,30 +32,6 @@ const formatMemberSince = (createdAt: unknown): string | null => {
     const date = new Date(createdAt);
     return Number.isNaN(date.getTime()) ? null : format(date, 'MMM yyyy').toUpperCase();
 };
-
-/**
- * One row of a settings card.
- *
- * The icon tints are flat opaque swatches rather than the `color + '15'` the row
- * used to build: an eight-digit hex is a translucent fill, and it takes its
- * lightness from whatever happens to be behind it.
- */
-const MenuRow = ({ icon: Icon, label, color = INK, tint, onPress, isLast = false }: any) => (
-    <Pressable
-        style={({ pressed }) => [
-            styles.menuRow,
-            !isLast && styles.menuRowDivided,
-            pressed && styles.menuRowPressed,
-        ]}
-        onPress={onPress}
-    >
-        <View style={[styles.iconBox, { backgroundColor: tint }]}>
-            <Icon size={18} color={color} strokeWidth={2.5} />
-        </View>
-        <Text style={[styles.menuLabel, { color }]}>{label}</Text>
-        <ChevronRight size={16} color={INK_MUTED} strokeWidth={3} />
-    </Pressable>
-);
 
 /** Tips, Help and About. Shown to guests too: none of them need an account. */
 const WellnessSection = ({ onTips, onHelp, onComingSoon }: {
@@ -166,9 +142,7 @@ export default function ProfileScreen({ navigation }: any) {
     if (!user) {
         return (
             <ScreenContainer variant="calm">
-                {/* AppHeader is shared with four other screens, so the pixel
-                    treatment is passed in here rather than baked into it. */}
-                <AppHeader title="Profile" titleStyle={styles.headerTitle} />
+                <AppHeader title="Profile" />
 
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -294,7 +268,7 @@ export default function ProfileScreen({ navigation }: any) {
 
     return (
         <ScreenContainer variant="calm">
-            <AppHeader title="Profile" titleStyle={styles.headerTitle} />
+            <AppHeader title="Profile" />
 
             <ScrollView
                 contentContainerStyle={styles.content}
@@ -405,11 +379,6 @@ export default function ProfileScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-    headerTitle: {
-        fontSize: 18,
-        letterSpacing: 2,
-        color: INK,
-    },
     content: {
         padding: 20,
         paddingTop: 10,
@@ -576,35 +545,6 @@ const styles = StyleSheet.create({
     menuCardWrapper: {
         marginBottom: 24,
     },
-    menuRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        padding: 14,
-    },
-    menuRowDivided: {
-        borderBottomWidth: BORDER_W_INNER,
-        borderBottomColor: OUTLINE,
-        borderStyle: 'dotted',
-    },
-    menuRowPressed: {
-        backgroundColor: '#EDE9E0',
-    },
-    iconBox: {
-        width: 32,
-        height: 32,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    menuLabel: {
-        flex: 1,
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
-    },
-
     versionText: {
         textAlign: 'center',
         fontSize: 9,

@@ -1,13 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
-import { ArrowLeft, Plus } from 'lucide-react-native';
+import { AlertTriangle, Plus, Target } from 'lucide-react-native';
 import { format } from 'date-fns';
 import type { Goal } from '@shared/types';
 import {
   pauseLastDay, resumeDay, currentPause, isGoalPaused, goalLastDay, plannedDayCount, endPause,
 } from '../../shared/types';
 import { countScheduledDaysThrough } from '../../shared/utils/goalProgress';
-import { ScreenContainer, AppHeader, EmptyState, GoalCard } from '../components';
+import { ScreenContainer, AppHeader, BackButton, EmptyState, GoalCard } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { useGoalsQuery, useGoalCompletionsQuery } from '../hooks/useGoalsQuery';
 import { useGoalsController } from '../controllers/useGoalsController';
@@ -149,23 +149,10 @@ export default function GoalsScreen({ navigation }: any) {
 
   return (
     <ScreenContainer variant="focus">
-      {/* AppHeader is shared with five other screens, so the pixel treatment is
-          passed in here rather than baked into the component. */}
       <AppHeader
         title="Goals"
         subtitle="What you are working on"
-        style={styles.header}
-        titleStyle={styles.headerTitle}
-        subtitleStyle={styles.headerSubtitle}
-        leftAction={
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-            hitSlop={8}
-          >
-            <ArrowLeft color={INK} size={20} strokeWidth={2.5} />
-          </Pressable>
-        }
+        leftAction={<BackButton onPress={() => navigation.goBack()} />}
       />
 
       <ScrollView
@@ -178,7 +165,7 @@ export default function GoalsScreen({ navigation }: any) {
 
         {isError && !isLoading && (
           <EmptyState
-            emoji="⚠️"
+            icon={<AlertTriangle size={32} color={INK_MUTED} strokeWidth={2.5} />}
             title="Could not load goals"
             subtitle="Check your connection and try again."
             buttonLabel="Retry"
@@ -188,7 +175,7 @@ export default function GoalsScreen({ navigation }: any) {
 
         {!isLoading && !isError && goals?.length === 0 && (
           <EmptyState
-            emoji="🎯"
+            icon={<Target size={32} color={INK_MUTED} strokeWidth={2.5} />}
             title="No goals yet"
             subtitle="Set one and pick the days you want to show up for it."
             buttonLabel="New Goal"
@@ -253,34 +240,6 @@ export default function GoalsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  headerTitle: {
-    fontSize: 18,
-    letterSpacing: 2,
-    color: INK,
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    letterSpacing: 1,
-    color: INK_MUTED,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PAPER,
-    borderWidth: BORDER_W_INNER,
-    borderColor: OUTLINE,
-  },
-  backButtonPressed: {
-    transform: [{ translateX: 1 }, { translateY: 1 }],
-    backgroundColor: '#EDE9E0',
-  },
   scrollContent: {
     padding: 20,
     paddingBottom: 40,

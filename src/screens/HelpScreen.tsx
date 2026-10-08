@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Linking } from 'react-native';
-import { ArrowLeft, ChevronDown, ChevronUp, HeartHandshake, ExternalLink } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, PixelCard } from '../components';
+import { ChevronDown, ChevronUp, HeartHandshake, ExternalLink } from 'lucide-react-native';
+import { ScreenContainer, AppHeader, BackButton, PixelCard } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { HELP_SECTIONS, CRISIS_SUPPORT, HelpItem } from '../constants/help';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
@@ -70,16 +70,7 @@ export default function HelpScreen({ navigation }: any) {
         <ScreenContainer variant="calm">
             <AppHeader
                 title="Help"
-                titleStyle={styles.headerTitle}
-                leftAction={
-                    <Pressable
-                        onPress={() => navigation.goBack()}
-                        style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-                        hitSlop={8}
-                    >
-                        <ArrowLeft color={INK} size={20} strokeWidth={2.5} />
-                    </Pressable>
-                }
+                leftAction={<BackButton onPress={() => navigation.goBack()} />}
             />
 
             <ScrollView
@@ -138,24 +129,6 @@ export default function HelpScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-    headerTitle: {
-        fontSize: 18,
-        letterSpacing: 2,
-        color: INK,
-    },
-    backButton: {
-        width: 36,
-        height: 36,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: PAPER,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    backButtonPressed: {
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
-    },
     content: {
         padding: 20,
         paddingTop: 10,

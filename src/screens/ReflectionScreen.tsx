@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, Pressable,
+  View, Text, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
-import { ArrowLeft, Check } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, ReflectionCard, PrimaryButton } from '../components';
+import { Check } from 'lucide-react-native';
+import { ScreenContainer, AppHeader, BackButton, ReflectionCard, PrimaryButton } from '../components';
 import { useReflectionController } from '../controllers/useReflectionController';
 import { getEmotionColor } from '../constants/colors';
 import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { PAPER, INK, INK_MUTED } from '../constants/pixel';
 
 export default function ReflectionScreen({ route, navigation }: any) {
   const {
@@ -28,20 +28,9 @@ export default function ReflectionScreen({ route, navigation }: any) {
 
   return (
     <ScreenContainer variant="focus">
-      {/* AppHeader is shared with four other screens, so the pixel treatment is
-          passed in here rather than baked into the component. */}
       <AppHeader
         title="Reflect"
-        titleStyle={styles.headerTitle}
-        leftAction={
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-            hitSlop={8}
-          >
-            <ArrowLeft color={INK} size={20} strokeWidth={2.5} />
-          </Pressable>
-        }
+        leftAction={<BackButton onPress={() => navigation.goBack()} />}
       />
 
       <KeyboardAvoidingView
@@ -135,25 +124,6 @@ export default function ReflectionScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  headerTitle: {
-    fontSize: 18,
-    letterSpacing: 2,
-    color: INK,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PAPER,
-    borderWidth: BORDER_W_INNER,
-    borderColor: OUTLINE,
-  },
-  backButtonPressed: {
-    // Sinks toward its own corner, matching how PrimaryButton answers a press.
-    transform: [{ translateX: 1 }, { translateY: 1 }],
-    backgroundColor: '#EDE9E0',
-  },
   scrollContent: {
     padding: 20,
     paddingTop: 10,
