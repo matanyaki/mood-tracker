@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView } from 'react-native';
 import { PixelAlert } from '../components/ui/PixelAlert';
-import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard, EmotionCheckInCard, BreatheRow } from '../components'; // FabMenu exported from index?
+import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard, EmotionCheckInCard, FloatingMonk } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
 import { CARD_GAP, FAB_CLEARANCE, SCREEN_GUTTER, SCREEN_TOP } from '../constants/layout';
@@ -95,9 +95,10 @@ export default function TodayScreen({ navigation }: any) {
                     onPressGreetings={openGreetingInput}
                 />
 
-                {/* A one-line way into the breathing session. Slim on purpose: it
-                    asks nothing of the day, so it should not weigh like the cards. */}
-                <BreatheRow onPress={openBreathe} />
+                {/* The way into the breathing session: the monk alone, no card. It
+                    asks nothing of the day, so it should not weigh like the cards.
+                    The column's CARD_GAP spaces it from the tiles and the quote. */}
+                <FloatingMonk onPress={openBreathe} />
 
                 {/* ZenQuotes Daily Card */}
                 <QuoteCard />
