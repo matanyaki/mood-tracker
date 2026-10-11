@@ -20,4 +20,6 @@ export type RootStackParamList = {
   EditProfile: undefined;
   Help: undefined;
   Tips: undefined;
+  // The guided 4-7-8 breathing session, opened from the Today screen.
+  Breathe: undefined;
 };
