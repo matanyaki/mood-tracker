@@ -36,6 +36,14 @@
             "assets/fonts/Silkscreen_700Bold.ttf"
           ]
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
       ]
     ],
     "extra": {
