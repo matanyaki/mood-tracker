@@ -13,6 +13,11 @@ interface AppHeaderProps {
   };
   /** Usually a <BackButton />. */
   leftAction?: React.ReactNode;
+  /**
+   * Something drawn rather than a text tag, in the right slot -- Today's monk.
+   * Ignored when `rightAction` is set; a header has one right-hand control.
+   */
+  rightElement?: React.ReactNode;
 }
 
 /**
@@ -28,6 +33,7 @@ export default function AppHeader({
   subtitle,
   rightAction,
   leftAction,
+  rightElement,
 }: AppHeaderProps) {
   return (
     <View style={styles.header}>
@@ -57,6 +63,12 @@ export default function AppHeader({
         >
           <Text style={styles.rightActionText}>{rightAction.label}</Text>
         </Pressable>
+      )}
+
+      {!rightAction && rightElement && (
+        <View style={styles.rightElementContainer}>
+          {rightElement}
+        </View>
       )}
     </View>
   );
@@ -103,5 +115,8 @@ const styles = StyleSheet.create({
   },
   rightActionText: {
     ...TYPE.label,
+  },
+  rightElementContainer: {
+    flexShrink: 0,
   },
 });

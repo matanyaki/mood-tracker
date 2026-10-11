@@ -5,6 +5,18 @@ import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, Gratitud
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
 import { CARD_GAP, FAB_CLEARANCE, SCREEN_GUTTER, SCREEN_TOP } from '../constants/layout';
+import { TYPE } from '../constants/typography';
+
+/** The monk in the header, in dp. Its figure fills about 25 x 32 of this box. */
+const HEADER_MONK = 56;
+
+/**
+ * How much taller the monk's tap target (HEADER_MONK + 4) is than the title and
+ * date beside it. Taken back as a negative margin, so the header keeps the height
+ * every other screen's has: the overhang is the PNG's transparent margin, and it
+ * lands in the header's own padding, with room left for the hop.
+ */
+const HEADER_MONK_OVERHANG = (HEADER_MONK + 4 - (TYPE.h1.lineHeight + TYPE.caption.lineHeight)) / 2;
 
 export default function TodayScreen({ navigation }: any) {
     const [isGratitudeVisible, setIsGratitudeVisible] = useState(false);
@@ -71,6 +83,10 @@ export default function TodayScreen({ navigation }: any) {
             <AppHeader
                 title="Today"
                 subtitle={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                // The way into the breathing session, where Diary keeps its Today tag.
+                rightElement={
+                    <FloatingMonk onPress={openBreathe} size={HEADER_MONK} style={styles.headerMonk} />
+                }
             />
 
             <ScrollView contentContainerStyle={styles.content}>
@@ -95,11 +111,6 @@ export default function TodayScreen({ navigation }: any) {
                     onPressGreetings={openGreetingInput}
                 />
 
-                {/* The way into the breathing session: the monk alone, no card. It
-                    asks nothing of the day, so it should not weigh like the cards.
-                    The column's CARD_GAP spaces it from the tiles and the quote. */}
-                <FloatingMonk onPress={openBreathe} />
-
                 {/* ZenQuotes Daily Card */}
                 <QuoteCard />
 
@@ -119,6 +130,9 @@ export default function TodayScreen({ navigation }: any) {
 
 
 const styles = StyleSheet.create({
+    headerMonk: {
+        marginVertical: -HEADER_MONK_OVERHANG,
+    },
     content: {
         paddingHorizontal: SCREEN_GUTTER,
         paddingTop: SCREEN_TOP,

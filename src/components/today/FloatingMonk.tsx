@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef } from 'react';
-import { View, Image, Pressable, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, Image, Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import Animated, {
     useSharedValue, useAnimatedStyle, useReducedMotion,
@@ -10,24 +10,21 @@ import { scheduleOnRN } from 'react-native-worklets';
 import * as Haptics from 'expo-haptics';
 import { MONK_IMAGE } from '../../constants/images';
 import { INHALE_SECONDS, HOLD_SECONDS, EXHALE_SECONDS } from '../../constants/breathing';
+import { MIN_TOUCH } from '../../constants/layout';
 import { INK } from '../../constants/pixel';
 
 /**
- * The monk, in dp. The source is a 1254px canvas, so no whole-number fit exists at
- * this size; 96 is the top of the range because the figure only fills the middle of
- * its canvas (about 44 x 55dp of these 96).
+ * The size every measurement below is drawn at. A different `size` scales them all
+ * by the same ratio, so the monk bobs and hops the same way at any size.
  */
-const MONK = 96;
+const DESIGN_SIZE = 96;
 
 /**
- * Where the figure's base sits inside that box: row 1031 of the 1254px canvas.
- * Tied to this PNG -- the shadow is drawn there, under the feet, not at the box's
- * bottom edge, which is transparent margin.
+ * Where the figure's base sits in its box: row 1031 of the 1254px canvas. Tied to
+ * this PNG -- the shadow is drawn there, under the feet, not at the box's bottom
+ * edge, which is transparent margin.
  */
-const FEET = Math.round((MONK * 1031) / 1254);
-
-/** The tap target: a square a little larger than the drawing, centred on it. */
-const TOUCH = 100;
+const FEET_RATIO = 1031 / 1254;
 
 /** Idle bob: how high, and how long one way (a full up-and-down is twice this). */
 const BOB = 6;
@@ -51,6 +48,13 @@ const bobEasing = Easing.inOut(Easing.sin);
 interface FloatingMonkProps {
     /** Opens the Breathe screen. Called once the hop has landed. */
     onPress: () => void;
+    /**
+     * Side of the image box, in dp. The source is a 1254px canvas, so no size is a
+     * whole-number fit; the figure fills only its middle (about 46% x 57%).
+     */
+    size?: number;
+    /** Layout only, on the tap target -- the parent's margins. */
+    style?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -64,9 +68,27 @@ interface FloatingMonkProps {
  * Reduced motion (the system setting, as FabMenu reads it): it stands still, and a
  * tap goes straight to Breathe.
  */
-export default function FloatingMonk({ onPress }: FloatingMonkProps) {
+export default function FloatingMonk({ onPress, size = DESIGN_SIZE, style }: FloatingMonkProps) {
     const isFocused = useIsFocused();
     const reduceMotion = useReducedMotion();
+
+    // Distances scale with the size; times do not, so the rhythm is the same at any size.
+    const scale = size / DESIGN_SIZE;
+    const bob = Math.max(1, Math.round(BOB * scale));
+    const hop = Math.max(2, Math.round(HOP * scale));
+
+    const geometry = useMemo(() => {
+        // Even widths, so each run centres on whole pixels.
+        const rows = SHADOW_ROWS.map(width => Math.max(2, Math.round((width * scale) / 2) * 2));
+        return {
+            rows,
+            box: { width: size, height: size },
+            // A little larger than the drawing, and never under the touch floor.
+            touch: { width: Math.max(size + 4, MIN_TOUCH), height: Math.max(size + 4, MIN_TOUCH) },
+            // Centred on the feet, so the figure's base sits in the ellipse's middle.
+            shadowTop: Math.round(size * FEET_RATIO) - (rows.length * SHADOW_CELL) / 2,
+        };
+    }, [size, scale]);
 
     /** How far up the monk is, in dp: 0 on the ground, negative in the air. */
     const lift = useSharedValue(0);
@@ -86,13 +108,13 @@ export default function FloatingMonk({ onPress }: FloatingMonkProps) {
 
         lift.value = withRepeat(
             withSequence(
-                withTiming(-BOB, { duration: BOB_HALF_MS, easing: bobEasing }),
+                withTiming(-bob, { duration: BOB_HALF_MS, easing: bobEasing }),
                 withTiming(0, { duration: BOB_HALF_MS, easing: bobEasing }),
             ),
             -1,
         );
         return () => cancelAnimation(lift);
-    }, [isFocused, reduceMotion, lift]);
+    }, [isFocused, reduceMotion, lift, bob]);
 
     const handlePress = useCallback(() => {
         if (hopping.current) return;
@@ -106,12 +128,12 @@ export default function FloatingMonk({ onPress }: FloatingMonkProps) {
 
         // Assigning the hop replaces the bob mid-swing, from wherever the monk is.
         lift.value = withSequence(
-            withTiming(-HOP, { duration: HOP_UP_MS, easing: Easing.out(Easing.quad) }),
+            withTiming(-hop, { duration: HOP_UP_MS, easing: Easing.out(Easing.quad) }),
             withSpring(0, HOP_LAND, finished => {
                 if (finished) scheduleOnRN(onPress);
             }),
         );
-    }, [reduceMotion, lift, onPress]);
+    }, [reduceMotion, lift, hop, onPress]);
 
     const monkStyle = useAnimatedStyle(() => ({
         transform: [{ translateY: lift.value }],
@@ -120,7 +142,7 @@ export default function FloatingMonk({ onPress }: FloatingMonkProps) {
     // Smaller and fainter the higher the monk goes; full again on landing. Clamped, so the
     // spring's dip below the ground does not grow it past its resting size.
     const shadowStyle = useAnimatedStyle(() => {
-        const height = interpolate(lift.value, [-HOP, 0], [1, 0], Extrapolation.CLAMP);
+        const height = interpolate(lift.value, [-hop, 0], [1, 0], Extrapolation.CLAMP);
         return {
             opacity: SHADOW_OPACITY * (1 - 0.5 * height),
             transform: [{ scale: 1 - 0.35 * height }],
@@ -133,17 +155,20 @@ export default function FloatingMonk({ onPress }: FloatingMonkProps) {
             accessibilityRole="button"
             accessibilityLabel="Take a minute to breathe"
             accessibilityHint={`Opens a guided ${INHALE_SECONDS}-${HOLD_SECONDS}-${EXHALE_SECONDS} breathing exercise`}
-            style={styles.touch}
+            style={[styles.touch, geometry.touch, style]}
         >
-            <View style={styles.box}>
-                <Animated.View style={[styles.shadow, shadowStyle]} pointerEvents="none">
-                    {SHADOW_ROWS.map((width, i) => (
+            <View style={geometry.box}>
+                <Animated.View
+                    style={[styles.shadow, { top: geometry.shadowTop }, shadowStyle]}
+                    pointerEvents="none"
+                >
+                    {geometry.rows.map((width, i) => (
                         <View key={i} style={[styles.shadowRow, { width }]} />
                     ))}
                 </Animated.View>
 
                 <Animated.View style={monkStyle}>
-                    <Image source={MONK_IMAGE} style={styles.monk} resizeMode="contain" />
+                    <Image source={MONK_IMAGE} style={geometry.box} resizeMode="contain" />
                 </Animated.View>
             </View>
         </Pressable>
@@ -152,30 +177,17 @@ export default function FloatingMonk({ onPress }: FloatingMonkProps) {
 
 const styles = StyleSheet.create({
     touch: {
-        alignSelf: 'center',
-        width: TOUCH,
-        height: TOUCH,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    box: {
-        width: MONK,
-        height: MONK,
     },
     shadow: {
         position: 'absolute',
         left: 0,
         right: 0,
-        // Centred on the feet, so the figure's base sits in the ellipse's middle.
-        top: FEET - (SHADOW_ROWS.length * SHADOW_CELL) / 2,
         alignItems: 'center',
     },
     shadowRow: {
         height: SHADOW_CELL,
         backgroundColor: INK,
-    },
-    monk: {
-        width: MONK,
-        height: MONK,
     },
 });
