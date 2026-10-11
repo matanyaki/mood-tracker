@@ -25,6 +25,7 @@ export { default as IntentionCard } from './today/IntentionCard';
 export { default as StreakCard } from './today/StreakCard';
 export { default as EmotionCheckInCard } from './today/EmotionCheckInCard';
 export { default as TodayGoalsCard } from './today/TodayGoalsCard';
+export { default as BreatheRow } from './today/BreatheRow';
 export { default as BreathCircle } from './breathe/BreathCircle';
 // Temporarily exporting TodayScreen if still needed or used elsewhere
 // export { default as TodayScreen } from '../screens/TodayScreen';

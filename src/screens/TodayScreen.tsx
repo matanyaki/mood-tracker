@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView } from 'react-native';
 import { PixelAlert } from '../components/ui/PixelAlert';
-import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard, EmotionCheckInCard } from '../components'; // FabMenu exported from index?
+import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard, EmotionCheckInCard, BreatheRow } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
 import { CARD_GAP, FAB_CLEARANCE, SCREEN_GUTTER, SCREEN_TOP } from '../constants/layout';
@@ -42,6 +42,8 @@ export default function TodayScreen({ navigation }: any) {
     // Straight to the form, not the goals list: this is the empty day's shortcut to
     // making one, and the list has nothing to show it yet.
     const openGoalForm = useCallback(() => navigation.navigate('GoalForm', {}), [navigation]);
+
+    const openBreathe = useCallback(() => navigation.navigate('Breathe'), [navigation]);
 
     const fabActions = useMemo(() => [
         {
@@ -92,6 +94,10 @@ export default function TodayScreen({ navigation }: any) {
                     onPressEmotions={openEmotionInput}
                     onPressGreetings={openGreetingInput}
                 />
+
+                {/* A one-line way into the breathing session. Slim on purpose: it
+                    asks nothing of the day, so it should not weigh like the cards. */}
+                <BreatheRow onPress={openBreathe} />
 
                 {/* ZenQuotes Daily Card */}
                 <QuoteCard />
