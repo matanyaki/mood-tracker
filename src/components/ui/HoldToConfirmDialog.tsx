@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet, Animated, Easing, ActivityIndicator } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import PixelCard from './PixelCard';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
+import { TYPE } from '../../constants/typography';
+import { MIN_TOUCH, SPACE } from '../../constants/layout';
+import { OUTLINE, PAPER, INK, BORDER_W_INNER, PRESSED, PRESS_SINK } from '../../constants/pixel';
 
 /** How long the delete button has to be held down. */
 const HOLD_MS = 5000;
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 24,
+        paddingHorizontal: SPACE.xl,
         backgroundColor: 'rgba(0,0,0,0.25)',
     },
     dialog: {
@@ -261,45 +262,35 @@ const styles = StyleSheet.create({
         maxWidth: 340,
     },
     header: {
-        paddingBottom: 12,
-        marginBottom: 14,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.md,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
         borderStyle: 'dotted',
     },
     title: {
-        fontSize: 14,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
+        ...TYPE.h3,
     },
     message: {
-        fontSize: 11,
-        fontFamily: PIXEL,
+        ...TYPE.body,
         color: INK,
-        lineHeight: 20,
-        marginBottom: 12,
+        marginBottom: SPACE.md,
     },
     hint: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 16,
-        marginBottom: 16,
+        ...TYPE.caption,
+        marginBottom: SPACE.lg,
     },
     error: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: DANGER_INK,
-        lineHeight: 16,
-        marginBottom: 12,
+        marginBottom: SPACE.md,
     },
     holdButton: {
         // Full width, stacked over CANCEL: a long hold wants a big target, and the
         // countdown label would not fit half a dialog.
         justifyContent: 'center',
         alignItems: 'center',
-        height: 44,
+        minHeight: MIN_TOUCH,
         backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: DANGER_INK,
@@ -319,37 +310,35 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     holdText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: DANGER_INK,
-        letterSpacing: 1,
     },
     holdTextOnFill: {
         color: PAPER,
     },
     button: {
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 10,
+        justifyContent: 'center',
+        // A full touch target, the same as every SecondaryButton (it was ~38px).
+        minHeight: MIN_TOUCH,
+        paddingHorizontal: SPACE.md,
+        paddingVertical: SPACE.sm,
         backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
     },
     cancelButton: {
-        marginTop: 10,
+        marginTop: SPACE.sm,
     },
     buttonPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+        backgroundColor: PRESSED,
     },
     buttonDisabled: {
         opacity: 0.4,
     },
     buttonText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
+        ...TYPE.label,
     },
 });

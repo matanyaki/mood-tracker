@@ -1,3 +1,6 @@
+import type { TextStyle } from 'react-native';
+import { INK, INK_MUTED } from './pixel';
+
 /**
  * Silkscreen is the app's only typeface -- every screen, card, label and input
  * draws with it, so the pixel-art look never drifts between screens.
@@ -48,3 +51,41 @@ export const PIXEL_BOLD = 'Silkscreen_700Bold';
  * as a View block instead, which no glyph can match.
  */
 export const PIXEL_BULLET = '* ';
+
+/**
+ * The type scale. Every text style starts from one of these and only overrides
+ * colour or alignment -- never size.
+ *
+ * 12 is the floor. Silkscreen draws caps at ~0.62em, so 12 here already reads
+ * smaller than 12 in a system face. With that floor, h2 / caption / label share a
+ * size and are told apart the way the app always has: bold vs regular, the
+ * `[ BRACKETS ]`, tracking and colour.
+ *
+ * A few places keep their own documented sizes because their geometry depends on
+ * them: the ruled note fields (14 on a 30px line), the calendar month title and
+ * the calendar weekday row (11, so "MON" fits a 34px day column).
+ */
+export const TYPE = {
+    /** Screen title. AppHeader only -- one per screen. */
+    h1: { fontFamily: PIXEL_BOLD, fontSize: 18, lineHeight: 24, letterSpacing: 2, color: INK },
+    /** Section heading outside a card: `[ ACCOUNT ]`. */
+    h2: { fontFamily: PIXEL_BOLD, fontSize: 12, lineHeight: 16, letterSpacing: 2, color: INK_MUTED },
+    /** Card and dialog titles; primary button text. */
+    h3: { fontFamily: PIXEL_BOLD, fontSize: 14, lineHeight: 20, letterSpacing: 2, color: INK },
+    /** Running text: answers, tips, messages. */
+    body: { fontFamily: PIXEL, fontSize: 12, lineHeight: 18, letterSpacing: 0.5, color: INK_MUTED },
+    /** Text the user wrote or reads closely: inputs, the quote, notes. */
+    bodyLg: { fontFamily: PIXEL, fontSize: 14, lineHeight: 22, letterSpacing: 0, color: INK },
+    /** Meta: timestamps, subtitles, counts. */
+    caption: { fontFamily: PIXEL, fontSize: 12, lineHeight: 16, letterSpacing: 1, color: INK_MUTED },
+    /** Buttons, chips, tags, menu rows, eyebrows inside a card. */
+    label: { fontFamily: PIXEL_BOLD, fontSize: 12, lineHeight: 16, letterSpacing: 1, color: INK },
+    /** Big numbers. */
+    stat: { fontFamily: PIXEL_BOLD, fontSize: 26, lineHeight: 32, letterSpacing: 0, color: INK },
+} satisfies Record<string, TextStyle>;
+
+/**
+ * Cap on system font scaling for a single line that lives in a fixed box -- a tab
+ * label, a weekday toggle, a streak tile. Text still grows, just not out of its box.
+ */
+export const TIGHT_FONT_SCALE = 1.3;

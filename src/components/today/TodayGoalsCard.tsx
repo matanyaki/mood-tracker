@@ -2,18 +2,20 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
 import { Check } from 'lucide-react-native';
-import type { Goal, TimeOfDay } from '@shared/types';
+import type { Goal } from '@shared/types';
 import { isGoalScheduledOn } from '../../../shared/types';
 import PixelCard from '../ui/PixelCard';
 import { PixelAlert } from '../ui/PixelAlert';
 import SkeletonBox from '../skeleton/SkeletonBox';
+import SecondaryButton from '../ui/SecondaryButton';
 import { useGoalsQuery, useGoalCompletionsQuery } from '../../hooks/useGoalsQuery';
 import { useGoalsController } from '../../controllers/useGoalsController';
 import { TIMES_OF_DAY, TIME_OF_DAY_LABELS } from '../../constants/goals';
-import { CARD_PADDING } from '../../constants/layout';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { GOAL_TEXT } from '../../constants/colors';
+import { CARD_PADDING, MIN_TOUCH, SPACE } from '../../constants/layout';
+import { TYPE } from '../../constants/typography';
 import {
-    OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER,
+    OUTLINE, PAPER, INK_MUTED, BORDER_W_INNER, PRESS_SINK,
 } from '../../constants/pixel';
 
 /** The goal accent, matching GoalCard, the calendar's goal pip and the Fab's Goals action. */
@@ -24,22 +26,12 @@ const GOAL_ACCENT = '#10B981';
  *
  * Completion is once for the whole day, so a goal that runs morning AND night is
  * still one checkbox -- listing it under both would offer two boxes for one fact.
- * It is filed under the earliest slot it has, and every slot it has is drawn on the
- * row as a tag, so the day still reads in order and nothing is lost.
+ * It is filed under the earliest slot it has.
  *
  * TIMES_OF_DAY is already ordered through the day, so its index IS the ordering.
  */
 const slotOf = (goal: Goal): number =>
     Math.min(...goal.timesOfDay.map(time => TIMES_OF_DAY.indexOf(time)));
-
-/**
- * All of the goal's slots, in day order -- what the row shows as tags.
- *
- * The slot the row is filed under is included. Tagging only the others made a
- * morning-to-night goal read "NOON AFTERNOON NIGHT", as if morning were not part of it.
- */
-const slotsOf = (goal: Goal): TimeOfDay[] =>
-    TIMES_OF_DAY.filter(time => goal.timesOfDay.includes(time));
 
 interface GoalRowProps {
     goal: Goal;
@@ -55,12 +47,13 @@ interface GoalRowProps {
  * go back to and the control should not invite a tap it cannot honour.
  */
 function GoalRow({ goal, done, onCheck }: GoalRowProps) {
-    const tags = slotsOf(goal);
-
     return (
         <Pressable
             onPress={() => onCheck(goal)}
             disabled={done}
+            accessibilityRole="checkbox"
+            accessibilityLabel={goal.name}
+            accessibilityState={{ checked: done, disabled: done }}
             style={({ pressed }) => [styles.row, pressed && !done && styles.rowPressed]}
         >
             <View style={[styles.checkbox, done && styles.checkboxDone]}>
@@ -71,18 +64,6 @@ function GoalRow({ goal, done, onCheck }: GoalRowProps) {
                 <Text style={[styles.goalName, done && styles.goalNameDone]} numberOfLines={2}>
                     {goal.name}
                 </Text>
-
-                {/* Only for a goal with more than one slot: a single slot is
-                    already said by the section heading above the row. */}
-                {tags.length > 0 && (
-                    <View style={styles.tagRow}>
-                        {tags.map(time => (
-                            <View key={time} style={styles.tag}>
-                                <Text style={styles.tagText}>{TIME_OF_DAY_LABELS[time]}</Text>
-                            </View>
-                        ))}
-                    </View>
-                )}
             </View>
         </Pressable>
     );
@@ -179,6 +160,10 @@ export default function TodayGoalsCard({ onAddGoal }: TodayGoalsCardProps) {
             <PixelCard padding={CARD_PADDING} accentColor={GOAL_ACCENT}>
                 <Pressable
                     onPress={onAddGoal}
+                    // The row is one text line tall; the slop reaches into the card's
+                    // padding so the target is the card's full height.
+                    hitSlop={{ top: CARD_PADDING, bottom: CARD_PADDING }}
+                    accessibilityRole="button"
                     style={({ pressed }) => [styles.addRow, pressed && styles.rowPressed]}
                 >
                     <Text style={styles.addText}>+ ADD A GOAL FOR TODAY</Text>
@@ -209,12 +194,11 @@ export default function TodayGoalsCard({ onAddGoal }: TodayGoalsCardProps) {
                 // user they have nothing due when they may have a full one.
                 <View style={styles.messageBlock}>
                     <Text style={styles.messageText}>Could not load your goals.</Text>
-                    <Pressable
+                    <SecondaryButton
+                        label="[ TRY AGAIN ]"
                         onPress={() => { goalsQuery.refetch(); completionsQuery.refetch(); }}
-                        style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
-                    >
-                        <Text style={styles.retryText}>[ TRY AGAIN ]</Text>
-                    </Pressable>
+                        style={styles.retryButton}
+                    />
                 </View>
             ) : (
                 sections.map((section, index) => (
@@ -236,37 +220,40 @@ export default function TodayGoalsCard({ onAddGoal }: TodayGoalsCardProps) {
     );
 }
 
+/** The checkbox, and how far the name drops so its first line centres on the box. */
+const CHECKBOX = 26;
+const NAME_OFFSET = (CHECKBOX - TYPE.label.lineHeight) / 2;
+
 const styles = StyleSheet.create({
     eyebrow: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: GOAL_ACCENT,
+        ...TYPE.label,
+        color: GOAL_TEXT,
         letterSpacing: 2,
-        marginBottom: 14,
+        marginBottom: SPACE.md,
     },
     divider: {
-        marginTop: 12,
-        paddingTop: 12,
+        marginTop: SPACE.md,
+        paddingTop: SPACE.md,
         borderTopWidth: BORDER_W_INNER,
         borderTopColor: OUTLINE,
         borderStyle: 'dotted',
     },
     sectionLabel: {
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: INK_MUTED,
         letterSpacing: 2,
-        marginBottom: 8,
+        marginBottom: SPACE.xs,
     },
     row: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: 12,
-        paddingVertical: 6,
+        gap: SPACE.md,
+        paddingVertical: SPACE.sm,
+        minHeight: MIN_TOUCH,
     },
     rowPressed: {
         // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     addRow: {
         // No border or fill: the card's own outline is already around it, and a box
@@ -274,19 +261,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     addText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: GOAL_ACCENT,
-        letterSpacing: 1,
+        ...TYPE.label,
+        color: GOAL_TEXT, // The accent green is 2.5:1 as text
     },
     checkbox: {
-        width: 26,
-        height: 26,
+        width: CHECKBOX,
+        height: CHECKBOX,
         alignItems: 'center',
         justifyContent: 'center',
-        // Nudged down so the box centres on the first line of the name beside it
-        // rather than on the whole two-line block.
-        marginTop: 1,
         backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
@@ -297,72 +279,36 @@ const styles = StyleSheet.create({
     },
     rowText: {
         flex: 1,
+        // Centres the name's first line on the checkbox rather than pinning both to
+        // the top edge, without centring a two-line name on the whole box.
+        paddingTop: NAME_OFFSET,
     },
     goalName: {
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
+        ...TYPE.label,
         letterSpacing: 0.5,
-        lineHeight: 20,
     },
     goalNameDone: {
         // Greyed rather than struck through: Silkscreen's strikethrough lands
         // between the pixel rows and tears the grid.
         color: INK_MUTED,
     },
-    tagRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 4,
-        marginTop: 6,
-    },
-    tag: {
-        paddingHorizontal: 5,
-        paddingVertical: 2,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    tagText: {
-        fontSize: 8,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED,
-        letterSpacing: 1,
-    },
     skeletonRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: SPACE.md,
     },
     skeletonSpacer: {
-        marginTop: 12,
+        marginTop: SPACE.md,
     },
     messageBlock: {
         alignItems: 'center',
     },
     messageText: {
-        fontSize: 11,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 20,
+        ...TYPE.body,
         textAlign: 'center',
     },
     retryButton: {
-        marginTop: 10,
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        alignItems: 'center',
-        backgroundColor: '#D1FAE5',
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    retryButtonPressed: {
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#B8EFD6',
-    },
-    retryText: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
+        marginTop: SPACE.md,
+        alignSelf: 'stretch',
     },
 });

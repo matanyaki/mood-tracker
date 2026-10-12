@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import PixelCard from '../ui/PixelCard';
+import SecondaryButton from '../ui/SecondaryButton';
 import { getEmotionImageKey } from '../../../shared/types/emotions';
 import { MOOD_IMAGES } from '../../constants/images';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
+import { darkInk } from '../../constants/colors';
+import { TYPE } from '../../constants/typography';
+import { CARD_PADDING, SPACE } from '../../constants/layout';
+import { OUTLINE, PAPER, BORDER_W_INNER } from '../../constants/pixel';
 
 export interface EmotionStat {
     id: string;
@@ -33,22 +36,6 @@ const COLLAPSED_ROWS = 3;
 /** The intensity scale's top, one pip per step. */
 const MAX_INTENSITY = 5;
 const PIPS = Array.from({ length: MAX_INTENSITY }, (_, i) => i);
-
-/**
- * The emotion colour darkened enough to set text in.
- *
- * Several fills are pale (Happy's amber sits at 1.5:1 on paper), so the name is
- * drawn in this instead. Channels x 0.45 clears WCAG AA (4.5:1) on PAPER for all
- * nine emotions -- the weakest, Happy, lands at 6.4:1.
- */
-const darkInk = (hexColor: string) => {
-    let hex = hexColor.replace('#', '');
-    if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-    }
-    const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.substring(i, i + 2), 16) || 0);
-    return `rgb(${Math.round(r * 0.45)}, ${Math.round(g * 0.45)}, ${Math.round(b * 0.45)})`;
-};
 
 const daysLabel = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
 
@@ -181,7 +168,7 @@ export default function EmotionBreakdown({ stats = [], loggedDays }: EmotionBrea
     const shownStats = expanded ? activeStats : activeStats.slice(0, COLLAPSED_ROWS);
 
     return (
-        <PixelCard padding={18} wrapperStyle={styles.cardWrapper}>
+        <PixelCard padding={CARD_PADDING}>
             {/* Card Header */}
             <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>EMOTION BREAKDOWN</Text>
@@ -198,16 +185,11 @@ export default function EmotionBreakdown({ stats = [], loggedDays }: EmotionBrea
                     ))}
 
                     {canExpand && (
-                        <Pressable
+                        <SecondaryButton
+                            label={expanded ? 'SHOW LESS' : `SHOW ALL EMOTIONS (${activeStats.length})`}
                             onPress={() => setExpanded(e => !e)}
-                            style={({ pressed }) => [styles.toggleButton, pressed && styles.toggleButtonPressed]}
-                            accessibilityRole="button"
                             accessibilityState={{ expanded }}
-                        >
-                            <Text style={styles.toggleText}>
-                                {expanded ? 'SHOW LESS' : `SHOW ALL EMOTIONS (${activeStats.length})`}
-                            </Text>
-                        </Pressable>
+                        />
                     )}
                 </View>
             ) : (
@@ -220,31 +202,22 @@ export default function EmotionBreakdown({ stats = [], loggedDays }: EmotionBrea
 }
 
 const styles = StyleSheet.create({
-    cardWrapper: {
-        marginBottom: 24,
-    },
     cardHeader: {
-        paddingBottom: 12,
-        marginBottom: 16,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.lg,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
         borderStyle: 'dotted',
     },
     cardTitle: {
-        fontSize: 13,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
+        ...TYPE.h3,
     },
     cardSubtitle: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 0.5,
-        marginTop: 6,
+        ...TYPE.caption,
+        marginTop: SPACE.xs,
     },
     rowsContainer: {
-        gap: 16,
+        gap: SPACE.lg,
     },
     rowContainer: {
         flexDirection: 'column',
@@ -253,27 +226,25 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: SPACE.sm,
     },
     leftGroup: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: SPACE.sm,
     },
     emotionImage: {
         width: 28,
         height: 28,
     },
     labelText: {
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        ...TYPE.label,
     },
     bottomRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 6,
+        marginTop: SPACE.xs,
     },
     pipRow: {
         flexDirection: 'row',
@@ -289,16 +260,10 @@ const styles = StyleSheet.create({
         borderColor: OUTLINE,
     },
     avgText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 0.5,
+        ...TYPE.label,
     },
     daysText: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 0.5,
+        ...TYPE.caption,
     },
     progressBarTrack: {
         // Tall enough to read as a drawn meter rather than a hairline: at the old
@@ -331,34 +296,12 @@ const styles = StyleSheet.create({
         // with the track's own right border.
         flex: 1,
     },
-    toggleButton: {
-        // The same paper button PixelAlert draws.
-        alignItems: 'center',
-        paddingVertical: 10,
-        backgroundColor: PAPER,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    toggleButtonPressed: {
-        // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
-    },
-    toggleText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
-    },
     emptyContainer: {
-        paddingVertical: 20,
+        paddingVertical: SPACE.lg,
         alignItems: 'center',
         justifyContent: 'center',
     },
     emptyText: {
-        fontSize: 11,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
+        ...TYPE.caption,
     },
 });

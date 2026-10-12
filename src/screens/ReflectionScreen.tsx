@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, Pressable,
+  View, Text, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
-import { ArrowLeft, Check } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, ReflectionCard, PrimaryButton } from '../components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Check } from 'lucide-react-native';
+import { ScreenContainer, AppHeader, BackButton, ReflectionCard, PrimaryButton } from '../components';
 import { useReflectionController } from '../controllers/useReflectionController';
 import { getEmotionColor } from '../constants/colors';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { TYPE } from '../constants/typography';
+import { CARD_GAP, SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP, SPACE } from '../constants/layout';
+import { INK } from '../constants/pixel';
 
 export default function ReflectionScreen({ route, navigation }: any) {
   const {
@@ -18,6 +20,7 @@ export default function ReflectionScreen({ route, navigation }: any) {
     handleTextChange,
     handleSave
   } = useReflectionController(route, navigation);
+  const insets = useSafeAreaInsets();
 
   // Which emotion is on screen. Pure presentation, so it lives here rather than in
   // the controller: notes stay keyed by emotion id there, and Save still sends all
@@ -28,20 +31,9 @@ export default function ReflectionScreen({ route, navigation }: any) {
 
   return (
     <ScreenContainer variant="focus">
-      {/* AppHeader is shared with four other screens, so the pixel treatment is
-          passed in here rather than baked into the component. */}
       <AppHeader
         title="Reflect"
-        titleStyle={styles.headerTitle}
-        leftAction={
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-            hitSlop={8}
-          >
-            <ArrowLeft color={INK} size={20} strokeWidth={2.5} />
-          </Pressable>
-        }
+        leftAction={<BackButton onPress={() => navigation.goBack()} />}
       />
 
       <KeyboardAvoidingView
@@ -51,7 +43,9 @@ export default function ReflectionScreen({ route, navigation }: any) {
         {/* `handled` so Next / Save fire on the first tap while the keyboard is
             open, instead of that tap only dismissing it. */}
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          // Runs to the bottom edge with nothing pinned under it, so the last
+          // button clears the home indicator itself.
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: SCREEN_BOTTOM + insets.bottom }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -101,8 +95,7 @@ export default function ReflectionScreen({ route, navigation }: any) {
                   label="< Back"
                   onPress={() => setStep(step - 1)}
                   disabled={loading}
-                  style={{ backgroundColor: PAPER }}
-                  textStyle={{ color: INK }}
+                  tone="paper"
                 />
               </View>
             )}
@@ -115,15 +108,14 @@ export default function ReflectionScreen({ route, navigation }: any) {
                   loading={loading}
                   disabled={loading}
                   icon={!loading ? <Check size={18} color="#fff" strokeWidth={3} /> : undefined}
-                  // Navy face; the button draws its own hard shadow, so the blurred
-                  // `shadowColor` this used to pass has nothing left to colour.
-                  style={{ backgroundColor: INK }}
+                  // Navy face; the button draws its own hard shadow.
+                  tone="navy"
                 />
               ) : (
                 <PrimaryButton
                   label="Next >"
                   onPress={() => setStep(step + 1)}
-                  style={{ backgroundColor: INK }}
+                  tone="navy"
                 />
               )}
             </View>
@@ -135,57 +127,30 @@ export default function ReflectionScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  headerTitle: {
-    fontSize: 18,
-    letterSpacing: 2,
-    color: INK,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PAPER,
-    borderWidth: BORDER_W_INNER,
-    borderColor: OUTLINE,
-  },
-  backButtonPressed: {
-    // Sinks toward its own corner, matching how PrimaryButton answers a press.
-    transform: [{ translateX: 1 }, { translateY: 1 }],
-    backgroundColor: '#EDE9E0',
-  },
   scrollContent: {
-    padding: 20,
-    paddingTop: 10,
-    paddingBottom: 30, // Bottom safe area, now that nothing is pinned below the scroll
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingTop: SCREEN_TOP,
+    gap: CARD_GAP,
   },
   introBlock: {
-    gap: 6,
-    marginBottom: 20,
+    gap: SPACE.xs,
   },
   stepEyebrow: {
-    fontSize: 10,
-    fontFamily: PIXEL_BOLD,
-    color: INK,
+    ...TYPE.label,
     letterSpacing: 2,
   },
   subtitle: {
-    fontSize: 12,
-    fontFamily: PIXEL,
-    color: INK_MUTED,
-    letterSpacing: 0.5,
-    lineHeight: 20,
+    ...TYPE.body,
   },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
+    gap: SPACE.md,
   },
   progressBar: {
     flex: 1,
     flexDirection: 'row',
-    gap: 4,
+    gap: SPACE.xs,
   },
   progressSegment: {
     flex: 1,
@@ -196,14 +161,11 @@ const styles = StyleSheet.create({
     backgroundColor: INK,
   },
   progressCount: {
-    fontSize: 10,
-    fontFamily: PIXEL_BOLD,
-    color: INK,
-    letterSpacing: 1,
+    ...TYPE.label,
   },
   navRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: SPACE.md,
   },
   navButton: {
     // PrimaryButton's wrapper stretches to its parent, so each one gets a column

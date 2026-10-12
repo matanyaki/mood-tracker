@@ -4,7 +4,7 @@ import {
     View,
     Text,
     TextInput,
-    TouchableOpacity,
+    Pressable,
     StyleSheet,
     Platform,
     Modal,
@@ -16,7 +16,9 @@ import {
 } from 'react-native';
 import { Lightbulb, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { PIXEL, PIXEL_BOLD, PIXEL_BULLET } from '../../constants/typography';
+import { PIXEL, PIXEL_BULLET, TYPE } from '../../constants/typography';
+import { PRESS_SINK, SHADOW_OFFSET, BORDER_W } from '../../constants/pixel';
+import { SPACE, hitSlopFor } from '../../constants/layout';
 
 // Gratitude prompts for the suggestion feature
 const GRATITUDE_PROMPTS = [
@@ -167,13 +169,15 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
                             <View style={styles.paper}>
 
                                 {/* Close Button (X) */}
-                                <TouchableOpacity
-                                    style={styles.closeButton}
+                                <Pressable
+                                    style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
                                     onPress={onClose}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Close gratitude note"
                                 >
-                                    <X size={20} color="#78350F" strokeWidth={2.5} />
-                                </TouchableOpacity>
+                                    <X size={20} color={INK} strokeWidth={2.5} />
+                                </Pressable>
 
                                 <View style={styles.header}>
                                     <Text style={styles.headerEyebrow}>[ GRATITUDE ]</Text>
@@ -216,22 +220,26 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
 
                                 {/* Footer Actions */}
                                 <View style={styles.footer}>
-                                    <TouchableOpacity
-                                        style={styles.suggestionButton}
+                                    <Pressable
+                                        style={({ pressed }) => [styles.suggestionButton, pressed && styles.pressed]}
                                         onPress={handleSuggestionPress}
-                                        activeOpacity={0.7}
+                                        hitSlop={FOOTER_SLOP}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Show a gratitude prompt"
                                     >
-                                        <Lightbulb size={16} color="#D97706" />
+                                        <Lightbulb size={16} color={EYEBROW} />
                                         <Text style={styles.suggestionText}>HINT</Text>
-                                    </TouchableOpacity>
+                                    </Pressable>
 
-                                    <TouchableOpacity
-                                        style={styles.saveButton}
+                                    <Pressable
+                                        style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}
                                         onPress={handleSave}
-                                        activeOpacity={0.8}
+                                        hitSlop={FOOTER_SLOP}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Save gratitude note"
                                     >
                                         <Text style={styles.saveButtonText}>SAVE</Text>
-                                    </TouchableOpacity>
+                                    </Pressable>
                                 </View>
 
                                 {/* Suggestion Popup Overlay */}
@@ -272,7 +280,14 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
 const INK = '#78350F';       // Dark amber "ink" outline
 const PAPER = '#FFF7DB';     // Warm cream paper
 const RULE = '#E7C98F';      // Ruled-line amber
-const ACCENT = '#D97706';    // Amber accent
+const BROWN = '#3F2A12';     // Ink-brown: typed text, and the SAVE label
+const EYEBROW = '#B45309';   // Burnt amber for small text on this paper (4.7:1; the accent was 3.0:1)
+// The SAVE face is the Intention card's amber, so the two SAVE buttons on Today are one
+// button. On the darker #D97706 accent no text colour in this palette reached 4.5:1.
+const SAVE_FACE = '#F59E0B';
+
+/** HINT and SAVE are both 36 tall (16 line + 2x8 padding + 2x2 border); the slop takes them to 44. */
+const FOOTER_SLOP = { top: hitSlopFor(36), bottom: hitSlopFor(36) };
 
 const styles = StyleSheet.create({
     modalOverlay: {
@@ -280,7 +295,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(30,20,0,0.55)', // Warm dimmed backdrop
-        padding: 24,
+        padding: SPACE.xl,
     },
     backdrop: {
         ...StyleSheet.absoluteFill,
@@ -294,32 +309,34 @@ const styles = StyleSheet.create({
         maxWidth: 380,
         position: 'relative',
     },
+    // Square corners and the shared 4px shadow. This note was the one rounded
+    // surface in the app (8 / 6 / 4px radii, an 8px shadow).
     pixelShadow: {
         ...StyleSheet.absoluteFill,
         backgroundColor: INK,
-        borderRadius: 8,
-        transform: [{ translateX: 8 }, { translateY: 8 }],
+        transform: [{ translateX: SHADOW_OFFSET }, { translateY: SHADOW_OFFSET }],
     },
     paper: {
         backgroundColor: PAPER,
-        borderRadius: 8,
-        borderWidth: 3,
+        borderWidth: BORDER_W,
         borderColor: INK,
-        paddingHorizontal: 22,
-        paddingTop: 18,
-        paddingBottom: 18,
+        paddingHorizontal: SPACE.xl,
+        paddingVertical: SPACE.lg,
         position: 'relative',
         overflow: 'hidden',
         zIndex: 1,
     },
+    pressed: {
+        // Sinks toward its own corner, the way every other pixel control answers a press.
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+    },
     closeButton: {
         position: 'absolute',
-        top: 12,
-        right: 12,
+        top: SPACE.md,
+        right: SPACE.md,
         zIndex: 10,
         width: 30,
         height: 30,
-        borderRadius: 4,
         borderWidth: 2,
         borderColor: INK,
         backgroundColor: PAPER,
@@ -327,30 +344,29 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     header: {
-        paddingBottom: 12,
-        marginBottom: 6,
-        marginRight: 36, // Space for close button
-        borderBottomWidth: 3,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.sm,
+        // Clears the close button: it sits 12px in from the paper's edge and is 30
+        // wide, so it reaches 18px past the 24px padding; 32 leaves a gap after it.
+        marginRight: SPACE.xxl,
+        borderBottomWidth: BORDER_W,
         borderBottomColor: INK,
     },
     headerEyebrow: {
-        fontSize: 10,
-        color: ACCENT,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
+        color: EYEBROW,
         letterSpacing: 2,
-        marginBottom: 6,
+        marginBottom: SPACE.xs,
     },
     headerTitle: {
-        fontSize: 13,
+        ...TYPE.h3,
         color: INK,
-        fontFamily: PIXEL_BOLD,
         letterSpacing: 0.5,
-        lineHeight: 22,
     },
     inputContainer: {
         position: 'relative',
         height: FIELD_HEIGHT, // Fixed: typing fills the lines, it does not add more
-        marginTop: 6,
+        marginTop: SPACE.sm,
     },
     linesContainer: {
         ...StyleSheet.absoluteFill,
@@ -371,6 +387,8 @@ const styles = StyleSheet.create({
         paddingTop: FIELD_TOP,
         paddingHorizontal: FIELD_PAD_H,
     },
+    // The ruled field keeps its own 14-on-30 metrics: the rules are drawn at
+    // LINE_HEIGHT, so the text has to sit on exactly that grid.
     placeholder: {
         fontSize: FONT_SIZE,
         lineHeight: LINE_HEIGHT,
@@ -386,57 +404,50 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE,
         lineHeight: LINE_HEIGHT,
         fontFamily: PIXEL,
-        color: '#3F2A12',       // Ink-brown text
+        color: BROWN,
         includeFontPadding: false, // Android: this padding is what pushed text off the rules
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 14,
-        paddingTop: 14,
-        borderTopWidth: 3,
+        marginTop: SPACE.md,
+        paddingTop: SPACE.md,
+        borderTopWidth: BORDER_W,
         borderTopColor: INK,
     },
     suggestionButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
+        paddingVertical: SPACE.sm,
+        paddingHorizontal: SPACE.md,
         backgroundColor: '#FFFDF3',
-        borderRadius: 6,
         borderWidth: 2,
         borderColor: INK,
     },
     suggestionText: {
-        marginLeft: 6,
-        color: ACCENT,
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        ...TYPE.label,
+        marginLeft: SPACE.xs,
+        color: EYEBROW,
     },
     saveButton: {
-        backgroundColor: ACCENT,
-        paddingVertical: 10,
-        paddingHorizontal: 26,
-        borderRadius: 6,
+        backgroundColor: SAVE_FACE,
+        paddingVertical: SPACE.sm,
+        paddingHorizontal: SPACE.xl,
         borderWidth: 2,
         borderColor: INK,
     },
     saveButtonText: {
-        color: '#FFF7DB',
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        ...TYPE.label,
+        color: BROWN,
     },
     suggestionPopup: {
         position: 'absolute',
         bottom: 78,
         right: 18,
         backgroundColor: '#FFFDF3',
-        paddingVertical: 10,
-        paddingHorizontal: 14,
-        borderRadius: 6,
+        paddingVertical: SPACE.sm,
+        paddingHorizontal: SPACE.md,
         borderWidth: 2,
         borderColor: INK,
         alignItems: 'center',
@@ -444,10 +455,8 @@ const styles = StyleSheet.create({
         maxWidth: 220,
     },
     popupText: {
+        ...TYPE.body,
         color: INK,
-        fontSize: 11,
-        lineHeight: 18,
-        fontFamily: PIXEL,
         textAlign: 'center',
     }
 });

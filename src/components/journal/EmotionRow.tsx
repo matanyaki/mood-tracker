@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
-import { getEmotionColor } from '../../constants/colors';
+import { getEmotionColor, getEmotionInk, textOnFill } from '../../constants/colors';
 import { MOOD_IMAGES } from '../../constants/images';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { CARD_PADDING, MIN_TOUCH, SPACE } from '../../constants/layout';
+import { PIXEL, PIXEL_BOLD, TYPE } from '../../constants/typography';
 import {
-    OUTLINE, PAPER, INK, INK_MUTED,
-    SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W,
+    OUTLINE, PAPER, INK_MUTED, SHADOW_OFFSET, BORDER_W, BORDER_W_INNER, ACCENT_BAR_W, PRESSED,
 } from '../../constants/pixel';
 
 export interface EmotionRowProps {
@@ -29,6 +29,8 @@ export const EmotionRow: React.FC<EmotionRowProps> = React.memo(({
     id, label, imageKey, currentScale, onScaleChange
 }) => {
     const color = getEmotionColor(id);
+    // The colour as text: the fills are too light to read (Happy is 1.5:1).
+    const ink = getEmotionInk(id);
     const isSelected = currentScale > 0;
 
     return (
@@ -49,14 +51,14 @@ export const EmotionRow: React.FC<EmotionRowProps> = React.memo(({
                         style={styles.emotionImage}
                         resizeMode="contain"
                     />
-                    <Text style={[styles.emotionLabel, isSelected && { color }]}>
+                    <Text style={[styles.emotionLabel, isSelected && { color: ink }]}>
                         {label}
                     </Text>
 
                     {/* Reads as a pixel readout rather than a badge: brackets are in
                         Silkscreen, and the geometric glyphs it lacks are not. */}
                     {isSelected && (
-                        <Text style={[styles.scaleReadout, { color }]}>
+                        <Text style={[styles.scaleReadout, { color: ink }]}>
                             [{currentScale}/5]
                         </Text>
                     )}
@@ -75,10 +77,14 @@ export const EmotionRow: React.FC<EmotionRowProps> = React.memo(({
                                     pressed && !isActive && styles.scaleButtonPressed,
                                 ]}
                                 onPress={() => onScaleChange(id, label, isActive ? 0 : point)} // Toggle off if active
+                                accessibilityRole="radio"
+                                accessibilityLabel={`${label}, intensity ${point} of 5`}
+                                accessibilityState={{ selected: isActive }}
+                                accessibilityHint={isActive ? 'Tap again to clear' : undefined}
                             >
                                 <Text style={[
                                     styles.scaleText,
-                                    isActive && styles.scaleTextActive,
+                                    isActive && [styles.scaleTextActive, { color: textOnFill(color) }],
                                 ]}>
                                     {point}
                                 </Text>
@@ -106,8 +112,8 @@ const styles = StyleSheet.create({
     emotionRow: {
         flexDirection: 'column',
         backgroundColor: 'rgba(255,255,255,0.72)',
-        padding: 16,
-        gap: 16,
+        padding: CARD_PADDING,
+        gap: SPACE.md,
         borderWidth: BORDER_W,
         borderColor: OUTLINE,
         borderLeftWidth: ACCENT_BAR_W,
@@ -118,31 +124,28 @@ const styles = StyleSheet.create({
     emotionInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: SPACE.md,
     },
     emotionImage: {
         width: 40,
         height: 40,
     },
     emotionLabel: {
-        fontSize: 16,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.h3,
         color: '#334155',
         letterSpacing: 1,
     },
     scaleReadout: {
+        ...TYPE.label,
         marginLeft: 'auto',
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
     },
     scaleContainer: {
         flexDirection: 'row',
-        gap: 8,
+        gap: SPACE.sm,
     },
     scaleButton: {
         flex: 1,
-        height: 42,
+        minHeight: MIN_TOUCH, // Was 42; a floor, so a large font grows it
         backgroundColor: '#F1F5F9',
         alignItems: 'center',
         justifyContent: 'center',
@@ -150,17 +153,17 @@ const styles = StyleSheet.create({
         borderColor: OUTLINE,
     },
     scaleButtonPressed: {
-        backgroundColor: '#DDE3EA',
+        backgroundColor: PRESSED,
     },
     scaleText: {
-        fontSize: 15,
+        ...TYPE.h3,
         fontFamily: PIXEL,
+        letterSpacing: 0,
         color: INK_MUTED,
     },
     scaleTextActive: {
         fontFamily: PIXEL_BOLD,
-        // White on amber (#F59E0B) is the weakest pair in the taxonomy; the outline
-        // and a dark shadowless fill do the separating, so keep the text ink-dark.
-        color: INK,
+        // Colour comes from textOnFill at the call site: navy on the light fills,
+        // white on the dark ones (navy on Tired or Anxious was ~3.6:1).
     },
 });

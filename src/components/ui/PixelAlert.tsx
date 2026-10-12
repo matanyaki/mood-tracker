@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
+import { Modal, View, Text, StyleSheet } from 'react-native';
 import PixelCard from './PixelCard';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, BORDER_W_INNER } from '../../constants/pixel';
+import SecondaryButton from './SecondaryButton';
+import { TYPE } from '../../constants/typography';
+import { CARD_PADDING, SPACE } from '../../constants/layout';
+import { OUTLINE, INK, BORDER_W_INNER } from '../../constants/pixel';
 
 export interface PixelAlertButton {
     text: string;
@@ -81,7 +83,7 @@ export function PixelAlertHost() {
             onRequestClose={() => press(buttons.find(button => button.style === 'cancel'))}
         >
             <View style={styles.overlay}>
-                <PixelCard padding={18} wrapperStyle={styles.dialog}>
+                <PixelCard padding={CARD_PADDING} wrapperStyle={styles.dialog}>
                     <View style={styles.header} accessibilityRole="alert">
                         <Text style={styles.title}>{content?.title.toUpperCase()}</Text>
                     </View>
@@ -90,13 +92,12 @@ export function PixelAlertHost() {
 
                     <View style={styles.buttons}>
                         {buttons.map((button, index) => (
-                            <Pressable
+                            <SecondaryButton
                                 key={index}
+                                label={button.text.toUpperCase()}
                                 onPress={() => press(button)}
-                                style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-                            >
-                                <Text style={styles.buttonText}>{button.text.toUpperCase()}</Text>
-                            </Pressable>
+                                style={styles.button}
+                            />
                         ))}
                     </View>
                 </PixelCard>
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 24,
+        paddingHorizontal: SPACE.xl,
         // The same flat dim as the PixelSelect panel's backdrop.
         backgroundColor: 'rgba(0,0,0,0.25)',
     },
@@ -120,47 +121,25 @@ const styles = StyleSheet.create({
     },
     // Title and divider match the Insights card headers.
     header: {
-        paddingBottom: 12,
-        marginBottom: 14,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.md,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
         borderStyle: 'dotted',
     },
     title: {
-        fontSize: 14,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
+        ...TYPE.h3,
     },
     message: {
-        fontSize: 11,
-        fontFamily: PIXEL,
+        ...TYPE.body,
         color: INK,
-        lineHeight: 20,
-        marginBottom: 18,
+        marginBottom: SPACE.lg,
     },
     buttons: {
         flexDirection: 'row',
-        gap: 10,
+        gap: SPACE.sm,
     },
     button: {
         flex: 1,
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        backgroundColor: PAPER,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    buttonPressed: {
-        // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
-    },
-    buttonText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
     },
 });

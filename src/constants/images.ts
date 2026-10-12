@@ -17,3 +17,9 @@ export const MOOD_IMAGES: { [key: string]: any } = {
     anxious: require('../../assets/images/emojis/Anxious.png'),
     angry: require('../../assets/images/emojis/Angry.png'),
 };
+
+/**
+ * The meditating monk: the Today screen's way into the breathing session, and the
+ * figure at the centre of it. Literal for the same reason as the emoji above.
+ */
+export const MONK_IMAGE = require('../../assets/images/meditation/Meditating Monk Icon.png');

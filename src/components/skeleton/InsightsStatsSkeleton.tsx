@@ -114,7 +114,7 @@ export default function InsightsStatsSkeleton() {
 
             
             {/* EmotionBreakdown card */}
-            <PixelCard padding={18} wrapperStyle={styles.breakdownCardWrapper}>
+            <PixelCard padding={16} wrapperStyle={styles.breakdownCardWrapper}>
                 <View style={styles.breakdownHeader}>
                     <SkeletonBox width={165} height={13} borderRadius={SQUARE} />
                     <SkeletonBox
@@ -152,7 +152,7 @@ export default function InsightsStatsSkeleton() {
 const styles = StyleSheet.create({
     // Mirrors MonthlyReassurance: filled face, outlined face box, paper panel.
     reassuranceCardWrapper: {
-        marginBottom: 20,
+        // No margin: InsightsScreen spaces its column with one CARD_GAP.
     },
     reassuranceCard: {
         backgroundColor: REASSURANCE_ACCENT,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     chartCardWrapper: {
-        marginBottom: 20,
+        // No margin: InsightsScreen spaces its column with one CARD_GAP.
     },
     chartCard: {
         alignItems: 'center',
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     },
     chartHeader: {
         width: '100%',
-        padding: 14,
+        padding: 16, // CARD_PADDING, as on the real chart card
         paddingBottom: 12,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
@@ -231,8 +231,7 @@ const styles = StyleSheet.create({
     summaryContainer: {
         flexDirection: 'row',
         gap: 16,
-        marginTop: 6,
-        marginBottom: 20,
+        // No margins: InsightsScreen spaces its column with one CARD_GAP.
     },
     summaryCardWrapper: {
         flex: 1,
@@ -247,7 +246,7 @@ const styles = StyleSheet.create({
         marginTop: 3,
     },
     breakdownCardWrapper: {
-        marginBottom: 24,
+        // No margin: InsightsScreen spaces its column with one CARD_GAP.
     },
     breakdownHeader: {
         paddingBottom: 12,

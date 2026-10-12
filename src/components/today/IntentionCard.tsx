@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Keyboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Target, Check, Pencil } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { CARD_PADDING } from '../../constants/layout';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import PixelCard from '../ui/PixelCard';
+import { CARD_PADDING, SPACE, hitSlopFor } from '../../constants/layout';
+import { PIXEL, TYPE } from '../../constants/typography';
+import { PRESS_SINK } from '../../constants/pixel';
 
 // One note per day: the card resets each morning, which is the point of "today's focus".
 const STORAGE_PREFIX = '@mindbright_intentions_';
@@ -91,81 +93,88 @@ export default function IntentionCard() {
     const canSave = text.trim().length > 0;
 
     return (
-        <View style={styles.wrapper}>
-            {/* Hard offset block = pixel-art drop shadow (no blur) */}
-            <View style={styles.pixelShadow} pointerEvents="none" />
-
-            <View style={styles.card}>
-                <View style={styles.header}>
-                    <View style={styles.headerRow}>
-                        <Target size={16} color={ACCENT} strokeWidth={2.5} />
-                        <Text style={styles.headerEyebrow}>[ MORNING INTENTIONS ]</Text>
-                    </View>
-                    <Text style={styles.headerTitle}>{"What's your main focus today?"}</Text>
+        // PixelCard in the card's own amber ink: same outline, accent bar and 4px
+        // shadow as every other card (this one drew its own, at 6px).
+        <PixelCard padding={CARD_PADDING} outlineColor={INK} accentColor={ACCENT} style={styles.card}>
+            <View style={styles.header}>
+                <View style={styles.headerRow}>
+                    <Target size={16} color={ACCENT} strokeWidth={2.5} />
+                    <Text style={styles.headerEyebrow}>[ MORNING INTENTIONS ]</Text>
                 </View>
-
-                {/* Writing area: fixed height, so the card keeps its size however much is
-                    typed. Brighter dotted rule than the dividers, so it still reads as a field. */}
-                <View style={styles.inputContainer}>
-                    <View style={styles.linesContainer} pointerEvents="none">
-                        {Array.from({ length: NUM_LINES }).map((_, i) => (
-                            <View key={i} style={styles.lineRow}>
-                                <View style={[styles.line, !isEditing && styles.lineLocked]} />
-                            </View>
-                        ))}
-                    </View>
-
-                    {/* Our own placeholder rather than the built-in one: Android does not
-                        apply `lineHeight` to a TextInput's placeholder, so the native hint
-                        floated above the rule. This Text shares the input's metrics
-                        exactly, so it sits on the line on both platforms. */}
-                    {text.length === 0 && (
-                        <View style={styles.placeholderWrap} pointerEvents="none">
-                            <Text style={styles.placeholder}>{PLACEHOLDER}</Text>
-                        </View>
-                    )}
-
-                    <TextInput
-                        ref={inputRef}
-                        style={[styles.input, !isEditing && styles.inputLocked]}
-                        multiline
-                        maxLength={MAX_CHARS}
-                        value={text}
-                        onChangeText={setText}
-                        editable={isEditing}
-                        textAlignVertical="top"
-                        underlineColorAndroid="transparent"
-                    />
-                </View>
-
-                <View style={styles.footer}>
-                    <Text style={styles.footerHint}>
-                        {savedFlash ? '[ SAVED ]' : isDirty ? 'UNSAVED CHANGES' : 'SAVED ON DEVICE'}
-                    </Text>
-
-                    {isEditing ? (
-                        <TouchableOpacity
-                            style={[styles.button, styles.saveButton, !canSave && styles.buttonDisabled]}
-                            onPress={handleSave}
-                            disabled={!canSave}
-                            activeOpacity={0.8}
-                        >
-                            <Check size={14} color={PAPER} strokeWidth={3} />
-                            <Text style={styles.saveButtonText}>SAVE</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity
-                            style={[styles.button, styles.editButton]}
-                            onPress={handleEdit}
-                            activeOpacity={0.8}
-                        >
-                            <Pencil size={14} color={INK} strokeWidth={2.5} />
-                            <Text style={styles.editButtonText}>EDIT</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
+                <Text style={styles.headerTitle}>{"What's your main focus today?"}</Text>
             </View>
-        </View>
+
+            {/* Writing area: fixed height, so the card keeps its size however much is
+                typed. Brighter dotted rule than the dividers, so it still reads as a field. */}
+            <View style={styles.inputContainer}>
+                <View style={styles.linesContainer} pointerEvents="none">
+                    {Array.from({ length: NUM_LINES }).map((_, i) => (
+                        <View key={i} style={styles.lineRow}>
+                            <View style={[styles.line, !isEditing && styles.lineLocked]} />
+                        </View>
+                    ))}
+                </View>
+
+                {/* Our own placeholder rather than the built-in one: Android does not
+                    apply `lineHeight` to a TextInput's placeholder, so the native hint
+                    floated above the rule. This Text shares the input's metrics
+                    exactly, so it sits on the line on both platforms. */}
+                {text.length === 0 && (
+                    <View style={styles.placeholderWrap} pointerEvents="none">
+                        <Text style={styles.placeholder}>{PLACEHOLDER}</Text>
+                    </View>
+                )}
+
+                <TextInput
+                    ref={inputRef}
+                    style={[styles.input, !isEditing && styles.inputLocked]}
+                    multiline
+                    maxLength={MAX_CHARS}
+                    value={text}
+                    onChangeText={setText}
+                    editable={isEditing}
+                    textAlignVertical="top"
+                    underlineColorAndroid="transparent"
+                />
+            </View>
+
+            <View style={styles.footer}>
+                <Text style={styles.footerHint}>
+                    {savedFlash ? '[ SAVED ]' : isDirty ? 'UNSAVED CHANGES' : 'SAVED ON DEVICE'}
+                </Text>
+
+                {isEditing ? (
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.button,
+                            styles.saveButton,
+                            !canSave && styles.buttonDisabled,
+                            pressed && styles.buttonPressed,
+                        ]}
+                        onPress={handleSave}
+                        disabled={!canSave}
+                        hitSlop={BUTTON_SLOP}
+                        accessibilityRole="button"
+                        accessibilityLabel="Save intention"
+                        accessibilityState={{ disabled: !canSave }}
+                    >
+                        <Check size={14} color={BROWN} strokeWidth={3} />
+                        <Text style={styles.saveButtonText}>SAVE</Text>
+                    </Pressable>
+                ) : (
+                    <Pressable
+                        style={({ pressed }) => [styles.button, styles.editButton, pressed && styles.buttonPressed]}
+                        onPress={handleEdit}
+                        hitSlop={BUTTON_SLOP}
+                        accessibilityRole="button"
+                        accessibilityLabel="Edit intention"
+                    >
+                        <Pencil size={14} color={INK} strokeWidth={2.5} />
+                        <Text style={styles.editButtonText}>EDIT</Text>
+                    </Pressable>
+                )}
+            </View>
+        </PixelCard>
     );
 }
 
@@ -175,57 +184,41 @@ const PAPER = '#FFFDF3';   // Warm off-white paper
 const RULE = '#E7C98F';    // Muted amber, used only for the locked (read-only) rule
 const ACCENT = '#F59E0B';  // Amber accent, used for dividers -- darker, like QuoteCard's footer rule
 const BRIGHT = '#FCD34D';  // Bright gold, used only for the active writing rule so it doesn't read as a divider
+const BROWN = '#3F2A12';   // Ink-brown: typed text, and the label on the amber SAVE (6.3:1)
+const EYEBROW = '#B45309'; // Burnt amber for small text on this paper (4.9:1)
+
+/** SAVE / EDIT are 36 tall (16 text + 2x8 padding + 2x2 border); the slop takes them to 44. */
+const BUTTON_SLOP = { top: hitSlopFor(36), bottom: hitSlopFor(36) };
 
 const styles = StyleSheet.create({
-    wrapper: {
-        // Room for the offset pixel shadow on both edges it falls on. The gap to the
-        // next card is CARD_GAP, applied once by the screen -- not here.
-        position: 'relative',
-        marginBottom: 6,
-        marginRight: 6,
-    },
-    pixelShadow: {
-        ...StyleSheet.absoluteFill,
-        backgroundColor: INK,
-        transform: [{ translateX: 6 }, { translateY: 6 }],
-    },
     card: {
         backgroundColor: PAPER,
-        padding: CARD_PADDING,
-        borderWidth: 3,
-        borderColor: INK,
-        borderLeftWidth: 10,
-        borderLeftColor: ACCENT,
     },
     header: {
-        paddingBottom: 10,
-        marginBottom: 6,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.sm,
         borderBottomWidth: 3,
         borderBottomColor: INK,
     },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        marginBottom: 6,
+        gap: SPACE.sm,
+        marginBottom: SPACE.xs,
     },
     headerEyebrow: {
-        fontSize: 10,
-        color: '#B45309',
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        ...TYPE.label,
+        color: EYEBROW,
     },
     headerTitle: {
-        fontSize: 13,
+        ...TYPE.h3,
         color: INK,
-        fontFamily: PIXEL_BOLD,
         letterSpacing: 0.5,
-        lineHeight: 22,
     },
     inputContainer: {
         position: 'relative',
         height: FIELD_HEIGHT, // Fixed: typing fills the lines, it does not add more
-        marginTop: 8,
+        marginTop: SPACE.sm,
     },
     linesContainer: {
         ...StyleSheet.absoluteFill,
@@ -250,6 +243,8 @@ const styles = StyleSheet.create({
         paddingTop: FIELD_TOP,
         paddingHorizontal: FIELD_PAD_H,
     },
+    // The ruled field keeps its own 14-on-30 metrics: the rules are drawn at
+    // LINE_HEIGHT, so the text has to sit on exactly that grid.
     placeholder: {
         fontSize: FONT_SIZE,
         lineHeight: LINE_HEIGHT,
@@ -265,7 +260,7 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE,
         lineHeight: LINE_HEIGHT,
         fontFamily: PIXEL,
-        color: '#3F2A12',       // Ink-brown text
+        color: BROWN,
         includeFontPadding: false, // Android: this padding is what pushed text off the rule
     },
     inputLocked: {
@@ -275,48 +270,47 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 14,
-        paddingTop: 12,
+        marginTop: SPACE.md,
+        paddingTop: SPACE.md,
         borderTopWidth: 2,
         // Darker accent rule, matching how QuoteCard darkens its own footer divider
         borderTopColor: ACCENT,
         borderStyle: 'dotted',
     },
     footerHint: {
+        ...TYPE.caption,
         flex: 1,
-        fontSize: 10,
-        color: '#B79A5E',
-        fontFamily: PIXEL,
-        letterSpacing: 1,
+        color: EYEBROW, // Was #B79A5E, 2.6:1 on this paper
     },
     button: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        paddingVertical: 8,
-        paddingHorizontal: 16,
+        gap: SPACE.xs,
+        paddingVertical: SPACE.sm,
+        paddingHorizontal: SPACE.lg,
         borderWidth: 2,
         borderColor: INK,
     },
     buttonDisabled: {
         opacity: 0.4,
     },
+    buttonPressed: {
+        // Sinks toward its own corner, the way every other pixel control answers a press.
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+    },
     saveButton: {
         backgroundColor: ACCENT,
     },
     saveButtonText: {
-        color: PAPER,
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        ...TYPE.label,
+        // Brown, not the paper colour: paper on this amber was 2.1:1.
+        color: BROWN,
     },
     editButton: {
         backgroundColor: PAPER,
     },
     editButtonText: {
+        ...TYPE.label,
         color: INK,
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
     },
 });

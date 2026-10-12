@@ -1,10 +1,22 @@
 import { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView } from 'react-native';
 import { PixelAlert } from '../components/ui/PixelAlert';
-import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard, EmotionCheckInCard } from '../components'; // FabMenu exported from index?
+import { AppHeader, ScreenContainer, FabMenu, QuoteCard, IntentionCard, GratitudeNote, StreakCard, TodayGoalsCard, EmotionCheckInCard, FloatingMonk } from '../components'; // FabMenu exported from index?
 import { Smile, Target, MessageCircle } from 'lucide-react-native';
 import { useGreetingController } from '../controllers/GreetingController';
-import { CARD_GAP, FAB_CLEARANCE } from '../constants/layout';
+import { CARD_GAP, FAB_CLEARANCE, SCREEN_GUTTER, SCREEN_TOP } from '../constants/layout';
+import { TYPE } from '../constants/typography';
+
+/** The monk in the header, in dp. Its figure fills about 25 x 32 of this box. */
+const HEADER_MONK = 56;
+
+/**
+ * How much taller the monk's tap target (HEADER_MONK + 4) is than the title and
+ * date beside it. Taken back as a negative margin, so the header keeps the height
+ * every other screen's has: the overhang is the PNG's transparent margin, and it
+ * lands in the header's own padding, with room left for the hop.
+ */
+const HEADER_MONK_OVERHANG = (HEADER_MONK + 4 - (TYPE.h1.lineHeight + TYPE.caption.lineHeight)) / 2;
 
 export default function TodayScreen({ navigation }: any) {
     const [isGratitudeVisible, setIsGratitudeVisible] = useState(false);
@@ -43,6 +55,8 @@ export default function TodayScreen({ navigation }: any) {
     // making one, and the list has nothing to show it yet.
     const openGoalForm = useCallback(() => navigation.navigate('GoalForm', {}), [navigation]);
 
+    const openBreathe = useCallback(() => navigation.navigate('Breathe'), [navigation]);
+
     const fabActions = useMemo(() => [
         {
             label: 'Emotions',
@@ -69,7 +83,10 @@ export default function TodayScreen({ navigation }: any) {
             <AppHeader
                 title="Today"
                 subtitle={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                emoji="☀️"
+                // The way into the breathing session, where Diary keeps its Today tag.
+                rightElement={
+                    <FloatingMonk onPress={openBreathe} size={HEADER_MONK} style={styles.headerMonk} />
+                }
             />
 
             <ScrollView contentContainerStyle={styles.content}>
@@ -113,8 +130,12 @@ export default function TodayScreen({ navigation }: any) {
 
 
 const styles = StyleSheet.create({
+    headerMonk: {
+        marginVertical: -HEADER_MONK_OVERHANG,
+    },
     content: {
-        padding: 20,
+        paddingHorizontal: SCREEN_GUTTER,
+        paddingTop: SCREEN_TOP,
         // The ONE thing that spaces this column. Every card reserves room for its own
         // shadow and nothing else carries a margin, so the gaps are all this value.
         gap: CARD_GAP,

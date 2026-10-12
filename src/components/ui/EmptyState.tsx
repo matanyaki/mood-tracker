@@ -1,83 +1,85 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import PixelCard from './PixelCard';
+import SecondaryButton from './SecondaryButton';
+import { TYPE } from '../../constants/typography';
+import { SPACE } from '../../constants/layout';
 
 interface EmptyStateProps {
-  emoji?: string;
-  title: string;
-  subtitle?: string;
-  buttonLabel?: string;
-  onButtonPress?: () => void;
-  style?: ViewStyle;
-  titleStyle?: TextStyle;
-  subtitleStyle?: TextStyle;
+    /** A lucide icon, drawn in INK_MUTED by the caller. */
+    icon?: React.ReactNode;
+    title: string;
+    subtitle?: string;
+    buttonLabel?: string;
+    onButtonPress?: () => void;
+    /**
+     * No card of its own -- for a state that renders inside a card that is already
+     * on screen (the goals ring card, the chart card).
+     */
+    bare?: boolean;
+    style?: StyleProp<ViewStyle>;
 }
 
 /**
- * Reusable empty state component.
- * Used when there's no data to display (e.g., no entries, no stats).
+ * The one way the app says "nothing here" or "this didn't load": an icon, a title,
+ * a line of explanation, and a quiet button.
+ *
+ * The button is always a SecondaryButton. An empty state is not a screen's primary
+ * action -- on Goals, the pinned NEW GOAL button already is, and two primaries
+ * stacked on one screen is one too many.
  */
 export default function EmptyState({
-  emoji,
-  title,
-  subtitle,
-  buttonLabel,
-  onButtonPress,
-  style,
-  titleStyle,
-  subtitleStyle,
+    icon,
+    title,
+    subtitle,
+    buttonLabel,
+    onButtonPress,
+    bare = false,
+    style,
 }: EmptyStateProps) {
-  return (
-    <View style={[styles.container, style]}>
-      {emoji && <Text style={styles.emoji}>{emoji}</Text>}
-      <Text style={[styles.title, titleStyle]}>{title}</Text>
-      {subtitle && (
-        <Text style={[styles.subtitle, subtitleStyle]}>{subtitle}</Text>
-      )}
-      {buttonLabel && onButtonPress && (
-        <TouchableOpacity style={styles.button} onPress={onButtonPress}>
-          <Text style={styles.buttonText}>{buttonLabel}</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+    const content = (
+        <>
+            {icon && <View style={styles.icon}>{icon}</View>}
+            <Text style={styles.title}>{title}</Text>
+            {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+            {!!buttonLabel && onButtonPress && (
+                <SecondaryButton label={buttonLabel} onPress={onButtonPress} style={styles.button} />
+            )}
+        </>
+    );
+
+    if (bare) {
+        return <View style={[styles.bare, style]}>{content}</View>;
+    }
+
+    return (
+        <PixelCard padding={SPACE.xl} style={styles.card} wrapperStyle={style}>
+            {content}
+        </PixelCard>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-    marginTop: 40,
-  },
-  emoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontFamily: PIXEL_BOLD,
-    color: '#1A1A2E',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    fontFamily: PIXEL,
-    color: '#4A4A4A',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  button: {
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontFamily: PIXEL_BOLD,
-    color: '#fff',
-  },
+    card: {
+        alignItems: 'center',
+    },
+    bare: {
+        alignItems: 'center',
+        paddingVertical: SPACE.lg,
+    },
+    icon: {
+        marginBottom: SPACE.md,
+    },
+    title: {
+        ...TYPE.h3,
+        textAlign: 'center',
+    },
+    subtitle: {
+        ...TYPE.body,
+        textAlign: 'center',
+        marginTop: SPACE.sm,
+    },
+    button: {
+        marginTop: SPACE.lg,
+    },
 });

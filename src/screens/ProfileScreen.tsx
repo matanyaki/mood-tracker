@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import Constants from 'expo-constants';
 import { format } from 'date-fns';
-import { ScreenContainer, AppHeader, PixelCard, PrimaryButton, PixelAvatar } from '../components';
+import { ScreenContainer, AppHeader, PixelCard, PrimaryButton, PixelAvatar, MenuRow } from '../components';
 import { useQueryClient } from '@tanstack/react-query';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import HoldToConfirmDialog from '../components/ui/HoldToConfirmDialog';
@@ -18,11 +18,17 @@ import { ProfileScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useProfileQuery } from '../hooks/useProfileQuery';
 import { getAuthErrorMessage, validateAuthForm } from '../utils/authErrors';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { DANGER_TEXT } from '../constants/colors';
+import { TYPE } from '../constants/typography';
+import {
+    CARD_GAP, CARD_PADDING, HEADING_GAP, MIN_TOUCH, SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP,
+    SECTION_GAP, SPACE,
+} from '../constants/layout';
+import { OUTLINE, INK, INK_MUTED, BORDER_W_INNER, PRESS_SINK } from '../constants/pixel';
 
 const INDIGO = '#4F46E5';
-const DANGER = '#EF4444';
+// Danger rows draw icon and label in one colour, so it is the text-safe red (4.8:1).
+const DANGER = DANGER_TEXT;
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -32,30 +38,6 @@ const formatMemberSince = (createdAt: unknown): string | null => {
     const date = new Date(createdAt);
     return Number.isNaN(date.getTime()) ? null : format(date, 'MMM yyyy').toUpperCase();
 };
-
-/**
- * One row of a settings card.
- *
- * The icon tints are flat opaque swatches rather than the `color + '15'` the row
- * used to build: an eight-digit hex is a translucent fill, and it takes its
- * lightness from whatever happens to be behind it.
- */
-const MenuRow = ({ icon: Icon, label, color = INK, tint, onPress, isLast = false }: any) => (
-    <Pressable
-        style={({ pressed }) => [
-            styles.menuRow,
-            !isLast && styles.menuRowDivided,
-            pressed && styles.menuRowPressed,
-        ]}
-        onPress={onPress}
-    >
-        <View style={[styles.iconBox, { backgroundColor: tint }]}>
-            <Icon size={18} color={color} strokeWidth={2.5} />
-        </View>
-        <Text style={[styles.menuLabel, { color }]}>{label}</Text>
-        <ChevronRight size={16} color={INK_MUTED} strokeWidth={3} />
-    </Pressable>
-);
 
 /** Tips, Help and About. Shown to guests too: none of them need an account. */
 const WellnessSection = ({ onTips, onHelp, onComingSoon }: {
@@ -166,16 +148,14 @@ export default function ProfileScreen({ navigation }: any) {
     if (!user) {
         return (
             <ScreenContainer variant="calm">
-                {/* AppHeader is shared with four other screens, so the pixel
-                    treatment is passed in here rather than baked into it. */}
-                <AppHeader title="Profile" titleStyle={styles.headerTitle} />
+                <AppHeader title="Profile" />
 
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={{ flex: 1 }}
                 >
                     <ScrollView
-                        contentContainerStyle={styles.scrollContent}
+                        contentContainerStyle={styles.content}
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >
@@ -201,7 +181,7 @@ export default function ProfileScreen({ navigation }: any) {
                         </PixelCard>
 
                         {/* Auth Form */}
-                        <PixelCard padding={20} wrapperStyle={styles.authCardWrapper}>
+                        <PixelCard padding={CARD_PADDING} wrapperStyle={styles.authCardWrapper}>
                             <View style={styles.authHeader}>
                                 <Text style={styles.authTitle}>
                                     {isSignUp ? 'CREATE ACCOUNT' : 'LOG IN'}
@@ -248,7 +228,7 @@ export default function ProfileScreen({ navigation }: any) {
                                     loading={authLoading}
                                     disabled={authLoading}
                                     // Navy face; the button draws its own hard shadow.
-                                    style={{ backgroundColor: INK }}
+                                    tone="navy"
                                 />
                             </View>
 
@@ -294,7 +274,7 @@ export default function ProfileScreen({ navigation }: any) {
 
     return (
         <ScreenContainer variant="calm">
-            <AppHeader title="Profile" titleStyle={styles.headerTitle} />
+            <AppHeader title="Profile" />
 
             <ScrollView
                 contentContainerStyle={styles.content}
@@ -305,8 +285,11 @@ export default function ProfileScreen({ navigation }: any) {
                 <Pressable
                     onPress={() => navigation.navigate('EditProfile')}
                     style={({ pressed }) => pressed && styles.userCardPressed}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${profile?.displayName || 'Your profile'}, ${user?.email ?? ''}`}
+                    accessibilityHint="Opens Edit Profile"
                 >
-                    <PixelCard padding={18} accentColor={INDIGO} wrapperStyle={styles.userCardWrapper}>
+                    <PixelCard padding={CARD_PADDING} accentColor={INDIGO} wrapperStyle={styles.userCardWrapper}>
                         <View style={styles.userRow}>
                             {/* Square, outlined: the 30px radius this carried was the only
                                 circle left anywhere on the screen. */}
@@ -405,25 +388,15 @@ export default function ProfileScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-    headerTitle: {
-        fontSize: 18,
-        letterSpacing: 2,
-        color: INK,
-    },
     content: {
-        padding: 20,
-        paddingTop: 10,
-        paddingBottom: 40,
-    },
-    scrollContent: {
-        padding: 20,
-        paddingTop: 10,
-        paddingBottom: 40,
+        paddingHorizontal: SCREEN_GUTTER,
+        paddingTop: SCREEN_TOP,
+        paddingBottom: SCREEN_BOTTOM,
     },
 
     // --- Guest banner ---
     guestCardWrapper: {
-        marginBottom: 20,
+        marginBottom: CARD_GAP,
     },
     guestCard: {
         // Warm paper, so the banner reads as a notice without needing a second
@@ -433,7 +406,7 @@ const styles = StyleSheet.create({
     guestRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: 12,
+        gap: SPACE.md,
     },
     guestIconBox: {
         width: 32,
@@ -448,27 +421,24 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     guestTitle: {
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: '#9A3412',
         letterSpacing: 2,
-        marginBottom: 6,
+        marginBottom: SPACE.xs,
     },
     guestBody: {
-        fontSize: 10,
-        fontFamily: PIXEL,
+        ...TYPE.body,
         color: '#9A3412',
-        lineHeight: 18,
     },
 
     // --- Auth form ---
     authCardWrapper: {
-        marginBottom: 20,
+        marginBottom: SECTION_GAP,
     },
     authHeader: {
         alignItems: 'center',
-        paddingBottom: 14,
-        marginBottom: 18,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.lg,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
         borderStyle: 'dotted',
@@ -476,65 +446,58 @@ const styles = StyleSheet.create({
     authTitle: {
         // Silkscreen runs ~0.76em per character bold: "CREATE ACCOUNT" is 14 of
         // them, which is 255px at the 24 this used to be, against ~260 of room.
-        fontSize: 14,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
-        marginBottom: 8,
+        ...TYPE.h3,
+        marginBottom: SPACE.xs,
     },
     authSubtitle: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 0.5,
+        ...TYPE.body,
         textAlign: 'center',
     },
     fieldLabel: {
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED,
-        letterSpacing: 2,
-        marginBottom: 6,
+        ...TYPE.h2,
+        marginBottom: HEADING_GAP,
     },
     input: {
         backgroundColor: '#FFFFFF',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-        marginBottom: 16,
+        paddingHorizontal: SPACE.md,
+        paddingVertical: SPACE.md,
+        marginBottom: SPACE.lg,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
-        fontSize: 13,
-        fontFamily: PIXEL,
+        // The bodyLg face and size, without its lineHeight: a single-line input
+        // with an explicit lineHeight sits off-centre on Android.
+        fontSize: TYPE.bodyLg.fontSize,
+        fontFamily: TYPE.bodyLg.fontFamily,
         color: INK,
         includeFontPadding: false, // Android: keep the text off the top border
     },
     authButtonRow: {
-        marginTop: 4,
+        marginTop: SPACE.xs,
     },
     switchButton: {
-        marginTop: 16,
+        marginTop: SPACE.sm,
         alignItems: 'center',
-        paddingVertical: 4,
+        justifyContent: 'center',
+        // A full touch target for a line of text (it was ~22px tall).
+        minHeight: MIN_TOUCH,
     },
     switchButtonPressed: {
         // Sinks toward its own corner, the way every pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     switchText: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: INDIGO,
-        letterSpacing: 1,
     },
 
     // --- User card ---
     userCardWrapper: {
-        marginBottom: 24,
+        marginBottom: SECTION_GAP,
     },
     userRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 14,
+        gap: SPACE.md,
     },
     userText: {
         // Without this the column sizes to its text, and a long address widens the
@@ -542,75 +505,33 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     userName: {
-        fontSize: 14,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
+        ...TYPE.h3,
     },
     userEmail: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        marginTop: 6,
-        marginBottom: 8,
+        ...TYPE.caption,
+        marginTop: SPACE.xs,
+        marginBottom: SPACE.xs,
     },
     userCardPressed: {
         // Sinks toward its own corner, the way every pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
     },
     metaText: {
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: INK_MUTED,
-        letterSpacing: 1,
     },
 
     // --- Menu cards ---
     sectionTitle: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED,
-        letterSpacing: 2,
-        marginBottom: 10,
+        ...TYPE.h2,
+        marginBottom: HEADING_GAP,
     },
     menuCardWrapper: {
-        marginBottom: 24,
-    },
-    menuRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        padding: 14,
-    },
-    menuRowDivided: {
-        borderBottomWidth: BORDER_W_INNER,
-        borderBottomColor: OUTLINE,
-        borderStyle: 'dotted',
-    },
-    menuRowPressed: {
-        backgroundColor: '#EDE9E0',
-    },
-    iconBox: {
-        width: 32,
-        height: 32,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    menuLabel: {
-        flex: 1,
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        marginBottom: SECTION_GAP,
     },
 
     versionText: {
+        ...TYPE.caption,
         textAlign: 'center',
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
-        marginTop: 4,
     },
 });

@@ -2,11 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { getEmotionImageKey, resolveEmotionId } from '../../../shared/types/emotions';
 import PixelCard from '../ui/PixelCard';
+import SecondaryButton from '../ui/SecondaryButton';
 import { MONTH_NAMES } from './FilterRow';
 import { EMOTIONS_CONFIG } from '../../constants/emotions';
 import { getEmotionColor } from '../../constants/colors';
 import { MOOD_IMAGES } from '../../constants/images';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { PIXEL_BOLD, TYPE } from '../../constants/typography';
+import { CARD_PADDING, SPACE } from '../../constants/layout';
 import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
 
 /**
@@ -436,7 +438,7 @@ export default function MonthlyReassurance({
         : `${monthShort} ${selectedDay}: ${selectedFeelings || 'NOTHING LOGGED'}`;
 
     return (
-        <PixelCard padding={16} wrapperStyle={styles.cardWrapper} style={styles.card}>
+        <PixelCard padding={CARD_PADDING} style={styles.card}>
             <View style={styles.header}>
                 <View style={styles.faceBox}>
                     <Image
@@ -483,18 +485,25 @@ export default function MonthlyReassurance({
                                 style={[styles.cellSlot, { width: cellWidth }]}
                                 accessibilityRole="button"
                                 accessibilityLabel={`${MONTH_NAMES[monthIndex]} ${day}${entry ? ', logged' : ''}`}
+                                accessibilityState={{ selected: isSelected, disabled: isFuture }}
                             >
-                                <View
-                                    style={[
-                                        styles.cell,
-                                        entry
-                                            ? { backgroundColor: lead ? getEmotionColor(lead.id) : INK_MUTED }
-                                            : null,
-                                        isFuture && styles.cellFuture,
-                                        isToday && styles.cellToday,
-                                        isSelected && styles.cellSelected,
-                                    ]}
-                                />
+                                {/* Cells stay small -- a month has to fit one card's
+                                    width -- so a press darkens the outline instead of
+                                    sinking a box this size. */}
+                                {({ pressed }) => (
+                                    <View
+                                        style={[
+                                            styles.cell,
+                                            entry
+                                                ? { backgroundColor: lead ? getEmotionColor(lead.id) : INK_MUTED }
+                                                : null,
+                                            isFuture && styles.cellFuture,
+                                            isToday && styles.cellToday,
+                                            isSelected && styles.cellSelected,
+                                            pressed && !isSelected && styles.cellPressed,
+                                        ]}
+                                    />
+                                )}
                             </Pressable>
                         );
                     })}
@@ -510,13 +519,7 @@ export default function MonthlyReassurance({
             {/* Asked for only where it can be acted on: today, in this month,
                 before anything is logged. A past month gets no nudge. */}
             {timing === 'current' && !loggedToday && onCheckIn && (
-                <Pressable
-                    onPress={onCheckIn}
-                    style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
-                    accessibilityRole="button"
-                >
-                    <Text style={styles.ctaText}>+ CHECK IN TODAY</Text>
-                </Pressable>
+                <SecondaryButton label="+ CHECK IN TODAY" onPress={onCheckIn} style={styles.cta} />
             )}
             {loggedToday && (
                 <Text style={styles.stamp}>[ TODAY IS LOGGED — NICE ]</Text>
@@ -526,9 +529,6 @@ export default function MonthlyReassurance({
 }
 
 const styles = StyleSheet.create({
-    cardWrapper: {
-        marginBottom: 20,
-    },
     card: {
         // The one filled card on Insights. Everything below it is PAPER, so the
         // fill alone is what makes this the first thing the eye lands on.
@@ -537,8 +537,8 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        marginBottom: 14,
+        gap: SPACE.md,
+        marginBottom: SPACE.md,
     },
     faceBox: {
         // Square and outlined, the same treatment as the SummaryCards icon boxes,
@@ -563,51 +563,38 @@ const styles = StyleSheet.create({
     // in INK rather than INK_MUTED: muted slate on the fill is not a contrast the
     // subtitle survives.
     cardTitle: {
-        fontSize: 13,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
+        ...TYPE.h3,
     },
     cardSubtitle: {
-        fontSize: 10,
-        fontFamily: PIXEL,
+        ...TYPE.caption,
         color: INK,
-        letterSpacing: 0.5,
-        marginTop: 6,
+        marginTop: SPACE.xs,
     },
     panel: {
-        padding: 12,
+        padding: SPACE.md,
         backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
     },
     message: {
-        fontSize: 12,
+        ...TYPE.body,
         fontFamily: PIXEL_BOLD,
         color: INK,
-        letterSpacing: 0.5,
-        lineHeight: 20,
     },
     stripPanel: {
-        marginTop: 10,
+        marginTop: SPACE.sm,
     },
     stripHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: SPACE.sm,
     },
     stripLabel: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
+        ...TYPE.caption,
     },
     stripCount: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
+        ...TYPE.label,
     },
     strip: {
         flexDirection: 'row',
@@ -637,41 +624,22 @@ const styles = StyleSheet.create({
         borderColor: INK,
         borderWidth: 3,
     },
+    cellPressed: {
+        borderColor: INK,
+    },
     peek: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 0.5,
-        marginTop: 8,
+        ...TYPE.caption,
+        marginTop: SPACE.sm,
     },
     peekActive: {
         fontFamily: PIXEL_BOLD,
         color: INK,
     },
     cta: {
-        marginTop: 10,
-        alignItems: 'center',
-        paddingVertical: 10,
-        backgroundColor: PAPER,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    ctaPressed: {
-        // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
-    },
-    ctaText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
+        marginTop: SPACE.sm,
     },
     stamp: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
-        marginTop: 10,
+        ...TYPE.label,
+        marginTop: SPACE.sm,
     },
 });

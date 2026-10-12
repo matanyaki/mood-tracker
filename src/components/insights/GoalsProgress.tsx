@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import type { GoalProgress } from '@shared/types';
 import PixelCard from '../ui/PixelCard';
+import EmptyState from '../ui/EmptyState';
 import SkeletonBox from '../skeleton/SkeletonBox';
 import PixelProgressRing from './PixelProgressRing';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
+import { TYPE } from '../../constants/typography';
+import { CARD_PADDING, SPACE } from '../../constants/layout';
+import { OUTLINE, INK_MUTED, BORDER_W_INNER } from '../../constants/pixel';
 
 /**
  * Three rings to a row once the screen is wide enough to fit them, two below that.
@@ -48,29 +50,23 @@ export default function GoalsProgress({ goals, isPending, onRetry, onAddGoal }: 
         // A failed fetch is not drawn as "no goals" -- that would tell the user their
         // goals are gone when they are only unreachable.
         body = (
-            <View style={styles.message}>
-                <Text style={styles.messageTitle}>COULD NOT LOAD</Text>
-                <Text style={styles.messageText}>Your goals could not be loaded.</Text>
-                <Pressable
-                    onPress={onRetry}
-                    style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-                >
-                    <Text style={styles.buttonText}>[ TRY AGAIN ]</Text>
-                </Pressable>
-            </View>
+            <EmptyState
+                bare
+                title="COULD NOT LOAD"
+                subtitle="Your goals could not be loaded."
+                buttonLabel="[ TRY AGAIN ]"
+                onButtonPress={onRetry}
+            />
         );
     } else if (goals.length === 0) {
         body = (
-            <View style={styles.message}>
-                <Text style={styles.messageTitle}>NO GOALS YET</Text>
-                <Text style={styles.messageText}>Add a goal to see how far along it is.</Text>
-                <Pressable
-                    onPress={onAddGoal}
-                    style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-                >
-                    <Text style={styles.buttonText}>[ ADD A GOAL ]</Text>
-                </Pressable>
-            </View>
+            <EmptyState
+                bare
+                title="NO GOALS YET"
+                subtitle="Add a goal to see how far along it is."
+                buttonLabel="[ ADD A GOAL ]"
+                onButtonPress={onAddGoal}
+            />
         );
     } else {
         body = (
@@ -99,7 +95,7 @@ export default function GoalsProgress({ goals, isPending, onRetry, onAddGoal }: 
     }
 
     return (
-        <PixelCard padding={18} wrapperStyle={styles.cardWrapper}>
+        <PixelCard padding={CARD_PADDING}>
             <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>GOALS PROGRESS</Text>
                 <Text style={styles.cardSubtitle}>Days done out of every scheduled day</Text>
@@ -112,101 +108,45 @@ export default function GoalsProgress({ goals, isPending, onRetry, onAddGoal }: 
 
 const styles = StyleSheet.create({
     // Card, header, title and subtitle match EmotionBreakdown.
-    cardWrapper: {
-        marginBottom: 24,
-    },
     cardHeader: {
-        paddingBottom: 12,
-        marginBottom: 16,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.lg,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
         borderStyle: 'dotted',
     },
     cardTitle: {
-        fontSize: 13,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
+        ...TYPE.h3,
     },
     cardSubtitle: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 0.5,
-        marginTop: 6,
+        ...TYPE.caption,
+        marginTop: SPACE.xs,
     },
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        rowGap: 20,
+        rowGap: SPACE.lg,
     },
     cell: {
         alignItems: 'center',
-        paddingHorizontal: 4,
+        paddingHorizontal: SPACE.xs,
     },
     goalName: {
         // Stretched to the cell so a long name truncates inside its column instead
         // of sizing itself wider than the column it is centred in.
         alignSelf: 'stretch',
         textAlign: 'center',
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
+        ...TYPE.label,
         letterSpacing: 0.5,
-        marginBottom: 8,
+        marginBottom: SPACE.sm,
     },
     count: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        letterSpacing: 1,
-        marginTop: 8,
+        ...TYPE.caption,
+        marginTop: SPACE.sm,
     },
     pausedTag: {
-        fontSize: 8,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: INK_MUTED,
-        letterSpacing: 1,
-        marginTop: 4,
-    },
-    // Empty and failed states match the Insights error card and the waves chart's
-    // empty state: bold title, muted centred line, paper [ BUTTON ].
-    message: {
-        alignItems: 'center',
-        paddingVertical: 20,
-    },
-    messageTitle: {
-        fontSize: 14,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 2,
-        marginBottom: 10,
-    },
-    messageText: {
-        fontSize: 11,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 20,
-        textAlign: 'center',
-        paddingHorizontal: 10,
-        marginBottom: 20,
-    },
-    button: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        backgroundColor: PAPER,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    buttonPressed: {
-        // Sinks toward its own corner, the way every other pixel control answers a press.
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
-    },
-    buttonText: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
+        marginTop: SPACE.xs,
     },
 });

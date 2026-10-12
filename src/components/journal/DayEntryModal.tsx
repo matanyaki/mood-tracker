@@ -1,13 +1,17 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { X, SmilePlus, Edit, Sparkles, Target, Check, Minus, Clock } from 'lucide-react-native';
 import EntryEmotionsList from './EntryEmotionsList';
 import { TIME_OF_DAY_LABELS } from '../../constants/goals';
 import type { GoalDayStatus } from '@shared/types';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER } from '../../constants/pixel';
+import { TYPE } from '../../constants/typography';
+import {
+    OUTLINE, PAPER, INK, INK_MUTED, BORDER_W, BORDER_W_INNER, PRESSED, PRESS_SINK,
+} from '../../constants/pixel';
+import { GOAL_TEXT, DANGER_TEXT, WARNING_TEXT } from '../../constants/colors';
+import { CARD_PADDING, SCREEN_GUTTER, SECTION_GAP, SPACE, hitSlopFor } from '../../constants/layout';
 
 interface DayEntryModalProps {
     visible: boolean;
@@ -37,11 +41,13 @@ const GOAL_COLOR = '#10B981';
  * the plain target for a day that hasn't arrived -- the shape says it before the
  * colour does, which is what keeps done and missed apart for a red/green eye.
  */
-const GOAL_STATUS: Record<GoalDayStatus, { label: string; color: string; tint: string; Icon: typeof Target }> = {
-    done: { label: 'DONE', color: GOAL_COLOR, tint: '#D1FAE5', Icon: Check },
-    missed: { label: 'MISSED', color: '#DC2626', tint: '#FEE2E2', Icon: Minus },
-    pending: { label: 'PENDING', color: '#D97706', tint: '#FEF3C7', Icon: Clock },
-    upcoming: { label: 'UPCOMING', color: INK_MUTED, tint: '#EDE9E0', Icon: Target },
+const GOAL_STATUS: Record<GoalDayStatus, { label: string; color: string; text: string; tint: string; Icon: typeof Target }> = {
+    // `color` draws the icon and the badge outline; `text` is the badge label, the
+    // same hue darkened until it reads at 4.5:1 on paper.
+    done: { label: 'DONE', color: GOAL_COLOR, text: GOAL_TEXT, tint: '#D1FAE5', Icon: Check },
+    missed: { label: 'MISSED', color: '#DC2626', text: DANGER_TEXT, tint: '#FEE2E2', Icon: Minus },
+    pending: { label: 'PENDING', color: '#D97706', text: WARNING_TEXT, tint: '#FEF3C7', Icon: Clock },
+    upcoming: { label: 'UPCOMING', color: INK_MUTED, text: INK_MUTED, tint: '#EDE9E0', Icon: Target },
 };
 
 export default function DayEntryModal({ visible, onClose, selectedDate, entries, greetings = [], goals = [], onEditEntry }: DayEntryModalProps) {
@@ -70,9 +76,15 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                 {format(new Date(selectedDate), 'EEEE, MMMM d')}
                             </Text>
                         </View>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <Pressable
+                            onPress={onClose}
+                            hitSlop={hitSlopFor(32)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Close"
+                            style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
+                        >
                             <X size={20} color={INK} strokeWidth={3} />
-                        </TouchableOpacity>
+                        </Pressable>
                     </View>
 
                     <ScrollView style={styles.modalScroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -88,7 +100,7 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                     <View style={styles.sectionContainer}>
                                         <View style={styles.sectionHeader}>
                                             <Sparkles size={18} color="#0099ffff" />
-                                            <Text style={[styles.sectionTitle, { color: '#0099ffff' }]}>GREETINGS</Text>
+                                            <Text style={styles.sectionTitle}>GREETINGS</Text>
                                         </View>
                                         {greetings.map((greeting, index) => {
                                             const isLast = index === greetings.length - 1;
@@ -138,7 +150,7 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                     <View style={styles.sectionContainer}>
                                         <View style={styles.sectionHeader}>
                                             <SmilePlus size={18} color="#A78BFA" />
-                                            <Text style={[styles.sectionTitle, { color: '#A78BFA' }]}>EMOTIONS</Text>
+                                            <Text style={styles.sectionTitle}>EMOTIONS</Text>
                                         </View>
                                         {entries.map((entry, index) => {
                                             const emotions = entry.emotions;
@@ -178,11 +190,11 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                     <View style={styles.sectionContainer}>
                                         <View style={styles.sectionHeader}>
                                             <Target size={18} color={GOAL_COLOR} />
-                                            <Text style={[styles.sectionTitle, { color: GOAL_COLOR }]}>GOALS</Text>
+                                            <Text style={styles.sectionTitle}>GOALS</Text>
                                         </View>
                                         {goals.map(({ goal, status }, index) => {
                                             const isLast = index === goals.length - 1;
-                                            const { label, color, tint, Icon } = GOAL_STATUS[status];
+                                            const { label, color, text, tint, Icon } = GOAL_STATUS[status];
                                             return (
                                                 <View key={goal.id} style={styles.timelineItem}>
                                                     <View style={styles.timelineColumn}>
@@ -196,7 +208,7 @@ export default function DayEntryModal({ visible, onClose, selectedDate, entries,
                                                             badge on one row would each squeeze the other, and the status
                                                             is what the eye is scanning the column for. */}
                                                         <View style={[styles.goalBadge, { borderColor: color }]}>
-                                                            <Text style={[styles.goalBadgeText, { color }]}>{label}</Text>
+                                                            <Text style={[styles.goalBadgeText, { color: text }]}>{label}</Text>
                                                         </View>
                                                         <Text style={styles.goalName}>{goal.name}</Text>
                                                         <Text style={styles.goalTimes}>
@@ -239,8 +251,9 @@ const styles = StyleSheet.create({
     modalHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12, // Keeps a long date off the close button
-        padding: 20,
+        gap: SPACE.md, // Keeps a long date off the close button
+        paddingHorizontal: SCREEN_GUTTER,
+        paddingVertical: SPACE.lg,
         backgroundColor: PAPER,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
@@ -252,20 +265,18 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     modalTitle: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: INK_MUTED,
         textTransform: 'uppercase',
         letterSpacing: 2,
-        marginBottom: 4,
+        marginBottom: SPACE.xs,
     },
     modalDate: {
         // Silkscreen runs ~0.76em per character: at the old 24px the longest date was
-        // 453px wide, against ~260px of room on a narrow phone.
-        fontSize: 16,
-        lineHeight: 22,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
+        // 453px wide, against ~260px of room on a narrow phone. h3 with light
+        // tracking keeps most dates to one line; the longest wrap to two.
+        ...TYPE.h3,
+        letterSpacing: 0.5,
     },
     closeButton: {
         flexShrink: 0, // Never squeezed or displaced by the date beside it
@@ -277,68 +288,73 @@ const styles = StyleSheet.create({
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
     },
+    closeButtonPressed: {
+        transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+        backgroundColor: PRESSED,
+    },
     modalScroll: {
         // flex: 1, // Removed to allow auto-height behavior within maxHeight container
     },
     scrollContent: {
-        padding: 20,
+        paddingHorizontal: SCREEN_GUTTER,
+        paddingTop: SCREEN_GUTTER,
     },
     emptyContainer: {
-        padding: 40,
+        paddingVertical: SPACE.xxl,
         alignItems: 'center',
     },
     emptyText: {
-        color: INK_MUTED,
-        fontSize: 13,
-        fontFamily: PIXEL,
-        letterSpacing: 1,
+        ...TYPE.body,
+        color: INK, // INK_MUTED on this sheet was 4.1:1
     },
 
     // Entry Card
     entryCard: {
         backgroundColor: PAPER,
-        padding: 18,
-        marginBottom: 24,
+        padding: CARD_PADDING,
+        marginBottom: SECTION_GAP,
         // Outline only, no offset shadow: the card runs the full width of a sheet
         // that already has its own hard edge, so a second one would just crowd it.
         borderWidth: BORDER_W,
         borderColor: OUTLINE,
     },
     innerEntryContainer: {
-        marginBottom: 24,
+        marginBottom: SECTION_GAP,
     },
     divider: {
         borderTopWidth: BORDER_W_INNER,
         borderTopColor: OUTLINE,
         borderStyle: 'dotted',
-        marginVertical: 16,
+        marginVertical: SPACE.lg,
     },
     sectionContainer: {
-        marginBottom: 8,
+        marginBottom: SPACE.sm,
     },
     sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        paddingBottom: 12,
-        marginBottom: 8,
+        gap: SPACE.sm,
+        paddingBottom: SPACE.md,
+        marginBottom: SPACE.sm,
         borderBottomWidth: BORDER_W_INNER,
         borderBottomColor: OUTLINE,
         borderStyle: 'dotted',
     },
     sectionTitle: {
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         letterSpacing: 2,
+        // Ink, not the section hue: the sky blue, violet and green read at 2.5-3:1
+        // as text. The icon beside the title still carries the colour.
+        color: INK,
     },
     timelineItem: {
         flexDirection: 'row',
-        marginBottom: 4,
+        marginBottom: SPACE.xs,
     },
     timelineColumn: {
-        width: 50,
+        width: 48,
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: SPACE.md,
     },
     iconWrapper: {
         width: 40,
@@ -353,82 +369,69 @@ const styles = StyleSheet.create({
         flex: 1,
         width: 2,
         backgroundColor: OUTLINE,
-        marginVertical: 4,
+        marginVertical: SPACE.xs,
     },
     contentColumn: {
         flex: 1,
-        paddingTop: 8,
-        paddingBottom: 24,
+        paddingTop: SPACE.sm,
+        paddingBottom: SPACE.xl,
     },
     greetingList: {
-        marginTop: 6,
+        marginTop: SPACE.xs,
     },
     greetingRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: 4,
+        marginBottom: SPACE.xs,
     },
     greetingBullet: {
         width: 8,
         height: 8,
         backgroundColor: '#0099ffff',
-        marginRight: 10,
+        marginRight: SPACE.sm,
         // Centres the block on the cap height of the first 22px line of text
         // (baseline sits 3.75px up, caps reach 10.5px above that).
         marginTop: 9,
     },
     greetingText: {
+        ...TYPE.bodyLg,
         flex: 1,
-        fontSize: 13,
-        fontFamily: PIXEL,
         color: '#334155',
-        lineHeight: 22,
         // No italic: Silkscreen ships one upright face per weight, so RN fakes the
         // slant by shearing the bitmap, which tears the pixel grid.
     },
     goalBadge: {
         // alignSelf so the box hugs its label instead of stretching the column.
         alignSelf: 'flex-start',
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        marginBottom: 6,
+        paddingHorizontal: SPACE.xs,
+        marginBottom: SPACE.xs,
         borderWidth: BORDER_W_INNER,
         // borderColor and text colour are set inline, per status.
     },
     goalBadgeText: {
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
-        letterSpacing: 1,
+        ...TYPE.label,
     },
     goalName: {
-        fontSize: 13,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        lineHeight: 20,
+        ...TYPE.label,
+        letterSpacing: 0.5,
     },
     goalTimes: {
-        marginTop: 6,
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
+        marginTop: SPACE.xs,
         color: INK_MUTED,
-        letterSpacing: 1,
     },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: SPACE.sm,
     },
     entryTime: {
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: INK_MUTED,
-        letterSpacing: 1,
     },
 
-
-
     bottomSpacer: {
-        height: 40,
+        height: SPACE.xxl,
     }
 });

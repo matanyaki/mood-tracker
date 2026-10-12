@@ -3,12 +3,13 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { usePrefetchInsights } from '../controllers/useInsightsController';
-import { PIXEL_BOLD } from '../constants/typography';
+import { TYPE, TIGHT_FONT_SCALE } from '../constants/typography';
+import { INK_MUTED } from '../constants/pixel';
 
 // Screens
 import CheckInScreen from '../screens/CheckInScreen';
@@ -21,13 +22,15 @@ import GoalFormScreen from '../screens/GoalFormScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import HelpScreen from '../screens/HelpScreen';
 import TipsScreen from '../screens/TipsScreen';
+import BreatheScreen from '../screens/BreatheScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // Pixel-art palette: flat black outline + hard offset shadow (no blur, no radius) -- matches FabMenu
 const BORDER = '#000000';
-const MUTED = '#9CA3AF';
+// Inactive tabs. Was #9CA3AF, 2.5:1 on the white bar; the label needs 4.5:1.
+const MUTED = INK_MUTED;
 
 // MaterialIcons tab icon rendered as a pixel box: plain icon when idle, boxed + offset
 // shadow when focused (reads as a "pressed" pixel button, same language as FabMenu).
@@ -40,6 +43,16 @@ function PixelTabIcon({ name, focused }: { name: React.ComponentProps<typeof Mat
         <MaterialIcons name={name} size={20} color={color} />
       </View>
     </View>
+  );
+}
+
+// The tab label. A function rather than a style so it can cap font scaling: four
+// labels share a phone's width, and at a large system font "INSIGHTS" would wrap.
+function PixelTabLabel({ color, children }: { color: string; children: string }) {
+  return (
+    <Text style={[tabStyles.tabBarLabel, { color }]} numberOfLines={1} maxFontSizeMultiplier={TIGHT_FONT_SCALE}>
+      {children}
+    </Text>
   );
 }
 
@@ -58,8 +71,8 @@ function AppTabs() {
         headerShown: false,
         tabBarActiveTintColor: BORDER,
         tabBarInactiveTintColor: MUTED,
-        tabBarStyle: [tabStyles.tabBar, { height: 54 + insets.bottom, paddingBottom: insets.bottom + 6 }],
-        tabBarLabelStyle: tabStyles.tabBarLabel,
+        tabBarStyle: [tabStyles.tabBar, { height: 58 + insets.bottom, paddingBottom: insets.bottom + 6 }],
+        tabBarLabel: ({ color, children }) => <PixelTabLabel color={color}>{children}</PixelTabLabel>,
         tabBarItemStyle: tabStyles.tabBarItem,
       }}
     >
@@ -69,7 +82,7 @@ function AppTabs() {
         component={require('../screens/TodayScreen').default}
         options={{
           tabBarIcon: ({ focused }) => <PixelTabIcon name="wb-sunny" focused={focused} />,
-          tabBarLabel: 'Today'
+          title: 'Today',
         }}
       />
       {/* <Tab.Screen
@@ -85,7 +98,7 @@ function AppTabs() {
         component={DiaryScreen}
         options={{
           tabBarIcon: ({ focused }) => <PixelTabIcon name="calendar-today" focused={focused} />,
-          tabBarLabel: 'Diary'
+          title: 'Diary',
         }}
       />
       <Tab.Screen
@@ -93,7 +106,7 @@ function AppTabs() {
         component={InsightsScreen}
         options={{
           tabBarIcon: ({ focused }) => <PixelTabIcon name="insights" focused={focused} />,
-          tabBarLabel: 'Insights'
+          title: 'Insights',
         }}
       />
       <Tab.Screen
@@ -101,7 +114,7 @@ function AppTabs() {
         component={ProfileScreen}
         options={{
           tabBarIcon: ({ focused }) => <PixelTabIcon name="account-circle" focused={focused} />,
-          tabBarLabel: 'Profile'
+          title: 'Profile',
         }}
       />
     </Tab.Navigator>
@@ -121,8 +134,7 @@ const tabStyles = StyleSheet.create({
     paddingTop: 2,
   },
   tabBarLabel: {
-    fontFamily: PIXEL_BOLD,
-    fontSize: 9,
+    ...TYPE.label,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginTop: 2,
@@ -183,6 +195,7 @@ export default function RootNavigator() {
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="Help" component={HelpScreen} />
         <Stack.Screen name="Tips" component={TipsScreen} />
+        <Stack.Screen name="Breathe" component={BreatheScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

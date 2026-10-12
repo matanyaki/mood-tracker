@@ -1,39 +1,72 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { ArrowLeft, Sparkles } from 'lucide-react-native';
-import { ScreenContainer, AppHeader, PixelCard, ToggleBox } from '../components';
-import { TIP_CATEGORIES, TipCategory, getTipOfTheDay } from '../constants/tips';
-import { PIXEL, PIXEL_BOLD } from '../constants/typography';
-import { OUTLINE, PAPER, INK, INK_MUTED, BORDER_W_INNER } from '../constants/pixel';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Sparkles } from 'lucide-react-native';
+import { ScreenContainer, AppHeader, BackButton, PixelCard, ToggleBox } from '../components';
+import { TIP_CATEGORIES, TIP_LEVELS, TipCategory, TipLevel, byLevel, getTipOfTheDay } from '../constants/tips';
+import {
+    CARD_PADDING, HEADING_GAP, ROW_PADDING_H, ROW_PADDING_V, SCREEN_BOTTOM, SCREEN_GUTTER,
+    SCREEN_TOP, SECTION_GAP, SPACE, hitSlopFor,
+} from '../constants/layout';
+import { TYPE } from '../constants/typography';
+import { OUTLINE, PAPER, BORDER_W_INNER } from '../constants/pixel';
 
 const ALL = 'all';
 
-/** One category: its header, then every tip in it on one card. */
-const CategoryCard = ({ category }: { category: TipCategory }) => {
-    const Icon = category.icon;
+/** Filter chip height, and the vertical slop that takes it to MIN_TOUCH. */
+const CHIP_H = 34;
+const CHIP_SLOP = { top: hitSlopFor(CHIP_H), bottom: hitSlopFor(CHIP_H) };
+
+/** Difficulty tag: one to three filled pips and the level's name. */
+const LevelBadge = ({ level }: { level: TipLevel }) => {
+    const { label, rank, color, tint } = TIP_LEVELS[level];
 
     return (
-        <View>
-            <View style={styles.categoryHeader}>
-                <View style={[styles.iconBox, { backgroundColor: category.tint }]}>
-                    <Icon size={16} color={category.color} strokeWidth={2.5} />
+        <View
+            style={[styles.levelBadge, { backgroundColor: tint, borderColor: color }]}
+            accessible
+            accessibilityLabel={`Difficulty: ${label.toLowerCase()}`}
+        >
+            <View style={styles.pips}>
+                {[1, 2, 3].map(pip => (
+                    <View
+                        key={pip}
+                        style={[styles.pip, { borderColor: color }, pip <= rank && { backgroundColor: color }]}
+                    />
+                ))}
+            </View>
+            <Text style={[styles.levelText, { color }]}>{label}</Text>
+        </View>
+    );
+};
+
+/** One category: a tinted header band, then its tips easy → hard on the same card. */
+const CategoryCard = ({ category }: { category: TipCategory }) => {
+    const Icon = category.icon;
+    const tips = [...category.tips].sort(byLevel);
+
+    return (
+        <PixelCard padding={0} accentColor={category.color} wrapperStyle={styles.categoryCardWrapper}>
+            <View style={[styles.categoryHeader, { backgroundColor: category.tint }]}>
+                <View style={styles.iconBox}>
+                    <Icon size={18} color={category.color} strokeWidth={2.5} />
                 </View>
-                <Text style={[styles.categoryTitle, { color: category.color }]}>{category.title}</Text>
-                <Text style={styles.categoryCount}>{category.tips.length}</Text>
+                <Text style={[styles.categoryTitle, { color: category.color }]} accessibilityRole="header">
+                    {category.title}
+                </Text>
             </View>
 
-            <PixelCard padding={0} accentColor={category.color} wrapperStyle={styles.categoryCardWrapper}>
-                {category.tips.map((tip, index) => (
-                    <View
-                        key={tip.title}
-                        style={[styles.tip, index < category.tips.length - 1 && styles.tipDivided]}
-                    >
-                        <Text style={styles.tipTitle}>{tip.title.toUpperCase()}</Text>
-                        <Text style={styles.tipBody}>{tip.body}</Text>
-                    </View>
-                ))}
-            </PixelCard>
-        </View>
+            {tips.map((tip, index) => (
+                <View
+                    key={tip.title}
+                    style={[styles.tip, index < tips.length - 1 && styles.tipDivided]}
+                >
+                    <LevelBadge level={tip.level} />
+                    <Text style={styles.tipTitle}>{tip.title.toUpperCase()}</Text>
+                    <Text style={styles.tipBody}>{tip.body}</Text>
+                </View>
+            ))}
+        </PixelCard>
     );
 };
 
@@ -44,6 +77,7 @@ const CategoryCard = ({ category }: { category: TipCategory }) => {
  */
 export default function TipsScreen({ navigation }: any) {
     const [filter, setFilter] = useState<string>(ALL);
+    const insets = useSafeAreaInsets();
 
     // Fixed for the life of the screen: re-picking on every render would swap the
     // tip out from under someone who stayed past midnight.
@@ -58,24 +92,15 @@ export default function TipsScreen({ navigation }: any) {
         <ScreenContainer variant="calm">
             <AppHeader
                 title="Tips"
-                titleStyle={styles.headerTitle}
-                leftAction={
-                    <Pressable
-                        onPress={() => navigation.goBack()}
-                        style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-                        hitSlop={8}
-                    >
-                        <ArrowLeft color={INK} size={20} strokeWidth={2.5} />
-                    </Pressable>
-                }
+                leftAction={<BackButton onPress={() => navigation.goBack()} />}
             />
 
             <ScrollView
-                contentContainerStyle={styles.content}
+                contentContainerStyle={[styles.content, { paddingBottom: SCREEN_BOTTOM + insets.bottom }]}
                 showsVerticalScrollIndicator={false}
             >
                 <PixelCard
-                    padding={16}
+                    padding={CARD_PADDING}
                     accentColor={tipOfTheDay.category.color}
                     style={styles.featuredCard}
                     wrapperStyle={styles.featuredCardWrapper}
@@ -90,6 +115,7 @@ export default function TipsScreen({ navigation }: any) {
                             <FeaturedIcon size={20} color={tipOfTheDay.category.color} strokeWidth={2.5} />
                         </View>
                         <View style={styles.featuredText}>
+                            <LevelBadge level={tipOfTheDay.tip.level} />
                             <Text style={styles.featuredTitle}>{tipOfTheDay.tip.title.toUpperCase()}</Text>
                             <Text style={styles.featuredBody}>{tipOfTheDay.tip.body}</Text>
                         </View>
@@ -109,6 +135,8 @@ export default function TipsScreen({ navigation }: any) {
                         selected={filter === ALL}
                         onPress={() => setFilter(ALL)}
                         style={styles.filterChip}
+                        hitSlop={CHIP_SLOP}
+                        accessibilityRole="radio"
                     />
                     {TIP_CATEGORIES.map(category => (
                         <ToggleBox
@@ -117,6 +145,8 @@ export default function TipsScreen({ navigation }: any) {
                             selected={filter === category.id}
                             onPress={() => setFilter(category.id)}
                             style={styles.filterChip}
+                            hitSlop={CHIP_SLOP}
+                            accessibilityRole="radio"
                         />
                     ))}
                 </ScrollView>
@@ -124,43 +154,20 @@ export default function TipsScreen({ navigation }: any) {
                 {visible.map(category => (
                     <CategoryCard key={category.id} category={category} />
                 ))}
-
-                <Text style={styles.footnote}>
-                    These are everyday habits, not medical advice. Pick one that feels doable and start small.
-                </Text>
             </ScrollView>
         </ScreenContainer>
     );
 }
 
 const styles = StyleSheet.create({
-    headerTitle: {
-        fontSize: 18,
-        letterSpacing: 2,
-        color: INK,
-    },
-    backButton: {
-        width: 36,
-        height: 36,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: PAPER,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    backButtonPressed: {
-        transform: [{ translateX: 1 }, { translateY: 1 }],
-        backgroundColor: '#EDE9E0',
-    },
     content: {
-        padding: 20,
-        paddingTop: 10,
-        paddingBottom: 40,
+        paddingHorizontal: SCREEN_GUTTER,
+        paddingTop: SCREEN_TOP,
     },
 
     // --- Tip of the day ---
     featuredCardWrapper: {
-        marginBottom: 20,
+        marginBottom: SECTION_GAP,
     },
     featuredCard: {
         backgroundColor: '#FFFBEB',
@@ -168,19 +175,18 @@ const styles = StyleSheet.create({
     featuredEyebrowRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        marginBottom: 12,
+        gap: SPACE.xs,
+        marginBottom: SPACE.md,
     },
     featuredEyebrow: {
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
+        ...TYPE.label,
         color: '#A16207',
         letterSpacing: 2,
     },
     featuredRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: 12,
+        gap: SPACE.md,
     },
     featuredIconBox: {
         width: 40,
@@ -194,68 +200,64 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     featuredTitle: {
-        fontSize: 12,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
-        lineHeight: 18,
-        marginBottom: 6,
+        ...TYPE.label,
+        marginBottom: SPACE.xs,
     },
     featuredBody: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 18,
+        ...TYPE.body,
     },
 
     // --- Filter ---
     filterScroll: {
-        marginHorizontal: -20,
-        marginBottom: 20,
+        marginHorizontal: -SCREEN_GUTTER,
+        marginTop: -CHIP_SLOP.top,
+        marginBottom: SECTION_GAP - CHIP_SLOP.bottom,
     },
     filterRow: {
-        paddingHorizontal: 20,
-        gap: 8,
+        paddingHorizontal: SCREEN_GUTTER,
+        // Room inside the scroll view for the chips' hitSlop -- Android drops touches
+        // outside a parent's bounds -- given back by filterScroll's negative margin.
+        paddingVertical: CHIP_SLOP.top,
+        gap: SPACE.sm,
     },
     filterChip: {
         // The goal form's boxes are 44 tall to be easy day targets; a filter row
-        // that scrolls sideways reads better slimmer.
-        height: 34,
-        paddingHorizontal: 12,
+        // that scrolls sideways reads better slimmer. CHIP_SLOP makes up the
+        // difference to the touch target, and minHeight lets a large font grow it.
+        minHeight: CHIP_H,
+        paddingHorizontal: SPACE.md,
     },
 
     // --- Categories ---
+    categoryCardWrapper: {
+        marginBottom: SECTION_GAP,
+    },
     categoryHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        marginBottom: 10,
+        gap: SPACE.md,
+        paddingVertical: SPACE.md,
+        paddingHorizontal: ROW_PADDING_H,
+        borderBottomWidth: BORDER_W_INNER,
+        borderBottomColor: OUTLINE,
     },
     iconBox: {
-        width: 28,
-        height: 28,
+        width: 32,
+        height: 32,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
     },
     categoryTitle: {
+        ...TYPE.h3,
         flex: 1,
-        fontSize: 11,
-        fontFamily: PIXEL_BOLD,
         letterSpacing: 1.5,
     },
-    categoryCount: {
-        fontSize: 9,
-        fontFamily: PIXEL_BOLD,
-        color: INK_MUTED,
-        letterSpacing: 1,
-    },
-    categoryCardWrapper: {
-        marginBottom: 24,
-    },
     tip: {
-        padding: 14,
+        paddingVertical: ROW_PADDING_V + SPACE.xs,
+        paddingHorizontal: ROW_PADDING_H,
     },
     tipDivided: {
         borderBottomWidth: BORDER_W_INNER,
@@ -263,26 +265,34 @@ const styles = StyleSheet.create({
         borderStyle: 'dotted',
     },
     tipTitle: {
-        fontSize: 10,
-        fontFamily: PIXEL_BOLD,
-        color: INK,
-        letterSpacing: 1,
-        lineHeight: 16,
-        marginBottom: 6,
+        ...TYPE.label,
+        marginBottom: SPACE.xs,
     },
     tipBody: {
-        fontSize: 10,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 18,
+        ...TYPE.body,
     },
 
-    footnote: {
-        textAlign: 'center',
-        fontSize: 9,
-        fontFamily: PIXEL,
-        color: INK_MUTED,
-        lineHeight: 16,
-        paddingHorizontal: 12,
+    // --- Difficulty badge ---
+    levelBadge: {
+        alignSelf: 'flex-start',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACE.sm,
+        paddingVertical: 2,
+        paddingHorizontal: SPACE.sm,
+        borderWidth: BORDER_W_INNER,
+        marginBottom: SPACE.sm,
+    },
+    pips: {
+        flexDirection: 'row',
+        gap: 2,
+    },
+    pip: {
+        width: 6,
+        height: 6,
+        borderWidth: 1,
+    },
+    levelText: {
+        ...TYPE.label,
     },
 });

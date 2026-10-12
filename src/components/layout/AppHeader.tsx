@@ -1,44 +1,42 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
-import { PIXEL, PIXEL_BOLD } from '../../constants/typography';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { TYPE } from '../../constants/typography';
+import { SCREEN_GUTTER, SPACE } from '../../constants/layout';
+import { OUTLINE, PAPER, PRESSED, PRESS_SINK, BORDER_W_INNER } from '../../constants/pixel';
 
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
-  emoji?: string;
   rightAction?: {
     label: string;
     onPress: () => void;
-    style?: ViewStyle;
-    /** Optional, so a screen can restyle the label without touching the others. */
-    textStyle?: TextStyle;
   };
+  /** Usually a <BackButton />. */
   leftAction?: React.ReactNode;
-  style?: ViewStyle;
-  titleStyle?: TextStyle;
-  subtitleStyle?: TextStyle;
+  /**
+   * Something drawn rather than a text tag, in the right slot -- Today's monk.
+   * Ignored when `rightAction` is set; a header has one right-hand control.
+   */
+  rightElement?: React.ReactNode;
 }
 
 /**
- * Reusable header component used across screens.
- * Supports:
- * - Title + subtitle (most common)
- * - Optional emoji icon
- * - Optional right action button
- * - Optional left action (e.g., back button)
+ * The header every screen opens with: one h1 title, an optional caption under it,
+ * a back button on the left and a small action on the right.
+ *
+ * The pixel treatment lives here, not on the screens. It used to be passed in as
+ * overrides by nine screens while the tenth (Today) passed none and drew at a
+ * different size -- so the style is no longer overridable at all.
  */
 export default function AppHeader({
   title,
   subtitle,
-  emoji,
   rightAction,
   leftAction,
-  style,
-  titleStyle,
-  subtitleStyle,
+  rightElement,
 }: AppHeaderProps) {
   return (
-    <View style={[styles.header, style]}>
+    <View style={styles.header}>
       {leftAction && (
         <View style={styles.leftActionContainer}>
           {leftAction}
@@ -46,24 +44,31 @@ export default function AppHeader({
       )}
 
       <View style={styles.headerContent}>
-        {emoji && <Text style={styles.emoji}>{emoji}</Text>}
         <View style={styles.textContainer}>
-          <Text style={[styles.title, titleStyle]}>{title}</Text>
+          <Text style={styles.title} numberOfLines={1} accessibilityRole="header">{title}</Text>
           {subtitle && (
-            <Text style={[styles.subtitle, subtitleStyle]}>{subtitle}</Text>
+            <Text style={styles.subtitle} numberOfLines={2}>{subtitle}</Text>
           )}
         </View>
       </View>
 
-      {rightAction ? (
-        <TouchableOpacity
-          style={[styles.rightAction, rightAction.style]}
+      {rightAction && (
+        <Pressable
           onPress={rightAction.onPress}
+          // The face is a small tag beside the title; the slop takes it to 44.
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={rightAction.label}
+          style={({ pressed }) => [styles.rightAction, pressed && styles.rightActionPressed]}
         >
-          <Text style={[styles.rightActionText, rightAction.textStyle]}>{rightAction.label}</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.rightSpacer} />
+          <Text style={styles.rightActionText}>{rightAction.label}</Text>
+        </Pressable>
+      )}
+
+      {!rightAction && rightElement && (
+        <View style={styles.rightElementContainer}>
+          {rightElement}
+        </View>
       )}
     </View>
   );
@@ -71,50 +76,47 @@ export default function AppHeader({
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingVertical: SPACE.md,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    // Centred, so a 36px back button and a one- or two-line title share a midline.
+    alignItems: 'center',
+    gap: SPACE.md,
   },
   leftActionContainer: {
-    marginRight: 12,
+    flexShrink: 0,
   },
   headerContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  emoji: {
-    fontSize: 32,
+    gap: SPACE.md,
   },
   textContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 20,
-    fontFamily: PIXEL_BOLD,
-    color: '#1A1A2E',
-    marginBottom: 2,
+    ...TYPE.h1,
   },
   subtitle: {
-    fontSize: 14,
-    fontFamily: PIXEL,
-    color: '#4A4A4A',
+    ...TYPE.caption,
   },
   rightAction: {
-    backgroundColor: '#E0E7FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    flexShrink: 0,
+    paddingHorizontal: SPACE.md,
+    paddingVertical: SPACE.xs,
+    backgroundColor: PAPER,
+    borderWidth: BORDER_W_INNER,
+    borderColor: OUTLINE,
+  },
+  rightActionPressed: {
+    transform: [{ translateX: PRESS_SINK }, { translateY: PRESS_SINK }],
+    backgroundColor: PRESSED,
   },
   rightActionText: {
-    fontSize: 14,
-    fontFamily: PIXEL_BOLD,
-    color: '#4F46E5',
+    ...TYPE.label,
   },
-  rightSpacer: {
-    width: 0,
+  rightElementContainer: {
+    flexShrink: 0,
   },
 });

@@ -146,6 +146,10 @@ export const useDiaryController = () => {
     const loading = fetching && !paintedOnce.current;
     const refreshing = fetching && paintedOnce.current;
 
+    // Read-only, for the screen to say so: a month that failed to load otherwise
+    // draws exactly like a month with nothing in it. Same queries as the gate above.
+    const isError = entriesQuery.isError || greetingsQuery.isError || goalsQuery.isError || completionsQuery.isError;
+
     /**
      * Which goals fall on each day the grid can show, and what became of each one,
      * as 'YYYY-MM-DD' -> [{ goal, status }].
@@ -329,6 +333,7 @@ export const useDiaryController = () => {
         entries,
         loading,
         refreshing,
+        isError,
         selectedDate,
         currentMonth,
         // What <Calendar> is mounted with: the seed, plus the key that re-mounts it.
