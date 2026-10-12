@@ -41,8 +41,20 @@ const CALENDAR_THEME = {
   textMonthFontFamily: PIXEL_BOLD,
   textDayHeaderFontFamily: PIXEL_BOLD,
   textDayFontSize: TYPE.bodyLg.fontSize, // 14: Silkscreen is wide -- 16 crowded the day cells
-  textDayHeaderFontSize: TYPE.caption.fontSize, // 12, up from 11; "SUN" is ~27px of a 34px cell
   'stylesheet.calendar.header': {
+    // The library's weekday label is a 32px, single-line box. In the bold pixel
+    // face at 12, "SUN" is 33px and "MON" 34.5px, so both were cut to "SU…" /
+    // "MO…". Restated wholesale (like every key here) at the day-cell width, and
+    // at 11, where the widest label, "MON", is 31.6px.
+    dayHeader: {
+      marginTop: 2,
+      marginBottom: 7,
+      width: 34,
+      textAlign: 'center',
+      fontSize: 11,
+      fontFamily: PIXEL_BOLD,
+      color: INK_MUTED,
+    },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',

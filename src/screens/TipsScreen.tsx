@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Sparkles } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, BackButton, PixelCard, ToggleBox } from '../components';
-import { TIP_CATEGORIES, TipCategory, getTipOfTheDay } from '../constants/tips';
+import { TIP_CATEGORIES, TIP_LEVELS, TipCategory, TipLevel, byLevel, getTipOfTheDay } from '../constants/tips';
 import {
     CARD_PADDING, HEADING_GAP, ROW_PADDING_H, ROW_PADDING_V, SCREEN_BOTTOM, SCREEN_GUTTER,
     SCREEN_TOP, SECTION_GAP, SPACE, hitSlopFor,
 } from '../constants/layout';
 import { TYPE } from '../constants/typography';
-import { OUTLINE, BORDER_W_INNER } from '../constants/pixel';
+import { OUTLINE, PAPER, BORDER_W_INNER } from '../constants/pixel';
 
 const ALL = 'all';
 
@@ -17,32 +17,56 @@ const ALL = 'all';
 const CHIP_H = 34;
 const CHIP_SLOP = { top: hitSlopFor(CHIP_H), bottom: hitSlopFor(CHIP_H) };
 
-/** One category: its header, then every tip in it on one card. */
-const CategoryCard = ({ category }: { category: TipCategory }) => {
-    const Icon = category.icon;
+/** Difficulty tag: one to three filled pips and the level's name. */
+const LevelBadge = ({ level }: { level: TipLevel }) => {
+    const { label, rank, color, tint } = TIP_LEVELS[level];
 
     return (
-        <View>
-            <View style={styles.categoryHeader}>
-                <View style={[styles.iconBox, { backgroundColor: category.tint }]}>
-                    <Icon size={16} color={category.color} strokeWidth={2.5} />
+        <View
+            style={[styles.levelBadge, { backgroundColor: tint, borderColor: color }]}
+            accessible
+            accessibilityLabel={`Difficulty: ${label.toLowerCase()}`}
+        >
+            <View style={styles.pips}>
+                {[1, 2, 3].map(pip => (
+                    <View
+                        key={pip}
+                        style={[styles.pip, { borderColor: color }, pip <= rank && { backgroundColor: color }]}
+                    />
+                ))}
+            </View>
+            <Text style={[styles.levelText, { color }]}>{label}</Text>
+        </View>
+    );
+};
+
+/** One category: a tinted header band, then its tips easy → hard on the same card. */
+const CategoryCard = ({ category }: { category: TipCategory }) => {
+    const Icon = category.icon;
+    const tips = [...category.tips].sort(byLevel);
+
+    return (
+        <PixelCard padding={0} accentColor={category.color} wrapperStyle={styles.categoryCardWrapper}>
+            <View style={[styles.categoryHeader, { backgroundColor: category.tint }]}>
+                <View style={styles.iconBox}>
+                    <Icon size={18} color={category.color} strokeWidth={2.5} />
                 </View>
-                <Text style={[styles.categoryTitle, { color: category.color }]}>{category.title}</Text>
-                <Text style={styles.categoryCount}>{category.tips.length}</Text>
+                <Text style={[styles.categoryTitle, { color: category.color }]} accessibilityRole="header">
+                    {category.title}
+                </Text>
             </View>
 
-            <PixelCard padding={0} accentColor={category.color} wrapperStyle={styles.categoryCardWrapper}>
-                {category.tips.map((tip, index) => (
-                    <View
-                        key={tip.title}
-                        style={[styles.tip, index < category.tips.length - 1 && styles.tipDivided]}
-                    >
-                        <Text style={styles.tipTitle}>{tip.title.toUpperCase()}</Text>
-                        <Text style={styles.tipBody}>{tip.body}</Text>
-                    </View>
-                ))}
-            </PixelCard>
-        </View>
+            {tips.map((tip, index) => (
+                <View
+                    key={tip.title}
+                    style={[styles.tip, index < tips.length - 1 && styles.tipDivided]}
+                >
+                    <LevelBadge level={tip.level} />
+                    <Text style={styles.tipTitle}>{tip.title.toUpperCase()}</Text>
+                    <Text style={styles.tipBody}>{tip.body}</Text>
+                </View>
+            ))}
+        </PixelCard>
     );
 };
 
@@ -91,6 +115,7 @@ export default function TipsScreen({ navigation }: any) {
                             <FeaturedIcon size={20} color={tipOfTheDay.category.color} strokeWidth={2.5} />
                         </View>
                         <View style={styles.featuredText}>
+                            <LevelBadge level={tipOfTheDay.tip.level} />
                             <Text style={styles.featuredTitle}>{tipOfTheDay.tip.title.toUpperCase()}</Text>
                             <Text style={styles.featuredBody}>{tipOfTheDay.tip.body}</Text>
                         </View>
@@ -129,10 +154,6 @@ export default function TipsScreen({ navigation }: any) {
                 {visible.map(category => (
                     <CategoryCard key={category.id} category={category} />
                 ))}
-
-                <Text style={styles.footnote}>
-                    These are everyday habits, not medical advice. Pick one that feels doable and start small.
-                </Text>
             </ScrollView>
         </ScreenContainer>
     );
@@ -208,34 +229,34 @@ const styles = StyleSheet.create({
     },
 
     // --- Categories ---
+    categoryCardWrapper: {
+        marginBottom: SECTION_GAP,
+    },
     categoryHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACE.sm,
-        marginBottom: HEADING_GAP,
+        gap: SPACE.md,
+        paddingVertical: SPACE.md,
+        paddingHorizontal: ROW_PADDING_H,
+        borderBottomWidth: BORDER_W_INNER,
+        borderBottomColor: OUTLINE,
     },
     iconBox: {
-        width: 28,
-        height: 28,
+        width: 32,
+        height: 32,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: PAPER,
         borderWidth: BORDER_W_INNER,
         borderColor: OUTLINE,
     },
     categoryTitle: {
-        ...TYPE.label,
+        ...TYPE.h3,
         flex: 1,
         letterSpacing: 1.5,
     },
-    categoryCount: {
-        ...TYPE.label,
-        color: TYPE.caption.color,
-    },
-    categoryCardWrapper: {
-        marginBottom: SECTION_GAP,
-    },
     tip: {
-        paddingVertical: ROW_PADDING_V,
+        paddingVertical: ROW_PADDING_V + SPACE.xs,
         paddingHorizontal: ROW_PADDING_H,
     },
     tipDivided: {
@@ -251,9 +272,27 @@ const styles = StyleSheet.create({
         ...TYPE.body,
     },
 
-    footnote: {
-        ...TYPE.caption,
-        textAlign: 'center',
-        paddingHorizontal: SPACE.md,
+    // --- Difficulty badge ---
+    levelBadge: {
+        alignSelf: 'flex-start',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACE.sm,
+        paddingVertical: 2,
+        paddingHorizontal: SPACE.sm,
+        borderWidth: BORDER_W_INNER,
+        marginBottom: SPACE.sm,
+    },
+    pips: {
+        flexDirection: 'row',
+        gap: 2,
+    },
+    pip: {
+        width: 6,
+        height: 6,
+        borderWidth: 1,
+    },
+    levelText: {
+        ...TYPE.label,
     },
 });

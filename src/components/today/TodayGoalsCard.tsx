@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
 import { Check } from 'lucide-react-native';
-import type { Goal, TimeOfDay } from '@shared/types';
+import type { Goal } from '@shared/types';
 import { isGoalScheduledOn } from '../../../shared/types';
 import PixelCard from '../ui/PixelCard';
 import { PixelAlert } from '../ui/PixelAlert';
@@ -26,22 +26,12 @@ const GOAL_ACCENT = '#10B981';
  *
  * Completion is once for the whole day, so a goal that runs morning AND night is
  * still one checkbox -- listing it under both would offer two boxes for one fact.
- * It is filed under the earliest slot it has, and every slot it has is drawn on the
- * row as a tag, so the day still reads in order and nothing is lost.
+ * It is filed under the earliest slot it has.
  *
  * TIMES_OF_DAY is already ordered through the day, so its index IS the ordering.
  */
 const slotOf = (goal: Goal): number =>
     Math.min(...goal.timesOfDay.map(time => TIMES_OF_DAY.indexOf(time)));
-
-/**
- * All of the goal's slots, in day order -- what the row shows as tags.
- *
- * The slot the row is filed under is included. Tagging only the others made a
- * morning-to-night goal read "NOON AFTERNOON NIGHT", as if morning were not part of it.
- */
-const slotsOf = (goal: Goal): TimeOfDay[] =>
-    TIMES_OF_DAY.filter(time => goal.timesOfDay.includes(time));
 
 interface GoalRowProps {
     goal: Goal;
@@ -57,8 +47,6 @@ interface GoalRowProps {
  * go back to and the control should not invite a tap it cannot honour.
  */
 function GoalRow({ goal, done, onCheck }: GoalRowProps) {
-    const tags = slotsOf(goal);
-
     return (
         <Pressable
             onPress={() => onCheck(goal)}
@@ -76,18 +64,6 @@ function GoalRow({ goal, done, onCheck }: GoalRowProps) {
                 <Text style={[styles.goalName, done && styles.goalNameDone]} numberOfLines={2}>
                     {goal.name}
                 </Text>
-
-                {/* Only for a goal with more than one slot: a single slot is
-                    already said by the section heading above the row. */}
-                {tags.length > 0 && (
-                    <View style={styles.tagRow}>
-                        {tags.map(time => (
-                            <View key={time} style={styles.tag}>
-                                <Text style={styles.tagText}>{TIME_OF_DAY_LABELS[time]}</Text>
-                            </View>
-                        ))}
-                    </View>
-                )}
             </View>
         </Pressable>
     );
@@ -314,21 +290,6 @@ const styles = StyleSheet.create({
     goalNameDone: {
         // Greyed rather than struck through: Silkscreen's strikethrough lands
         // between the pixel rows and tears the grid.
-        color: INK_MUTED,
-    },
-    tagRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: SPACE.xs,
-        marginTop: SPACE.xs,
-    },
-    tag: {
-        paddingHorizontal: SPACE.xs,
-        borderWidth: BORDER_W_INNER,
-        borderColor: OUTLINE,
-    },
-    tagText: {
-        ...TYPE.label,
         color: INK_MUTED,
     },
     skeletonRow: {

@@ -14,7 +14,12 @@ import { OUTLINE, INK, INK_MUTED, BORDER_W_INNER, PRESS_SINK } from '../../const
 export type MoodDelta = number | 'new' | null;
 
 interface SummaryCardsProps {
-    filteredTotalEntries: number;
+    /**
+     * Days in the month with at least one check-in -- not the number of check-ins.
+     * Every other count on Insights (DAYS LOGGED, the breakdown's "of N days") is a
+     * day count, and a day logged twice made this card read one higher than them.
+     */
+    daysJournaled: number;
     /** 0-100, or null for a month with nothing to score. */
     moodScore: number | null;
     delta: MoodDelta;
@@ -59,7 +64,7 @@ const SCORE_FACTORS = [
     },
 ];
 
-export default function SummaryCards({ filteredTotalEntries, moodScore, delta }: SummaryCardsProps) {
+export default function SummaryCards({ daysJournaled, moodScore, delta }: SummaryCardsProps) {
     const [explainerVisible, setExplainerVisible] = useState(false);
 
     // A decline is drawn muted, not red: a down month is not something to be
@@ -72,9 +77,9 @@ export default function SummaryCards({ filteredTotalEntries, moodScore, delta }:
                 <View style={[styles.iconBox, { backgroundColor: '#E0E7FF' }]}>
                     <TrendingUp size={18} color="#4F46E5" strokeWidth={3} />
                 </View>
-                <Text style={styles.summaryNumber}>{filteredTotalEntries}</Text>
-                <Text style={styles.summaryLabel}>TOTAL</Text>
-                <Text style={styles.summaryLabel}>JOURNALS</Text>
+                <Text style={styles.summaryNumber}>{daysJournaled}</Text>
+                <Text style={styles.summaryLabel}>DAYS</Text>
+                <Text style={styles.summaryLabel}>JOURNALED</Text>
             </PixelCard>
 
             <Pressable

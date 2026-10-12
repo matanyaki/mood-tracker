@@ -61,8 +61,9 @@ export const PIXEL_BULLET = '* ';
  * size and are told apart the way the app always has: bold vs regular, the
  * `[ BRACKETS ]`, tracking and colour.
  *
- * Two places keep their own documented sizes because their geometry depends on
- * them: the ruled note fields (14 on a 30px line) and the calendar month title.
+ * A few places keep their own documented sizes because their geometry depends on
+ * them: the ruled note fields (14 on a 30px line), the calendar month title and
+ * the calendar weekday row (11, so "MON" fits a 34px day column).
  */
 export const TYPE = {
     /** Screen title. AppHeader only -- one per screen. */

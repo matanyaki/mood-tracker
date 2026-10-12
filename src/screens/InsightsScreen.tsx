@@ -224,7 +224,7 @@ export default function InsightsScreen({ navigation }: any) {
     <ScreenContainer variant="calm">
       <AppHeader
         title="Insights"
-        subtitle="Track your emotion waves"
+
       />
 
       <ScrollView
@@ -268,8 +268,10 @@ export default function InsightsScreen({ navigation }: any) {
               onCheckIn={() => navigation.navigate('CheckIn')}
             />
 
+            {/* The same journaled-day count as DAYS LOGGED above and the breakdown
+                below -- two check-ins on one day are still one day. */}
             <SummaryCards
-              filteredTotalEntries={filteredTotalEntries}
+              daysJournaled={dayEntries.length}
               moodScore={moodScore}
               delta={moodDelta}
             />

@@ -129,9 +129,9 @@ export default function BreatheScreen({ navigation }: any) {
                     </View>
                 </PixelCard>
 
-                <Text style={styles.hint}>
+                {/* <Text style={styles.hint}>
                     In through the nose, out through the mouth. If you feel light-headed, stop and breathe normally.
-                </Text>
+                </Text> */}
 
                 <PrimaryButton
                     label={button.label}
