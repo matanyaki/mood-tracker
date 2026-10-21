@@ -5,18 +5,24 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
-import type { Goal, TimeOfDay } from '@shared/types';
-import { computeEndDate } from '../../shared/types';
-import { ScreenContainer, AppHeader, BackButton, PrimaryButton, primaryButtonInk, PixelSelect, PixelField, ToggleBox } from '../components';
+import type { DateData } from 'react-native-calendars';
+import type { Goal, TimeOfDay, DurationUnit } from '@shared/types';
+import {
+  goalDuration, resolveEndDate, goalScheduleError, plannedDayCount, nextDay, MAX_DURATION,
+} from '../../shared/types';
+import {
+  ScreenContainer, AppHeader, BackButton, PrimaryButton, primaryButtonInk,
+  PixelSelect, PixelField, ToggleBox, PixelCard, PixelCalendar,
+} from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
 import { useGoalsController } from '../controllers/useGoalsController';
 import { GOAL_TEXT, DANGER_TEXT } from '../constants/colors';
 import {
-  WEEKDAY_LABELS, TIMES_OF_DAY, TIME_OF_DAY_LABELS, TIMES_PER_WEEK_OPTIONS,
+  WEEKDAY_LABELS, TIMES_OF_DAY, TIME_OF_DAY_LABELS, DURATION_UNIT_LABELS,
 } from '../constants/goals';
 import { TYPE } from '../constants/typography';
 import { SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP, SECTION_GAP, SPACE } from '../constants/layout';
-import { INK_MUTED } from '../constants/pixel';
+import { INK_MUTED, SHADOW_OFFSET } from '../constants/pixel';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -28,12 +34,24 @@ const daysInMonth = (year: number, month: number) => new Date(year, month, 0).ge
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
+/** 'YYYY-MM-DD' -> 'DD/MM/YY', the way the goal card writes its dates. */
+const shortDate = (date: string) => {
+  const [y, m, d] = date.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+};
+
+/** The order the length boxes are drawn in: shortest first, the picked date last. */
+const DURATION_UNITS_SHOWN: DurationUnit[] = ['days', 'weeks', 'months', 'date'];
+
+/** The dot the Diary marks a goal day with, so the picker previews what it will show. */
+const GOAL_DOT = { key: 'goal', color: '#10B981' };
+
 /**
  * Create or edit one goal.
  *
- * Both jobs are one screen because a goal is only valid as a whole -- the weekday
- * boxes mean nothing without the times-per-week they have to match -- so there is
- * no half of this form worth showing on its own. `route.params.goal` is what tells
+ * Both jobs are one screen because a goal is only valid as a whole -- the days
+ * picked mean nothing without the run they have to fall inside -- so there is no
+ * half of this form worth showing on its own. `route.params.goal` is what tells
  * the two apart.
  */
 export default function GoalFormScreen({ route, navigation }: any) {
@@ -51,8 +69,18 @@ export default function GoalFormScreen({ route, navigation }: any) {
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [day, setDay] = useState(initialDay);
-  const [monthsText, setMonthsText] = useState(existing ? String(existing.months) : '1');
-  const [timesPerWeek, setTimesPerWeek] = useState(existing?.timesPerWeek ?? 3);
+  const existingLength = existing ? goalDuration(existing) : null;
+  const [unit, setUnit] = useState<DurationUnit>(existingLength?.unit ?? 'weeks');
+  const [countText, setCountText] = useState(
+    existingLength && existingLength.unit !== 'date' ? String(existingLength.count) : '2'
+  );
+  // The end date picked on the calendar. Only read while unit is 'date'.
+  const [pickedEnd, setPickedEnd] = useState<string | null>(
+    existingLength?.unit === 'date' ? existing!.endDate : null
+  );
+  // The month the calendar opens on, fixed when it mounts. Handing the calendar a
+  // moving initialDate re-seeds it on every pick (see useDiaryController).
+  const [calendarSeed, setCalendarSeed] = useState(pickedEnd ?? initialStart);
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(existing?.daysOfWeek ?? []);
   const [timesOfDay, setTimesOfDay] = useState<TimeOfDay[]>(existing?.timesOfDay ?? []);
 
@@ -81,29 +109,56 @@ export default function GoalFormScreen({ route, navigation }: any) {
     }));
   }, [year, month]);
 
-  const timesPerWeekOptions = useMemo(
-    () => TIMES_PER_WEEK_OPTIONS.map(n => ({ label: `${n} x / week`, value: String(n) })),
-    []
-  );
-
   // The 31st of a month the user then switches away from has to land somewhere:
   // clamping to the last real day keeps the picker from ever showing a date that
   // does not exist.
   const clampedDay = Math.min(day, daysInMonth(year, month));
   const startDate = `${year}-${pad(month)}-${pad(clampedDay)}`;
 
-  const months = parseInt(monthsText, 10);
-  const hasValidMonths = Number.isFinite(months) && months > 0;
-  const endDate = hasValidMonths ? computeEndDate(startDate, months) : null;
+  const count = parseInt(countText, 10);
+  const sortedDays = useMemo(() => [...daysOfWeek].sort((a, b) => a - b), [daysOfWeek]);
 
-  const handleTimesPerWeekChange = useCallback((value: string) => {
-    const next = parseInt(value, 10);
-    setTimesPerWeek(next);
-    // Lowering the count would leave more days picked than the goal allows, which
-    // the server rejects — drop the extras rather than letting the form sit in a
-    // state it cannot save from.
-    setDaysOfWeek(prev => (prev.length > next ? [...prev].sort((a, b) => a - b).slice(0, next) : prev));
-  }, []);
+  // The goal's length exactly as it will be sent: a count, or the picked end date.
+  const length = useMemo(() => unit === 'date'
+    ? { durationUnit: unit, ...(pickedEnd ? { endDate: pickedEnd } : {}) }
+    : { durationUnit: unit, durationCount: Number.isFinite(count) && count > 0 ? count : 0 },
+  [unit, pickedEnd, count]);
+
+  // A preview of what the server will store -- it derives endDate the same way.
+  const endDate = resolveEndDate({ startDate, ...length });
+  const goalDays = endDate && endDate >= startDate && sortedDays.length > 0
+    ? plannedDayCount({ startDate, endDate, daysOfWeek: sortedDays })
+    : 0;
+
+  const handleUnitChange = useCallback((next: DurationUnit) => {
+    // Opening the calendar on the end the current length gives keeps a switch to
+    // DATE from throwing away what was already set.
+    if (next === 'date' && !pickedEnd) {
+      const seed = endDate && endDate >= startDate ? endDate : startDate;
+      setPickedEnd(seed);
+      setCalendarSeed(seed);
+    }
+    setUnit(next);
+  }, [pickedEnd, endDate, startDate]);
+
+  const handleEndDayPress = useCallback((day: DateData) => setPickedEnd(day.dateString), []);
+
+  // The picked end, and every goal day up to it, marked the way the Diary will mark
+  // them -- so picking a date shows which days the goal will actually ask for.
+  const calendarMarks = useMemo(() => {
+    if (unit !== 'date') return {};
+    const marks: Record<string, any> = {};
+    if (pickedEnd && pickedEnd >= startDate && sortedDays.length > 0) {
+      for (let day = startDate; day <= pickedEnd; day = nextDay(day)) {
+        const [y, m, d] = day.split('-').map(Number);
+        if (sortedDays.includes(new Date(y, m - 1, d).getDay())) {
+          marks[day] = { marked: true, dots: [GOAL_DOT] };
+        }
+      }
+    }
+    if (pickedEnd) marks[pickedEnd] = { ...marks[pickedEnd], selected: true };
+    return marks;
+  }, [unit, pickedEnd, startDate, sortedDays]);
 
   const toggleDay = useCallback((index: number) => {
     setDaysOfWeek(prev =>
@@ -121,17 +176,17 @@ export default function GoalFormScreen({ route, navigation }: any) {
     );
   }, []);
 
-  // The same four rules the server enforces, checked here so the user is told
-  // which one they missed instead of being handed a 400.
+  // The same rules the server enforces (the shared goalScheduleError), checked here
+  // so the user is told which one they missed instead of being handed a 400.
   const validationError = useMemo(() => {
     if (!name.trim()) return 'Give the goal a name.';
-    if (!hasValidMonths) return 'Set how many months it runs for.';
-    if (daysOfWeek.length !== timesPerWeek) {
-      return `Pick exactly ${timesPerWeek} ${timesPerWeek === 1 ? 'day' : 'days'}.`;
-    }
+    const scheduleError = goalScheduleError({
+      startDate, ...length, daysOfWeek: sortedDays, timesPerWeek: sortedDays.length,
+    });
+    if (scheduleError) return scheduleError;
     if (timesOfDay.length === 0) return 'Pick at least one time of day.';
     return null;
-  }, [name, hasValidMonths, daysOfWeek, timesPerWeek, timesOfDay]);
+  }, [name, startDate, length, sortedDays, timesOfDay]);
 
   const handleSave = useCallback(async () => {
     if (validationError || isSaving) return;
@@ -139,9 +194,10 @@ export default function GoalFormScreen({ route, navigation }: any) {
     const data = {
       name: name.trim(),
       startDate,
-      months,
-      timesPerWeek,
-      daysOfWeek: [...daysOfWeek].sort((a, b) => a - b),
+      ...length,
+      // The days ARE the weekly count: picking WED and SUN is twice a week.
+      timesPerWeek: sortedDays.length,
+      daysOfWeek: sortedDays,
       timesOfDay,
     };
 
@@ -156,8 +212,8 @@ export default function GoalFormScreen({ route, navigation }: any) {
       PixelAlert.alert('Error', 'Could not save your goal. Please try again.');
     }
   }, [
-    validationError, isSaving, name, startDate, months, timesPerWeek,
-    daysOfWeek, timesOfDay, isEditing, existing, updateGoal, createGoal, navigation,
+    validationError, isSaving, name, startDate, length,
+    sortedDays, timesOfDay, isEditing, existing, updateGoal, createGoal, navigation,
   ]);
 
   return (
@@ -211,62 +267,73 @@ export default function GoalFormScreen({ route, navigation }: any) {
             />
           </View>
 
-          {/* The end date reads off these two fields, so it sits with them rather
-              than floating between them and the next section. */}
-          <View style={styles.group}>
-            <View style={styles.row}>
-              <PixelField
-                eyebrow="[ MONTHS ]"
-                value={monthsText}
-                onChangeText={setMonthsText}
-                keyboardType="number-pad"
-                maxLength={2}
-                flex={1}
-              />
-              <PixelSelect
-                eyebrow="[ TIMES / WEEK ]"
-                options={timesPerWeekOptions}
-                value={String(timesPerWeek)}
-                onChange={handleTimesPerWeekChange}
-                flex={1.4}
-              />
+          {/* How long it runs: a count of days, weeks or months, or an end date
+              picked on the same calendar the Diary draws. */}
+          <View style={styles.section}>
+            <Text style={styles.eyebrow}>[ LENGTH ]</Text>
+
+            <View style={styles.weekRow}>
+              {DURATION_UNITS_SHOWN.map(option => (
+                <ToggleBox
+                  key={option}
+                  label={DURATION_UNIT_LABELS[option]}
+                  selected={unit === option}
+                  onPress={() => handleUnitChange(option)}
+                  style={styles.dayBox}
+                  accessibilityRole="radio"
+                  tight
+                />
+              ))}
             </View>
 
-            {/* endDate is derived, never typed -- the server computes the stored value
+            {unit !== 'date' ? (
+              <PixelField
+                eyebrow={`[ ${DURATION_UNIT_LABELS[unit]} ]`}
+                value={countText}
+                onChangeText={setCountText}
+                keyboardType="number-pad"
+                maxLength={String(MAX_DURATION[unit]).length}
+              />
+            ) : (
+              <PixelCard padding={0} style={styles.calendarCard} wrapperStyle={styles.calendarWrapper}>
+                <PixelCalendar
+                  initialDate={calendarSeed}
+                  minDate={startDate}
+                  onDayPress={handleEndDayPress}
+                  markingType="multi-dot"
+                  markedDates={calendarMarks}
+                />
+              </PixelCard>
+            )}
+
+            {/* endDate is derived for a count -- the server computes the stored value
                 the same way, so this is a preview of what will be saved. */}
             <Text style={styles.endDate}>
-              ENDS: {endDate ?? '--'}
+              ENDS: {endDate && endDate >= startDate ? shortDate(endDate) : '--'}
+              {goalDays > 0 ? `  [${goalDays} GOAL ${goalDays === 1 ? 'DAY' : 'DAYS'}]` : ''}
             </Text>
           </View>
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.eyebrow}>[ DAYS ]</Text>
-              <Text style={[
-                styles.counter,
-                daysOfWeek.length === timesPerWeek && styles.counterDone,
-              ]}>
-                {daysOfWeek.length} / {timesPerWeek}
+              <Text style={[styles.counter, daysOfWeek.length > 0 && styles.counterDone]}>
+                {daysOfWeek.length} x / WEEK
               </Text>
             </View>
 
-            {/* Exactly timesPerWeek boxes may be lit, so once the week is full the
-                unpicked ones go inert rather than silently refusing a tap. */}
+            {/* Any set of days: how many are lit is how many times a week it runs. */}
             <View style={styles.weekRow}>
-              {WEEKDAY_LABELS.map((label, index) => {
-                const selected = daysOfWeek.includes(index);
-                return (
-                  <ToggleBox
-                    key={label}
-                    label={label}
-                    selected={selected}
-                    disabled={!selected && daysOfWeek.length >= timesPerWeek}
-                    onPress={() => toggleDay(index)}
-                    style={styles.dayBox}
-                    tight
-                  />
-                );
-              })}
+              {WEEKDAY_LABELS.map((label, index) => (
+                <ToggleBox
+                  key={label}
+                  label={label}
+                  selected={daysOfWeek.includes(index)}
+                  onPress={() => toggleDay(index)}
+                  style={styles.dayBox}
+                  tight
+                />
+              ))}
             </View>
           </View>
 
@@ -323,6 +390,14 @@ const styles = StyleSheet.create({
   endDate: {
     ...TYPE.label,
     color: INK_MUTED,
+  },
+  calendarWrapper: {
+    marginRight: SHADOW_OFFSET, // Room for the offset shadow, as PixelSelect leaves
+  },
+  calendarCard: {
+    // Tight for the same reason as the Diary's: seven 34px cells need ~250px.
+    paddingHorizontal: SPACE.sm,
+    paddingVertical: SPACE.md,
   },
   section: {
     gap: SPACE.sm,

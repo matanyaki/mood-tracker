@@ -22,14 +22,35 @@ export const GoalPauseSchema = z.object({
 
 export type GoalPause = z.infer<typeof GoalPauseSchema>;
 
+/**
+ * How a goal's length is given.
+ *
+ * - days / weeks / months: a count from startDate (`durationCount`).
+ * - date: the user picked the end date itself on the calendar.
+ *
+ * Every goal saved before this existed has neither field and runs `months` months,
+ * which is what an absent unit means.
+ */
+export const DURATION_UNITS = ['days', 'weeks', 'months', 'date'] as const;
+
+export type DurationUnit = typeof DURATION_UNITS[number];
+
+export const DurationUnitSchema = z.enum(DURATION_UNITS);
+
 export const GoalSchema = z.object({
     id: z.string().optional(),
     userId: z.string(),
     name: z.string().trim().min(1),
     startDate: z.string(), // YYYY-MM-DD, chosen by the user
-    months: z.number().int().positive(),
-    endDate: z.string(),   // YYYY-MM-DD, always computeEndDate(startDate, months)
-    timesPerWeek: z.number().int().positive(),
+    // Absent = 'months' (every goal from before days and weeks).
+    durationUnit: DurationUnitSchema.optional(),
+    // The length in durationUnit; unused for 'date'. Absent = `months`.
+    durationCount: z.number().int().positive().optional(),
+    // The length of a goal saved before durationUnit existed. Read only through
+    // goalDuration, never directly.
+    months: z.number().int().positive().optional(),
+    endDate: z.string(),   // YYYY-MM-DD, always resolveEndDate(...) -- picked by the user only for 'date'
+    timesPerWeek: z.number().int().positive(), // always daysOfWeek.length
     // 0 = Sunday, matching Date.prototype.getDay()
     daysOfWeek: z.array(z.number().int().min(0).max(6)),
     timesOfDay: z.array(TimeOfDaySchema).min(1),
@@ -42,11 +63,79 @@ export const GoalSchema = z.object({
 
 export type Goal = z.infer<typeof GoalSchema>;
 
-// endDate is derived, never sent: the server computes it from startDate + months so
-// the two can't disagree. userId comes from the verified token, the same way it does
-// for an entry or a greeting. pauses have their own actions (POST /:id/pause, /:id/resume).
-export type CreateGoalDTO = Omit<Goal, 'id' | 'userId' | 'endDate' | 'pauses' | 'createdAt' | 'updatedAt'>;
+// endDate is derived, not sent -- the server computes it from startDate and the
+// length so the two can't disagree -- except for a 'date' goal, where the date the
+// user picked IS the length. userId comes from the verified token, the same way it
+// does for an entry or a greeting. pauses have their own actions (POST /:id/pause, /:id/resume).
+export type CreateGoalDTO = Omit<Goal, 'id' | 'userId' | 'endDate' | 'pauses' | 'createdAt' | 'updatedAt'> & {
+    endDate?: string;
+};
 export type UpdateGoalDTO = CreateGoalDTO;
+
+/** The fields that say how long a goal runs. */
+export type GoalLength = Pick<Goal, 'startDate' | 'durationUnit' | 'durationCount' | 'months'> & { endDate?: string };
+
+/**
+ * A goal's length as one unit and count, whichever shape it was saved in. The one
+ * reader of durationUnit / durationCount / months. `count` is 0 for a 'date' goal.
+ */
+export function goalDuration(goal: GoalLength): { unit: DurationUnit; count: number } {
+    const unit = goal.durationUnit ?? 'months';
+    if (unit === 'date') return { unit, count: 0 };
+    return { unit, count: goal.durationCount ?? goal.months ?? 0 };
+}
+
+/**
+ * The end date a goal's length gives, or null when it gives none (no count, or a
+ * 'date' goal with no date). The one rule the server, the guest path and the form
+ * preview all use.
+ *
+ * Both ends count, so days and weeks are exact: 2 weeks from a Wednesday ends on
+ * the Tuesday 13 days later. Months keep computeEndDate's rule unchanged, so no
+ * existing goal's end moves.
+ */
+export function resolveEndDate(goal: GoalLength): string | null {
+    const { unit, count } = goalDuration(goal);
+    if (unit === 'date') return goal.endDate ?? null;
+    if (count <= 0) return null;
+    if (unit === 'days') return addDays(goal.startDate, count - 1);
+    if (unit === 'weeks') return addDays(goal.startDate, count * 7 - 1);
+    return computeEndDate(goal.startDate, count);
+}
+
+/** The longest a goal can be set to, per unit. A 'date' goal is held to the same as days. */
+export const MAX_DURATION: Record<Exclude<DurationUnit, 'date'>, number> = {
+    days: 366,
+    weeks: 52,
+    months: 24,
+};
+
+/**
+ * Why a goal's schedule can't be saved, or null if it can. The one set of rules
+ * the server, the guest path and the form all check, so the form says the same
+ * thing the server would.
+ */
+export function goalScheduleError(goal: GoalLength & Pick<Goal, 'daysOfWeek' | 'timesPerWeek'>): string | null {
+    if (goal.daysOfWeek.length === 0) return 'Pick at least one day.';
+    if (new Set(goal.daysOfWeek).size !== goal.daysOfWeek.length) return 'Each day can be picked once.';
+    if (goal.timesPerWeek !== goal.daysOfWeek.length) return 'Times per week has to match the days picked.';
+
+    const { unit, count } = goalDuration(goal);
+    if (unit === 'date') {
+        if (!goal.endDate || !GOAL_DATE_PATTERN.test(goal.endDate)) return 'Pick an end date.';
+        if (goal.endDate < goal.startDate) return 'The end date is before the start date.';
+        if (goal.endDate > addDays(goal.startDate, MAX_DURATION.days - 1)) return 'A goal can run at most a year.';
+    } else {
+        if (count <= 0) return `Set how many ${unit} it runs for.`;
+        if (count > MAX_DURATION[unit]) return `A goal can run at most ${MAX_DURATION[unit]} ${unit}.`;
+    }
+
+    const endDate = resolveEndDate(goal)!;
+    if (plannedDayCount({ startDate: goal.startDate, endDate, daysOfWeek: goal.daysOfWeek }) === 0) {
+        return 'None of the picked days fall between the start and end date.';
+    }
+    return null;
+}
 
 /**
  * One day marked done, stored at users/{uid}/goals/{goalId}/completions/{YYYY-MM-DD}.
@@ -82,8 +171,8 @@ export type GoalCompletionsByGoal = Record<string, string[]>;
  * request, the same way /api/streaks is.
  *
  * `target` is every day the goal was planned for, startDate to endDate. Pausing does
- * not change it -- the run is pushed out instead. A valid goal picks at least one
- * weekday and runs at least a month, so it is never zero in practice.
+ * not change it -- the run is pushed out instead. A valid goal has at least one of
+ * its weekdays inside its run (goalScheduleError), so it is never zero in practice.
  */
 export const GoalProgressSchema = z.object({
     goalId: z.string(),

@@ -2,30 +2,33 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import goalService from '../services/goalService';
 import {
-    Goal, GoalCompletion, GoalCompletionsByGoal, GoalProgress, GoalSchema, GoalDateSchema,
+    Goal, GoalCompletion, GoalCompletionsByGoal, GoalProgress, GoalSchema, GoalDateSchema, goalScheduleError,
 } from '../../../shared/types';
 import { asyncWrap } from '../middleware/errorHandler';
 import { requireUid } from '../middleware/auth';
 
 /**
  * Derived from the canonical schema, so the shared contract stays the single source
- * of truth — and so a client structurally cannot set its own userId or endDate.
+ * of truth — and so a client structurally cannot set its own userId.
  *
- * The refine is the one rule that no single field can carry: picking three days a
- * week means picking exactly three weekday boxes, and a goal that disagrees with
- * itself would schedule nothing the user asked for.
+ * endDate is accepted but only kept for a 'date' goal, where the user picked it;
+ * every other goal's end is recomputed from its length in the service.
+ *
+ * The refine is the rules no single field can carry -- the days picked, the length
+ * and the end date only make sense together. They live in the shared
+ * goalScheduleError so the form and the guest path apply the same ones.
  */
 const GoalBodySchema = GoalSchema
     .omit({ id: true, userId: true, endDate: true, pauses: true, createdAt: true, updatedAt: true })
-    .extend({ startDate: GoalDateSchema })
-    .refine(data => data.daysOfWeek.length === data.timesPerWeek, {
-        message: 'Pick exactly one weekday for each time per week.',
-        path: ['daysOfWeek'],
+    .extend({ startDate: GoalDateSchema, endDate: GoalDateSchema.optional() })
+    .superRefine((data, ctx) => {
+        const error = goalScheduleError(data);
+        if (error) ctx.addIssue({ code: 'custom', message: error, path: ['daysOfWeek'] });
     });
 
 // Update takes the same full body rather than a partial one. A goal's schedule is
-// only valid as a whole — a patch that moved timesPerWeek without daysOfWeek would
-// pass field-by-field and still break the rule above.
+// only valid as a whole — a patch that moved the end date without the days could
+// pass field-by-field and still break the rules above.
 const UpdateGoalBodySchema = GoalBodySchema;
 
 const MarkDoneBodySchema = z.object({

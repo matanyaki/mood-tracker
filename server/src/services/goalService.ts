@@ -1,6 +1,6 @@
 import { goalRepository } from '../repositories/goalRepository';
 import { AppError, rethrow } from '../middleware/errorHandler';
-import { computeEndDate, isGoalPaused, addPause, endPause } from '../../../shared/types';
+import { resolveEndDate, isGoalPaused, addPause, endPause } from '../../../shared/types';
 import { dayKeyFromMillis } from '../../../shared/utils/streak';
 import { computeGoalProgress } from '../../../shared/utils/goalProgress';
 import type {
@@ -14,12 +14,13 @@ class GoalService {
      * Create a new goal.
      *
      * endDate is derived here rather than taken from the request: it is a function
-     * of startDate and months, and a client that sent its own could store a goal
-     * whose end date disagrees with its own schedule.
+     * of startDate and the length, and a client that sent its own could store a goal
+     * whose end date disagrees with its own schedule. A 'date' goal is the exception
+     * -- its picked end date is its length -- and resolveEndDate keeps it as sent.
      */
     async createGoal(userId: string, data: CreateGoalDTO): Promise<Goal> {
         try {
-            const endDate = computeEndDate(data.startDate, data.months);
+            const endDate = resolveEndDate(data)!;
             return await goalRepository.create(userId, { ...data, endDate });
         } catch (error: unknown) {
             return rethrow(error, 'Failed to create goal');
@@ -95,7 +96,7 @@ class GoalService {
      */
     async updateGoal(userId: string, goalId: string, data: UpdateGoalDTO): Promise<void> {
         try {
-            const endDate = computeEndDate(data.startDate, data.months);
+            const endDate = resolveEndDate(data)!;
             await goalRepository.update(userId, goalId, { ...data, endDate });
         } catch (error: unknown) {
             rethrow(error, `Failed to update goal ${goalId}`);

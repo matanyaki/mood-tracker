@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Pencil, Pause, Play, Trash2 } from 'lucide-react-native';
 import type { Goal } from '@shared/types';
-import { currentPause, goalLastDay } from '../../../shared/types';
+import { currentPause, goalLastDay, goalDuration } from '../../../shared/types';
 import { WEEKDAY_LABELS, TIME_OF_DAY_LABELS } from '../../constants/goals';
 import { GOAL_TEXT } from '../../constants/colors';
 import PixelCard from '../ui/PixelCard';
@@ -32,6 +32,18 @@ const GOAL_ACCENT = '#10B981';
 const shortDate = (date: string) => {
     const [year, month, day] = date.split('-');
     return `${day}/${month}/${year.slice(2)}`;
+};
+
+/** '[2W + PAUSE]' from the parts that apply, or nothing when none do. */
+const bracket = (parts: string[]) => {
+    const shown = parts.filter(Boolean);
+    return shown.length ? `[${shown.join(' + ')}]` : '';
+};
+
+/** '2W', '10D', '3M' -- or nothing for a goal whose end date was picked, which the dates already say. */
+const lengthTag = (goal: Goal) => {
+    const { unit, count } = goalDuration(goal);
+    return unit === 'date' ? '' : `${count}${unit.charAt(0).toUpperCase()}`;
 };
 
 /**
@@ -115,7 +127,7 @@ export default function GoalCard({ goal, onEdit, onPause, onResume, onDelete }: 
             <Text style={styles.meta}>
                 {shortDate(goal.startDate)} {'>'} {isPaused
                     ? `PAUSED AFTER ${shortDate(pause.lastDay)}`
-                    : `${shortDate(lastDay)}  [${goal.months}M${wasPushed ? ' + PAUSE' : ''}]`}
+                    : `${shortDate(lastDay)}  ${bracket([lengthTag(goal), wasPushed ? 'PAUSE' : ''])}`}
             </Text>
 
             {/* The whole week is drawn, not just the chosen days, so the pattern
