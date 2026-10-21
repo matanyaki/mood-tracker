@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import { ScreenContainer, AppHeader, BackButton, ReflectionCard, PrimaryButton } from '../components';
 import { useReflectionController } from '../controllers/useReflectionController';
-import { getEmotionColor } from '../constants/colors';
 import { TYPE } from '../constants/typography';
 import { CARD_GAP, SCREEN_BOTTOM, SCREEN_GUTTER, SCREEN_TOP, SPACE } from '../constants/layout';
 import { INK } from '../constants/pixel';
@@ -55,8 +54,8 @@ export default function ReflectionScreen({ route, navigation }: any) {
             <Text style={styles.subtitle}>Take a moment to write about your feelings.</Text>
           </View>
 
-          {/* One segment per selected emotion: done ones filled, the current one in
-              its emotion's colour (the same as the card's accent bar), the rest dim. */}
+          {/* One segment per selected emotion: done ones and the current one filled
+              in ink (never the emotion's colour), the rest dim. */}
           <View style={styles.progressRow}>
             <View style={styles.progressBar}>
               {selections.map((item: any, index: number) => (
@@ -64,8 +63,7 @@ export default function ReflectionScreen({ route, navigation }: any) {
                   key={item.id}
                   style={[
                     styles.progressSegment,
-                    index < step && styles.progressSegmentDone,
-                    index === step && { backgroundColor: getEmotionColor(item.id) },
+                    index <= step && styles.progressSegmentDone,
                   ]}
                 />
               ))}

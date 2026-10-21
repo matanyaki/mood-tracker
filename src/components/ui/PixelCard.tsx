@@ -62,14 +62,24 @@ export default function PixelCard({
                     styles.face,
                     { padding },
                     outlineColor ? { borderColor: outlineColor } : null,
-                    accentColor
-                        ? { borderLeftWidth: ACCENT_BAR_W, borderLeftColor: accentColor }
-                        : null,
+                    // The border only reserves the bar's width; the bar itself is drawn
+                    // below. A coloured borderLeft mitres into the thinner top and bottom
+                    // outlines (wedges of outline at both left corners), and on Android a
+                    // card that stays mounted while its accent changes -- ReflectionCard
+                    // stepping through emotions -- does not always repaint it cleanly.
+                    accentColor ? styles.faceWithAccent : null,
                     style,
                 ]}
             >
                 {children}
             </View>
+
+            {accentColor && (
+                <View
+                    style={[styles.accentBar, { backgroundColor: accentColor }]}
+                    pointerEvents="none"
+                />
+            )}
         </View>
     );
 }
@@ -91,5 +101,17 @@ const styles = StyleSheet.create({
         backgroundColor: PAPER,
         borderWidth: BORDER_W,
         borderColor: OUTLINE,
+    },
+    faceWithAccent: {
+        borderLeftWidth: ACCENT_BAR_W,
+    },
+    // Solid block over the face's left border, full height, so the whole left edge
+    // is the accent colour from corner to corner.
+    accentBar: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        width: ACCENT_BAR_W,
     },
 });

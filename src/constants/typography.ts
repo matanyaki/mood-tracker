@@ -69,7 +69,7 @@ export const TYPE = {
     /** Screen title. AppHeader only -- one per screen. */
     h1: { fontFamily: PIXEL_BOLD, fontSize: 18, lineHeight: 24, letterSpacing: 2, color: INK },
     /** Section heading outside a card: `[ ACCOUNT ]`. */
-    h2: { fontFamily: PIXEL_BOLD, fontSize: 12, lineHeight: 16, letterSpacing: 2, color: INK_MUTED },
+    h2: { fontFamily: PIXEL_BOLD, fontSize: 12, lineHeight: 16, letterSpacing: 2, color: INK },
     /** Card and dialog titles; primary button text. */
     h3: { fontFamily: PIXEL_BOLD, fontSize: 14, lineHeight: 20, letterSpacing: 2, color: INK },
     /** Running text: answers, tips, messages. */

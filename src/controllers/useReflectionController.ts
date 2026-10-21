@@ -4,14 +4,21 @@ import { useQueryClient } from '@tanstack/react-query';
 import { JournalService } from '../services/journalService';
 import { useAuth } from '../context/AuthContext';
 
+// Unsaved notes, keyed by emotion id. Module-level so they outlive the screen:
+// going Back to Check In unmounts Reflection, and the notes should still be there
+// on the way back in -- the same promise GratitudeNote makes. Only a successful
+// save clears them. In memory only, so an app restart starts fresh.
+let draftNotes: Record<string, string> = {};
+
 export const useReflectionController = (route: any, navigation: any) => {
     const { user, isGuest } = useAuth();
     const queryClient = useQueryClient();
     const { selections } = route.params;
-    const [notes, setNotes] = useState<Record<string, string>>({});
+    const [notes, setNotes] = useState<Record<string, string>>(() => ({ ...draftNotes }));
     const [loading, setLoading] = useState(false);
 
     const handleTextChange = useCallback((id: string, text: string) => {
+        draftNotes = { ...draftNotes, [id]: text };
         setNotes(prev => ({ ...prev, [id]: text }));
     }, []);
 
@@ -54,6 +61,9 @@ export const useReflectionController = (route: any, navigation: any) => {
             // @ts-ignore
             const entryId = await JournalService.addEntry(entryData);
             console.log("[Reflection] Entry saved successfully. ID:", entryId);
+
+            // Saved, so the next check-in opens with empty notes.
+            draftNotes = {};
 
             // Invalidate the saved month so Diary and Insights both refresh on next read.
             // Insights counts its emotions from these same entries, so this covers it.
