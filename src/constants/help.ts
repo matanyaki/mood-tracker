@@ -88,7 +88,7 @@ export const HELP_SECTIONS: HelpSection[] = [
             {
                 question: 'How do I create a goal?',
                 answer:
-                    'Tap + on the Today screen, choose Goals, then add a new one. Give it a name, a start date, how many months it runs, how many times a week, which days, and what time of day.',
+                    'Tap + on the Today screen, choose Goals, then add a new one. Give it a name and a start date, then say how long it runs: a number of days, weeks or months, or an end date picked on the calendar. Pick the days of the week it runs on, and what time of day. The number of days you pick is how many times a week it runs.\n\nFor weeks that differ, choose PICK DAYS instead and tap each day the goal runs on the calendar.',
             },
             {
                 question: 'How do I mark a goal as done?',
@@ -146,4 +146,18 @@ export const CRISIS_SUPPORT = {
         "This app is a journal, not a replacement for real support. If you're struggling, a free, confidential helpline can help. If you're in danger, call your local emergency number.",
     linkLabel: 'FIND A HELPLINE',
     url: 'https://www.eran.org.il/online-emotional-help/',
+};
+
+/**
+ * What the Goal form's HELP button says: what makes a goal worth setting, not how
+ * the form works -- the form's own labels cover that, and the Help screen has the
+ * step by step.
+ */
+export const GOOD_GOAL_TIPS = {
+    title: 'A good goal',
+    body:
+        'Small: something you can still do on a hard day. "Walk 10 minutes" beats "get fit".\n\n' +
+        'Clear: at the end of the day you know for sure whether you did it.\n\n' +
+        'Short to start: two weeks you finish beat three months you drop. You can add more later.\n\n' +
+        'Tied to a time: the same time of day turns it into a habit.',
 };

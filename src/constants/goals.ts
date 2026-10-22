@@ -1,10 +1,11 @@
 // The schedule vocabulary itself lives in shared/types/goal.types.ts so the server
 // schema and the client agree on one list. This module adds only what the UI needs
 // on top of it: the labels drawn on the boxes.
-import { TIMES_OF_DAY } from '../../shared/types/goal.types';
+import { TIMES_OF_DAY, DURATION_UNITS, SCHEDULE_MODES } from '../../shared/types/goal.types';
+import type { DurationUnit, ScheduleMode } from '../../shared/types/goal.types';
 
-export { TIMES_OF_DAY };
-export type { TimeOfDay, Goal } from '../../shared/types/goal.types';
+export { TIMES_OF_DAY, DURATION_UNITS, SCHEDULE_MODES };
+export type { TimeOfDay, Goal, DurationUnit, ScheduleMode } from '../../shared/types/goal.types';
 
 /**
  * Weekday labels, indexed by the same 0-6 the goal stores (0 = Sunday, matching
@@ -22,10 +23,21 @@ export const TIME_OF_DAY_LABELS: Record<typeof TIMES_OF_DAY[number], string> = {
 };
 
 /**
- * What the times-per-week picker offers.
- *
- * Stops at 7 because a goal has to pick exactly that many weekday boxes and there
- * are only seven of them -- an eighth option would be one the form could never
- * satisfy and the server would always reject.
+ * Box labels for the length units, in the order the form draws them. Also the
+ * count field's eyebrow -- "[ WEEKS ]" -- so the number reads with its unit.
  */
-export const TIMES_PER_WEEK_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
+export const DURATION_UNIT_LABELS: Record<DurationUnit, string> = {
+    days: 'DAYS',
+    weeks: 'WEEKS',
+    months: 'MONTHS',
+    date: 'DATE',
+};
+
+/**
+ * Box labels for the two ways to give a goal's days, in the order the form draws
+ * them: the same weekdays every week, or days picked one by one on a calendar.
+ */
+export const SCHEDULE_MODE_LABELS: Record<ScheduleMode, string> = {
+    weekdays: 'SAME DAYS',
+    dates: 'PICK DAYS',
+};

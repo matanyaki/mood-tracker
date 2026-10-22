@@ -11,6 +11,26 @@ export type TimeOfDay = typeof TIMES_OF_DAY[number];
 export const TimeOfDaySchema = z.enum(TIMES_OF_DAY);
 
 /**
+ * How a goal's length is given. 'days', 'weeks' and 'months' are a count from
+ * startDate; 'date' is an end date the user picked, with no count at all.
+ * Ordered shortest first, because the form draws them in this order.
+ */
+export const DURATION_UNITS = ['days', 'weeks', 'months', 'date'] as const;
+
+export type DurationUnit = typeof DURATION_UNITS[number];
+
+export const DurationUnitSchema = z.enum(DURATION_UNITS);
+
+/**
+ * How a goal's days are given. 'weekdays' repeats the same weekdays from startDate
+ * for its length; 'dates' is every day picked one by one on a calendar, so each
+ * week can differ.
+ */
+export const SCHEDULE_MODES = ['weekdays', 'dates'] as const;
+
+export type ScheduleMode = typeof SCHEDULE_MODES[number];
+
+/**
  * One pause in a goal's run. The days strictly between `lastDay` and `resumedOn` are
  * not part of the goal at all -- neither done nor missed -- and the run is pushed
  * out by however many goal days fell inside them.
@@ -26,11 +46,22 @@ export const GoalSchema = z.object({
     id: z.string().optional(),
     userId: z.string(),
     name: z.string().trim().min(1),
-    startDate: z.string(), // YYYY-MM-DD, chosen by the user
-    months: z.number().int().positive(),
-    endDate: z.string(),   // YYYY-MM-DD, always computeEndDate(startDate, months)
+    // Absent means 'weekdays': every goal saved before picked days existed. Read
+    // only through isDatesSchedule.
+    scheduleMode: z.enum(SCHEDULE_MODES).optional(),
+    // 'dates' only: every day the goal runs on, YYYY-MM-DD, sorted and unique. The
+    // rest of a 'dates' schedule is derived from it -- see datesScheduleFields.
+    dates: z.array(z.string()).optional(),
+    startDate: z.string(), // YYYY-MM-DD, chosen by the user; dates[0] for 'dates'
+    // The goal's length. Read only through goalDuration, and not used for 'dates'.
+    // A goal saved before units existed has only `months`, and means unit 'months'.
+    durationUnit: DurationUnitSchema.optional(),
+    durationCount: z.number().int().positive().optional(),
+    months: z.number().int().positive().optional(),
+    endDate: z.string(),   // YYYY-MM-DD, always resolveEndDate(goal)
+    // For 'dates', the most picks in any Sun-Sat week.
     timesPerWeek: z.number().int().positive(),
-    // 0 = Sunday, matching Date.prototype.getDay()
+    // 0 = Sunday, matching Date.prototype.getDay(). Empty for 'dates'.
     daysOfWeek: z.array(z.number().int().min(0).max(6)),
     timesOfDay: z.array(TimeOfDaySchema).min(1),
     // Oldest first; only the last one can still be open. Absent on a goal never
@@ -42,11 +73,58 @@ export const GoalSchema = z.object({
 
 export type Goal = z.infer<typeof GoalSchema>;
 
-// endDate is derived, never sent: the server computes it from startDate + months so
-// the two can't disagree. userId comes from the verified token, the same way it does
-// for an entry or a greeting. pauses have their own actions (POST /:id/pause, /:id/resume).
-export type CreateGoalDTO = Omit<Goal, 'id' | 'userId' | 'endDate' | 'pauses' | 'createdAt' | 'updatedAt'>;
+// endDate is derived from startDate and the duration, so the two can't disagree. It
+// is sent only for unit 'date', where it IS the duration; for every other unit the
+// server computes it with resolveEndDate. userId comes from the verified token, the
+// same way it does for an entry or a greeting. pauses have their own actions
+// (POST /:id/pause, /:id/resume).
+export type CreateGoalDTO = Omit<Goal, 'id' | 'userId' | 'endDate' | 'pauses' | 'createdAt' | 'updatedAt'> & {
+    endDate?: string;
+};
 export type UpdateGoalDTO = CreateGoalDTO;
+
+/** Whether a goal runs on picked dates rather than repeating weekdays. */
+export const isDatesSchedule = (goal: Pick<Goal, 'scheduleMode'>) => goal.scheduleMode === 'dates';
+
+/**
+ * A 'dates' schedule's fields, all derived from the picks: start and end are the
+ * first and last, there are no weekdays, and timesPerWeek is the busiest Sun-Sat
+ * week. Empty picks give no start or end -- goalScheduleError turns those away.
+ */
+export function datesScheduleFields(dates: string[]) {
+    const sorted = [...new Set(dates)].sort();
+    const perWeek = new Map<string, number>();
+    for (const date of sorted) {
+        const weekStart = addDays(date, -weekdayOf(date));
+        perWeek.set(weekStart, (perWeek.get(weekStart) ?? 0) + 1);
+    }
+    return {
+        scheduleMode: 'dates' as const,
+        dates: sorted,
+        startDate: sorted[0],
+        endDate: sorted[sorted.length - 1],
+        daysOfWeek: [] as number[],
+        timesPerWeek: Math.max(0, ...perWeek.values()),
+    };
+}
+
+/**
+ * What a create or edit body is stored as. The server and the guest path both
+ * write through this, so neither trusts the derived fields a client sent: a
+ * 'dates' goal's start, end, weekdays and times a week come from its picks, and
+ * every other goal's endDate from resolveEndDate.
+ *
+ * The mode is always written, so an edit that switches it back to 'weekdays'
+ * replaces the stored one. Only call it on a body goalScheduleError accepted.
+ */
+export function resolveGoalSchedule(data: CreateGoalDTO): CreateGoalDTO & { endDate: string } {
+    if (isDatesSchedule(data)) {
+        // The length fields mean nothing for picked days, so they are not stored.
+        const { durationUnit, durationCount, months, ...rest } = data;
+        return { ...rest, ...datesScheduleFields(data.dates ?? []) };
+    }
+    return { ...data, scheduleMode: 'weekdays', endDate: resolveEndDate(data)! };
+}
 
 /**
  * One day marked done, stored at users/{uid}/goals/{goalId}/completions/{YYYY-MM-DD}.
@@ -82,8 +160,9 @@ export type GoalCompletionsByGoal = Record<string, string[]>;
  * request, the same way /api/streaks is.
  *
  * `target` is every day the goal was planned for, startDate to endDate. Pausing does
- * not change it -- the run is pushed out instead. A valid goal picks at least one
- * weekday and runs at least a month, so it is never zero in practice.
+ * not change it -- the run is pushed out instead. goalScheduleError turns away a
+ * goal none of whose picked weekdays fall inside its run, so a valid goal never has
+ * a target of zero.
  */
 export const GoalProgressSchema = z.object({
     goalId: z.string(),
@@ -103,15 +182,131 @@ export const GOAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const GoalDateSchema = z.string().regex(GOAL_DATE_PATTERN, 'Expected a YYYY-MM-DD date.');
 
+/** The fields that say how long a goal runs. */
+type GoalDurationFields = Pick<Goal, 'durationUnit' | 'durationCount' | 'months' | 'scheduleMode' | 'dates'>;
+
 /**
- * The one and only endDate rule: startDate plus `months` calendar months.
+ * A goal's length as a unit and a count. The ONLY reader of durationUnit,
+ * durationCount and months, so a goal saved with just `months` reads the same as
+ * one saved with a unit.
  *
- * Built from the date parts rather than `new Date(...)` arithmetic so it stays on
- * the calendar the user picked from — a Date would drag the caller's timezone into
- * a value that has no time of day at all.
- *
- * A short month clamps: 31 Jan + 1 month is 28 (or 29) Feb, not 3 March.
+ * The count is 0 for 'date' -- that goal's length is its endDate -- and 0 for a
+ * goal with no length stored at all.
  */
+export function goalDuration(goal: GoalDurationFields): { unit: DurationUnit; count: number } {
+    const unit = goal.durationUnit ?? 'months';
+    if (unit === 'date') return { unit, count: 0 };
+    return { unit, count: goal.durationCount ?? goal.months ?? 0 };
+}
+
+/**
+ * The one and only endDate rule. Both startDate and the end date are days of the
+ * goal, so N days ends on day N, not the day after it:
+ *
+ * - days:   startDate + (count - 1) days
+ * - weeks:  startDate + (count * 7 - 1) days
+ * - months: computeEndDate(startDate, count), unchanged from before units existed
+ * - date:   the endDate passed in, as the user picked it
+ * - picked dates (scheduleMode 'dates'): the last of them
+ *
+ * Null when there is nothing to resolve: a count of 0, a 'date' goal with no
+ * endDate, or no picked dates. The caller decides whether that is an error.
+ */
+export function resolveEndDate(
+    goal: GoalDurationFields & Pick<Goal, 'startDate'> & { endDate?: string }
+): string | null {
+    if (isDatesSchedule(goal)) return goal.dates?.length ? [...goal.dates].sort()[goal.dates.length - 1] : null;
+
+    const { unit, count } = goalDuration(goal);
+    if (unit === 'date') return goal.endDate ?? null;
+    if (count === 0) return null;
+
+    switch (unit) {
+        case 'days':   return addDays(goal.startDate, count - 1);
+        case 'weeks':  return addDays(goal.startDate, count * 7 - 1);
+        case 'months': return computeEndDate(goal.startDate, count);
+    }
+}
+
+/** The longest a goal can run, per counted unit. A 'date' goal has its own limit below. */
+export const MAX_DURATION = { days: 366, weeks: 52, months: 24 } as const;
+
+/** How far past startDate a picked end date can be, and how far apart picked days can be. */
+const MAX_DATE_SPAN_DAYS = 366;
+
+/** The most days a 'dates' goal can pick. */
+export const MAX_PLAN_DATES = 366;
+
+/** Whether a string is a real 'YYYY-MM-DD' day: the pattern alone lets '2026-02-31' through. */
+const isValidDay = (date: string) => GOAL_DATE_PATTERN.test(date) && addDays(date, 0) === date;
+
+/** goalScheduleError's rules for picked dates. `today`, when given, turns away past picks. */
+function datesScheduleError(dates: string[], today?: string): string | null {
+    if (dates.length === 0) return 'Pick at least one day on the calendar.';
+    if (dates.length > MAX_PLAN_DATES) return `A goal can have at most ${MAX_PLAN_DATES} picked days.`;
+    if (!dates.every(isValidDay)) return 'Pick valid days.';
+    if (new Set(dates).size !== dates.length) return 'Each day can only be picked once.';
+
+    const sorted = [...dates].sort();
+    if (sorted[sorted.length - 1] > addDays(sorted[0], MAX_DATE_SPAN_DAYS)) {
+        return 'The picked days can span at most a year.';
+    }
+    if (today && sorted[0] < today) return 'Picked days cannot be in the past.';
+    return null;
+}
+
+/**
+ * Why a goal's schedule is not allowed, or null when it is. The ONE set of rules --
+ * the server, the guest path and the form all ask this, so a goal the form accepts
+ * is one the server accepts too. Checked in order; the first problem wins, and the
+ * message is written to be shown to the user as it is.
+ *
+ * Takes a CreateGoalDTO as well as a Goal: endDate is read only for unit 'date',
+ * where it is what the user picked. Every other unit resolves its own. A 'dates'
+ * goal is checked on its picks alone -- everything else about it is derived.
+ *
+ * `today` is passed on create only, as the device's day (the same way a pause
+ * names its own): a new goal cannot start, or pick a day, already behind it. An
+ * edit keeps the past start and picks its history depends on.
+ */
+export function goalScheduleError(
+    goal: GoalDurationFields & Pick<Goal, 'startDate' | 'daysOfWeek' | 'timesPerWeek'> & { endDate?: string },
+    today?: string
+): string | null {
+    if (isDatesSchedule(goal)) return datesScheduleError(goal.dates ?? [], today);
+
+    if (today && goal.startDate < today) return 'The start date cannot be in the past.';
+
+    if (goal.daysOfWeek.length === 0) return 'Pick at least one day of the week.';
+    if (new Set(goal.daysOfWeek).size !== goal.daysOfWeek.length) {
+        return 'Each day of the week can only be picked once.';
+    }
+    // The picked days ARE the plan, so the count must agree with them.
+    if (goal.timesPerWeek !== goal.daysOfWeek.length) {
+        return 'Times a week must match the number of days picked.';
+    }
+
+    const { unit, count } = goalDuration(goal);
+    if (unit === 'date') {
+        const end = goal.endDate;
+        if (!end || !isValidDay(end)) return 'Pick a valid end date.';
+        if (end < goal.startDate) return 'The end date cannot be before the start date.';
+        if (end > addDays(goal.startDate, MAX_DATE_SPAN_DAYS)) {
+            return `The end date can be at most ${MAX_DATE_SPAN_DAYS} days after the start date.`;
+        }
+    } else {
+        if (count <= 0) return `Pick how many ${unit} the goal runs for.`;
+        if (count > MAX_DURATION[unit]) return `A goal can run for at most ${MAX_DURATION[unit]} ${unit}.`;
+    }
+
+    // Not null: every case that resolves to null was turned away above.
+    const endDate = resolveEndDate(goal)!;
+    if (plannedDayCount({ ...goal, endDate }) === 0) {
+        return 'None of the picked days fall between the start and end date.';
+    }
+    return null;
+}
+
 /**
  * Whether a goal is scheduled on one 'YYYY-MM-DD' day.
  *
@@ -121,6 +316,8 @@ export const GoalDateSchema = z.string().regex(GOAL_DATE_PATTERN, 'Expected a YY
  *
  * Both ends of the window count: a goal that runs three months from the 14th is
  * still running on its last day. A day inside a pause is not scheduled at all.
+ * A 'dates' goal is scheduled on its picks as pauses have moved them, which never
+ * land inside a pause, so the same three tests answer for both modes.
  *
  * The range test is a string comparison because 'YYYY-MM-DD' sorts lexically, and
  * the weekday is read off a LOCAL Date built from the parts. `new Date('2026-09-14')`
@@ -129,16 +326,63 @@ export const GoalDateSchema = z.string().regex(GOAL_DATE_PATTERN, 'Expected a YY
  */
 export function isGoalScheduledOn(goal: GoalSchedule, date: string): boolean {
     if (date < goal.startDate || date > goalLastDay(goal)) return false;
-    return isOnGoalWeekday(goal, date) && !isInPause(goal, date);
+    return isOnGoalPlanDay(goal, date) && !isInPause(goal, date);
 }
 
 /** The fields that decide which days a goal falls on. */
-type GoalSchedule = Pick<Goal, 'startDate' | 'endDate' | 'daysOfWeek' | 'pauses'>;
+type GoalSchedule = Pick<Goal, 'startDate' | 'endDate' | 'daysOfWeek' | 'pauses' | 'scheduleMode' | 'dates'>;
 
-/** Whether a day is one of the goal's weekdays, ignoring its window and pauses. */
-function isOnGoalWeekday(goal: Pick<Goal, 'daysOfWeek'>, date: string): boolean {
+/**
+ * Whether a day is one the goal's plan puts it on, ignoring its window: one of its
+ * weekdays, or one of its picked dates as pauses have moved them. The ONE place
+ * that decides goal days -- a weekday goal's pauses are left to isInPause.
+ */
+function isOnGoalPlanDay(goal: Pick<Goal, 'daysOfWeek' | 'scheduleMode' | 'dates' | 'pauses'>, date: string): boolean {
+    if (isDatesSchedule(goal)) return effectivePlanDates(goal).includes(date);
+    return goal.daysOfWeek.includes(weekdayOf(date));
+}
+
+/** A 'YYYY-MM-DD' day's weekday, 0 = Sunday, read off a LOCAL Date built from the parts. */
+function weekdayOf(date: string): number {
     const [year, month, day] = date.split('-').map(Number);
-    return goal.daysOfWeek.includes(new Date(year, month - 1, day).getDay());
+    return new Date(year, month - 1, day).getDay();
+}
+
+/** Whole days from one 'YYYY-MM-DD' to another, counted in UTC like addDays. */
+function daysBetween(from: string, to: string): number {
+    return (Date.parse(`${to}T00:00:00.000Z`) - Date.parse(`${from}T00:00:00.000Z`)) / 86_400_000;
+}
+
+/** Memo for effectivePlanDates, keyed the same way as lastDayCache below. */
+const planDatesCache = new WeakMap<object, string[]>();
+
+/**
+ * A 'dates' goal's picks as its pauses have moved them, sorted.
+ *
+ * Pauses apply oldest first. A resumed pause moves every pick after its lastDay
+ * later by the days it skipped -- (resumedOn - lastDay - 1) -- so the picks keep
+ * their spacing and none is lost. An open pause drops every pick after its lastDay:
+ * nothing is scheduled until it resumes.
+ *
+ * Moving the picks is what a weekday goal does by walking on to its next weekday;
+ * picked dates have nothing past the last one to walk to.
+ */
+export function effectivePlanDates(goal: Pick<Goal, 'dates' | 'pauses'>): string[] {
+    const cached = planDatesCache.get(goal);
+    if (cached) return cached;
+
+    let dates = [...(goal.dates ?? [])].sort();
+    for (const pause of goal.pauses ?? []) {
+        if (!pause.resumedOn) {
+            dates = dates.filter(date => date <= pause.lastDay);
+            break;
+        }
+        const shift = daysBetween(pause.lastDay, pause.resumedOn) - 1;
+        dates = dates.map(date => (date > pause.lastDay ? addDays(date, shift) : date));
+    }
+
+    planDatesCache.set(goal, dates);
+    return dates;
 }
 
 /** A 'YYYY-MM-DD' moved by whole days. Stepped in UTC so the key stays a plain calendar day. */
@@ -167,15 +411,20 @@ function isInPause(goal: Pick<Goal, 'pauses'>, date: string): boolean {
 }
 
 /**
- * How many days the goal was planned for: its weekdays from startDate to endDate.
+ * How many days the goal was planned for: its weekdays from startDate to endDate,
+ * or its picked dates.
  *
  * Pauses do not change this number -- they change when the run ends. It is the
  * progress ring's target, and what a resumed goal keeps running until it has had.
  */
-export function plannedDayCount(goal: Pick<Goal, 'startDate' | 'endDate' | 'daysOfWeek'>): number {
+export function plannedDayCount(
+    goal: Pick<Goal, 'startDate' | 'endDate' | 'daysOfWeek' | 'scheduleMode' | 'dates'>
+): number {
+    if (isDatesSchedule(goal)) return goal.dates?.length ?? 0;
+
     let count = 0;
     for (let day = goal.startDate; day <= goal.endDate; day = nextDay(day)) {
-        if (isOnGoalWeekday(goal, day)) count++;
+        if (isOnGoalPlanDay(goal, day)) count++;
     }
     return count;
 }
@@ -195,6 +444,7 @@ const lastDayCache = new WeakMap<object, string>();
  * - Paused and resumed: the run picks up where it left off. It keeps going until it
  *   has had as many goal days as it was planned for, so the end moves out by the goal
  *   days that fell inside its pauses. Never earlier than the original end date.
+ *   A 'dates' goal ends on its last pick as the pauses moved it (effectivePlanDates).
  *
  * Everything that asks "is this day part of the goal" goes through here.
  */
@@ -202,6 +452,10 @@ export function goalLastDay(goal: GoalSchedule): string {
     const pause = currentPause(goal);
     if (pause) return pause.lastDay;
     if (!goal.pauses?.length) return goal.endDate;
+    if (isDatesSchedule(goal)) {
+        const dates = effectivePlanDates(goal);
+        return dates[dates.length - 1] ?? goal.endDate;
+    }
 
     const cached = lastDayCache.get(goal);
     if (cached) return cached;
@@ -215,7 +469,7 @@ export function goalLastDay(goal: GoalSchedule): string {
         // Terminates: no pause is open, so every day past the last resume runs, and
         // a goal with a target has at least one weekday.
         while (true) {
-            if (isOnGoalWeekday(goal, day) && !isInPause(goal, day)) count++;
+            if (isOnGoalPlanDay(goal, day) && !isInPause(goal, day)) count++;
             if (count === target) break;
             day = nextDay(day);
         }
@@ -297,6 +551,16 @@ export function goalDayStatus(date: string, today: string, isCompleted: boolean)
     return date === today ? 'pending' : 'missed';
 }
 
+/**
+ * startDate plus `months` calendar months: the end date of a 'months' goal. Call
+ * resolveEndDate rather than this, so every unit goes through the same rule.
+ *
+ * Built from the date parts rather than `new Date(...)` arithmetic so it stays on
+ * the calendar the user picked from — a Date would drag the caller's timezone into
+ * a value that has no time of day at all.
+ *
+ * A short month clamps: 31 Jan + 1 month is 28 (or 29) Feb, not 3 March.
+ */
 export function computeEndDate(startDate: string, months: number): string {
     const [year, month, day] = startDate.split('-').map(Number);
 

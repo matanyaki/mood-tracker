@@ -1,6 +1,6 @@
 import { goalRepository } from '../repositories/goalRepository';
 import { AppError, rethrow } from '../middleware/errorHandler';
-import { computeEndDate, isGoalPaused, addPause, endPause } from '../../../shared/types';
+import { resolveGoalSchedule, isGoalPaused, addPause, endPause } from '../../../shared/types';
 import { dayKeyFromMillis } from '../../../shared/utils/streak';
 import { computeGoalProgress } from '../../../shared/utils/goalProgress';
 import type {
@@ -14,13 +14,17 @@ class GoalService {
      * Create a new goal.
      *
      * endDate is derived here rather than taken from the request: it is a function
-     * of startDate and months, and a client that sent its own could store a goal
-     * whose end date disagrees with its own schedule.
+     * of startDate and the duration (resolveEndDate), and a client that sent its own
+     * could store a goal whose end date disagrees with its own schedule. Only a
+     * 'date' goal keeps the endDate sent, because there it IS the duration. A
+     * 'dates' goal's start, end and times a week all come from its picks.
+     *
+     * Safe: the controller has already checked the body with goalScheduleError,
+     * which turns away every goal resolveGoalSchedule cannot resolve.
      */
     async createGoal(userId: string, data: CreateGoalDTO): Promise<Goal> {
         try {
-            const endDate = computeEndDate(data.startDate, data.months);
-            return await goalRepository.create(userId, { ...data, endDate });
+            return await goalRepository.create(userId, resolveGoalSchedule(data));
         } catch (error: unknown) {
             return rethrow(error, 'Failed to create goal');
         }
@@ -91,12 +95,11 @@ class GoalService {
     }
 
     /**
-     * Update an existing goal. endDate is recomputed, same as on create.
+     * Update an existing goal. The schedule is re-derived, same as on create.
      */
     async updateGoal(userId: string, goalId: string, data: UpdateGoalDTO): Promise<void> {
         try {
-            const endDate = computeEndDate(data.startDate, data.months);
-            await goalRepository.update(userId, goalId, { ...data, endDate });
+            await goalRepository.update(userId, goalId, resolveGoalSchedule(data));
         } catch (error: unknown) {
             rethrow(error, `Failed to update goal ${goalId}`);
         }

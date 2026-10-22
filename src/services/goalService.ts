@@ -8,7 +8,7 @@ import type {
     Goal, CreateGoalDTO, UpdateGoalDTO, GoalCompletion, GoalCompletionsByGoal, GoalProgress,
 } from '@shared/types';
 import {
-    GoalSchema, GoalCompletionSchema, GoalProgressSchema, computeEndDate,
+    GoalSchema, GoalCompletionSchema, GoalProgressSchema, resolveGoalSchedule, goalScheduleError,
     isGoalPaused, addPause, endPause,
 } from '../../shared/types';
 import type { PauseChange } from '../../shared/types';
@@ -34,6 +34,19 @@ const readGuestGoals = async (): Promise<Goal[]> => {
 
 const writeGuestGoals = (goals: Goal[]) =>
     AsyncStorage.setItem(GUEST_GOALS_KEY, JSON.stringify(goals));
+
+/**
+ * Throw the way the server would answer with a 400, so a guest goal follows the same
+ * rules. Also what makes resolveGoalSchedule(data) safe below: goalScheduleError
+ * turns away every goal it cannot resolve. `today` is passed on create only.
+ */
+const assertGuestSchedule = (data: CreateGoalDTO, today?: string) => {
+    const error = goalScheduleError(data, today);
+    if (error) throw new Error(error);
+};
+
+/** The device's own day, which the server cannot know -- see the create body. */
+const deviceToday = () => dayKeyFromMillis(Date.now(), new Date().getTimezoneOffset());
 
 /**
  * Apply a pause or resume to one guest goal. `change` returns null for a no-op
@@ -64,21 +77,27 @@ export const GoalService = {
      * - Authenticated: Saves via Custom Backend API
      * - Guest: Saves to AsyncStorage
      *
-     * endDate is not sent: the server derives it from startDate + months. The guest
-     * branch calls the same shared helper, so a guest who signs up later does not
-     * see their goals' end dates shift.
+     * endDate is sent only for unit 'date'; otherwise the server derives it from
+     * startDate and the duration, and a 'dates' goal's whole schedule from its picks.
+     * The guest branch calls the same shared helpers — resolveGoalSchedule, and
+     * goalScheduleError for the rules the server checks — so a guest who signs up
+     * later does not see their goals change.
+     *
+     * Today goes with it so that a new goal cannot pick a day already behind it.
      */
     createGoal: async (userId: string, data: CreateGoalDTO): Promise<Goal> => {
+        const today = deviceToday();
+
         try {
             if (GoalService.isGuest(userId)) {
                 // --- LOCAL STORAGE (Guest) ---
+                assertGuestSchedule(data, today);
                 const existing = await readGuestGoals();
 
                 const newGoal: Goal = {
-                    ...data,
+                    ...resolveGoalSchedule(data),
                     id: Date.now().toString(),
                     userId: GUEST_ID,
-                    endDate: computeEndDate(data.startDate, data.months),
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                 };
@@ -92,7 +111,7 @@ export const GoalService = {
                 const user = auth.currentUser;
                 if (!user) throw new Error("User not authenticated.");
 
-                const created = await api.post('/api/goals', data);
+                const created = await api.post('/api/goals', { ...data, today });
                 return GoalSchema.parse(created);
             }
         } catch (error) {
@@ -230,13 +249,13 @@ export const GoalService = {
         try {
             if (GoalService.isGuest(userId)) {
                 // --- LOCAL STORAGE ---
+                assertGuestSchedule(data);
                 const goals = await readGuestGoals();
                 await writeGuestGoals(goals.map(goal =>
                     goal.id === goalId
                         ? {
                             ...goal,
-                            ...data,
-                            endDate: computeEndDate(data.startDate, data.months),
+                            ...resolveGoalSchedule(data),
                             updatedAt: new Date().toISOString(),
                         }
                         : goal

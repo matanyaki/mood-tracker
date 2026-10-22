@@ -17,13 +17,13 @@ import type { Goal, GoalCompletionsByGoal, GoalProgress } from '../types/goal.ty
  *
  * Walked a day at a time through isGoalScheduledOn, the one place that decides
  * which days a goal falls on, so a partial first or last week counts only the days
- * it really has.
+ * it really has -- and a 'dates' goal counts its picks where its pauses moved them.
  *
  * What the Goals screen asks before a pause (would it keep anything?) and before a
  * resume (how many goal days are still to go?).
  */
 export function countScheduledDaysThrough(
-    goal: Pick<Goal, 'startDate' | 'endDate' | 'daysOfWeek' | 'pauses'>,
+    goal: Pick<Goal, 'startDate' | 'endDate' | 'daysOfWeek' | 'pauses' | 'scheduleMode' | 'dates'>,
     through: string
 ): number {
     const lastDay = goalLastDay(goal) < through ? goalLastDay(goal) : through;
