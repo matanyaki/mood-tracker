@@ -88,7 +88,7 @@ export const HELP_SECTIONS: HelpSection[] = [
             {
                 question: 'How do I create a goal?',
                 answer:
-                    'Tap + on the Today screen, choose Goals, then add a new one. Give it a name, a start date, how many months it runs, how many times a week, which days, and what time of day.',
+                    'Tap + on the Today screen, choose Goals, then add a new one. Give it a name and a start date, then say how long it runs: a number of days, weeks or months, or an end date picked on the calendar. Pick the days of the week it runs on, and what time of day. The number of days you pick is how many times a week it runs.\n\nFor weeks that differ, choose PICK DAYS instead and tap each day the goal runs on the calendar.',
             },
             {
                 question: 'How do I mark a goal as done?',

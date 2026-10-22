@@ -10,7 +10,7 @@ interface ToggleBoxProps {
     label: string;
     selected: boolean;
     onPress: () => void;
-    /** Greyed and inert -- the weekday boxes use it once the week is full. */
+    /** Greyed and inert. */
     disabled?: boolean;
     style?: StyleProp<ViewStyle>;
     /**

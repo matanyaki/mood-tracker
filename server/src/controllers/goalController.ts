@@ -3,30 +3,44 @@ import { z } from 'zod';
 import goalService from '../services/goalService';
 import {
     Goal, GoalCompletion, GoalCompletionsByGoal, GoalProgress, GoalSchema, GoalDateSchema,
+    goalScheduleError,
 } from '../../../shared/types';
 import { asyncWrap } from '../middleware/errorHandler';
 import { requireUid } from '../middleware/auth';
 
 /**
  * Derived from the canonical schema, so the shared contract stays the single source
- * of truth — and so a client structurally cannot set its own userId or endDate.
+ * of truth — and so a client structurally cannot set its own userId. endDate is
+ * accepted but only read for unit 'date', where it is the user's pick; for every
+ * other unit the service resolves its own and the one sent is ignored.
  *
- * The refine is the one rule that no single field can carry: picking three days a
- * week means picking exactly three weekday boxes, and a goal that disagrees with
- * itself would schedule nothing the user asked for.
+ * The superRefine carries the rules no single field can: the schedule as a whole,
+ * checked by goalScheduleError — the same rules the form and the guest path apply.
+ * A 'dates' body is checked on its `dates` alone; the service derives the rest.
  */
-const GoalBodySchema = GoalSchema
+const GoalBodyFields = GoalSchema
     .omit({ id: true, userId: true, endDate: true, pauses: true, createdAt: true, updatedAt: true })
-    .extend({ startDate: GoalDateSchema })
-    .refine(data => data.daysOfWeek.length === data.timesPerWeek, {
-        message: 'Pick exactly one weekday for each time per week.',
-        path: ['daysOfWeek'],
+    .extend({ startDate: GoalDateSchema, endDate: GoalDateSchema.optional() });
+
+// Create also takes the device's `today`, the same way a pause names its own day:
+// a new goal cannot pick a day already behind it, and only the device knows which
+// day that is. Optional, so a client that predates picked days still creates.
+const CreateGoalBodySchema = GoalBodyFields
+    .extend({ today: GoalDateSchema.optional() })
+    .superRefine((data, ctx) => {
+        const error = goalScheduleError(data, data.today);
+        if (error) ctx.addIssue({ code: 'custom', message: error, path: ['daysOfWeek'] });
     });
 
 // Update takes the same full body rather than a partial one. A goal's schedule is
 // only valid as a whole — a patch that moved timesPerWeek without daysOfWeek would
-// pass field-by-field and still break the rule above.
-const UpdateGoalBodySchema = GoalBodySchema;
+// pass field-by-field and still break the rule above. No `today`: an edit keeps
+// the past picks the goal's history depends on.
+const UpdateGoalBodySchema = GoalBodyFields
+    .superRefine((data, ctx) => {
+        const error = goalScheduleError(data);
+        if (error) ctx.addIssue({ code: 'custom', message: error, path: ['daysOfWeek'] });
+    });
 
 const MarkDoneBodySchema = z.object({
     date: GoalDateSchema,
@@ -55,7 +69,8 @@ interface ApiResponse<T> {
 
 export const createGoal = asyncWrap(async (req: Request, res: Response) => {
     const userId = requireUid(req);
-    const data = GoalBodySchema.parse(req.body);
+    // `today` was only for the check above, so it is not stored.
+    const { today, ...data } = CreateGoalBodySchema.parse(req.body);
 
     const goal = await goalService.createGoal(userId, data);
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Pencil, Pause, Play, Trash2 } from 'lucide-react-native';
 import type { Goal } from '@shared/types';
-import { currentPause, goalLastDay } from '../../../shared/types';
+import { currentPause, goalDuration, goalLastDay, isDatesSchedule } from '../../../shared/types';
 import { WEEKDAY_LABELS, TIME_OF_DAY_LABELS } from '../../constants/goals';
 import { GOAL_TEXT } from '../../constants/colors';
 import PixelCard from '../ui/PixelCard';
@@ -32,6 +32,24 @@ const GOAL_ACCENT = '#10B981';
 const shortDate = (date: string) => {
     const [year, month, day] = date.split('-');
     return `${day}/${month}/${year.slice(2)}`;
+};
+
+/** One letter per counted unit, for the meta line's "[2W]". */
+const UNIT_SUFFIX = { days: 'D', weeks: 'W', months: 'M' } as const;
+
+/**
+ * The bracketed tag after the dates: the length, then "+ PAUSE" if pauses pushed
+ * the end out. A 'date' goal and a picked-days goal have no length tag -- their two
+ * dates already say it -- so they show "[PAUSE]" or nothing at all.
+ */
+const metaTag = (goal: Goal, wasPushed: boolean) => {
+    const { unit, count } = goalDuration(goal);
+    const hasLength = !isDatesSchedule(goal) && unit !== 'date' && count > 0;
+    const parts = [
+        ...(hasLength ? [`${count}${UNIT_SUFFIX[unit as keyof typeof UNIT_SUFFIX]}`] : []),
+        ...(wasPushed ? ['PAUSE'] : []),
+    ];
+    return parts.length ? `  [${parts.join(' + ')}]` : '';
 };
 
 /**
@@ -115,25 +133,32 @@ export default function GoalCard({ goal, onEdit, onPause, onResume, onDelete }: 
             <Text style={styles.meta}>
                 {shortDate(goal.startDate)} {'>'} {isPaused
                     ? `PAUSED AFTER ${shortDate(pause.lastDay)}`
-                    : `${shortDate(lastDay)}  [${goal.months}M${wasPushed ? ' + PAUSE' : ''}]`}
+                    : `${shortDate(lastDay)}${metaTag(goal, wasPushed)}`}
             </Text>
 
             {/* The whole week is drawn, not just the chosen days, so the pattern
                 reads at a glance -- three lit boxes out of seven says more than
-                a list of three names. */}
-            <View style={styles.weekRow}>
-                {WEEKDAY_LABELS.map((label, index) => {
-                    const isOn = days.includes(index);
-                    return (
-                        <View key={label} style={[styles.dayPip, isOn && styles.dayPipOn]}>
-                            <Text style={[styles.dayPipText, isOn && styles.dayPipTextOn]}>
-                                {label.charAt(0)}
-                            </Text>
-                        </View>
-                    );
-                })}
-                <Text style={styles.weekCount}>{goal.timesPerWeek}x / WEEK</Text>
-            </View>
+                a list of three names. Picked days have no one week to draw, so
+                they are counted instead. */}
+            {isDatesSchedule(goal) ? (
+                <Text style={styles.planCount}>
+                    {goal.dates?.length ?? 0} PICKED {goal.dates?.length === 1 ? 'DAY' : 'DAYS'} * MAX {goal.timesPerWeek} x / WEEK
+                </Text>
+            ) : (
+                <View style={styles.weekRow}>
+                    {WEEKDAY_LABELS.map((label, index) => {
+                        const isOn = days.includes(index);
+                        return (
+                            <View key={label} style={[styles.dayPip, isOn && styles.dayPipOn]}>
+                                <Text style={[styles.dayPipText, isOn && styles.dayPipTextOn]}>
+                                    {label.charAt(0)}
+                                </Text>
+                            </View>
+                        );
+                    })}
+                    <Text style={styles.weekCount}>{goal.timesPerWeek}x / WEEK</Text>
+                </View>
+            )}
 
             <Text style={styles.times} numberOfLines={1}>
                 {goal.timesOfDay.map(time => TIME_OF_DAY_LABELS[time]).join(' * ')}
@@ -221,6 +246,10 @@ const styles = StyleSheet.create({
         ...TYPE.label,
         marginLeft: SPACE.sm,
         color: GOAL_TEXT, // The accent green is 2.5:1 as text
+    },
+    planCount: {
+        ...TYPE.label,
+        color: GOAL_TEXT,
     },
     times: {
         ...TYPE.label,
