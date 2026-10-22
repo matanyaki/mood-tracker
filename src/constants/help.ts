@@ -147,3 +147,17 @@ export const CRISIS_SUPPORT = {
     linkLabel: 'FIND A HELPLINE',
     url: 'https://www.eran.org.il/online-emotional-help/',
 };
+
+/**
+ * What the Goal form's HELP button says: what makes a goal worth setting, not how
+ * the form works -- the form's own labels cover that, and the Help screen has the
+ * step by step.
+ */
+export const GOOD_GOAL_TIPS = {
+    title: 'A good goal',
+    body:
+        'Small: something you can still do on a hard day. "Walk 10 minutes" beats "get fit".\n\n' +
+        'Clear: at the end of the day you know for sure whether you did it.\n\n' +
+        'Short to start: two weeks you finish beat three months you drop. You can add more later.\n\n' +
+        'Tied to a time: the same time of day turns it into a habit.',
+};

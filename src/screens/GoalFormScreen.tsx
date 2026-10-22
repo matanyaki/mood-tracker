@@ -16,6 +16,7 @@ import {
   CalendarPickerModal,
 } from '../components';
 import { PixelAlert } from '../components/ui/PixelAlert';
+import { GOOD_GOAL_TIPS } from '../constants/help';
 import { useGoalsController } from '../controllers/useGoalsController';
 import { GOAL_TEXT, DANGER_TEXT } from '../constants/colors';
 import {
@@ -123,6 +124,9 @@ export default function GoalFormScreen({ route, navigation }: any) {
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(existing?.daysOfWeek ?? []);
   const [timesOfDay, setTimesOfDay] = useState<TimeOfDay[]>(existing?.timesOfDay ?? []);
 
+  // A new goal starts today or later. An edited goal that already started keeps its
+  // start reachable, since its past days are history.
+  const startMinDate = existing && existing.startDate < todayKey ? existing.startDate : todayKey;
   const startSelected = useMemo(() => [startDate], [startDate]);
   const handleStartSelect = useCallback((dates: string[]) => setStartDate(dates[0]), []);
   const closeStartPicker = useCallback(() => setStartPickerOpen(false), []);
@@ -232,6 +236,7 @@ export default function GoalFormScreen({ route, navigation }: any) {
       <AppHeader
         title={isEditing ? 'Edit Goal' : 'New Goal'}
         leftAction={<BackButton onPress={() => navigation.goBack()} />}
+        rightAction={{ label: 'HELP', onPress: () => PixelAlert.alert(GOOD_GOAL_TIPS.title, GOOD_GOAL_TIPS.body, [{ text: 'GOT IT' }]) }}
       />
 
       <KeyboardAvoidingView
@@ -407,8 +412,8 @@ export default function GoalFormScreen({ route, navigation }: any) {
 
       <CalendarPickerModal
         visible={startPickerOpen}
-        title="[ START DATE ]"
         selected={startSelected}
+        minDate={startMinDate}
         onSelect={handleStartSelect}
         onClose={closeStartPicker}
       />
@@ -427,7 +432,6 @@ export default function GoalFormScreen({ route, navigation }: any) {
           leaves it standing, and goalScheduleError says so. */}
       <CalendarPickerModal
         visible={endPickerOpen}
-        title="[ END DATE ]"
         selected={endSelected}
         minDate={startDate}
         onSelect={handleEndSelect}
@@ -448,7 +452,6 @@ const styles = StyleSheet.create({
   },
   endDate: {
     ...TYPE.label,
-    color: INK_MUTED,
   },
   section: {
     gap: SPACE.sm,

@@ -266,14 +266,16 @@ function datesScheduleError(dates: string[], today?: string): string | null {
  * goal is checked on its picks alone -- everything else about it is derived.
  *
  * `today` is passed on create only, as the device's day (the same way a pause
- * names its own): a new goal cannot pick a day already behind it. An edit keeps
- * the past picks its history depends on.
+ * names its own): a new goal cannot start, or pick a day, already behind it. An
+ * edit keeps the past start and picks its history depends on.
  */
 export function goalScheduleError(
     goal: GoalDurationFields & Pick<Goal, 'startDate' | 'daysOfWeek' | 'timesPerWeek'> & { endDate?: string },
     today?: string
 ): string | null {
     if (isDatesSchedule(goal)) return datesScheduleError(goal.dates ?? [], today);
+
+    if (today && goal.startDate < today) return 'The start date cannot be in the past.';
 
     if (goal.daysOfWeek.length === 0) return 'Pick at least one day of the week.';
     if (new Set(goal.daysOfWeek).size !== goal.daysOfWeek.length) {

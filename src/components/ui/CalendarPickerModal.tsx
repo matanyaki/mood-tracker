@@ -21,8 +21,8 @@ const weekStartOf = (date: string) => format(startOfWeek(parseISO(date)), 'yyyy-
 
 interface CalendarPickerModalProps {
     visible: boolean;
-    /** Above the grid, e.g. "END DATE". */
-    title: string;
+    /** Above the grid, e.g. "[ PICK DAYS ]". Left out when the field that opened it already says what is picked. */
+    title?: string;
     /** The days picked so far, 'YYYY-MM-DD'. */
     selected: string[];
     /** Days before it are greyed out and cannot be tapped, or cleared. */
@@ -155,7 +155,7 @@ export default function CalendarPickerModal({
                 />
 
                 <PixelCard padding={0} style={styles.card} wrapperStyle={{ width: dialogWidth }}>
-                    <Text style={styles.title}>{title}</Text>
+                    {!!title && <Text style={styles.title}>{title}</Text>}
 
                     <Calendar
                         initialDate={seed}
