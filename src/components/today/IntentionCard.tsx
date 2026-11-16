@@ -37,7 +37,7 @@ export default function IntentionCard() {
     const [savedText, setSavedText] = useState('');   // Last value written to storage
     const [isEditing, setIsEditing] = useState(true); // Empty card starts open for writing
     const [savedFlash, setSavedFlash] = useState(false);
-    const inputRef = useRef<TextInput>(null);
+    const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
     const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Load today's intention on mount

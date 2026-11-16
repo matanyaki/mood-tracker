@@ -55,8 +55,8 @@ interface PixelSelectProps {
 export default function PixelSelect({ eyebrow, options, value, onChange, flex }: PixelSelectProps) {
     const [open, setOpen] = useState(false);
     const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
-    const triggerRef = useRef<View>(null);
-    const listRef = useRef<ScrollView>(null);
+    const triggerRef = useRef<React.ComponentRef<typeof View>>(null);
+    const listRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
     const selectedIndex = options.findIndex(o => o.value === value);
     const selectedLabel = options[selectedIndex]?.label ?? '';

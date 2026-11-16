@@ -13,7 +13,16 @@ import {
     TouchableWithoutFeedback,
     Keyboard,
     type KeyboardEvent,
+    type LayoutChangeEvent,
 } from 'react-native';
+import Reanimated, {
+    Easing as REasing,
+    useAnimatedStyle,
+    useReducedMotion,
+    useSharedValue,
+    withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Lightbulb, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { PIXEL, PIXEL_BULLET, TYPE } from '../../constants/typography';
@@ -48,6 +57,17 @@ const FONT_SIZE = 14;
 const PLACEHOLDER = 'I am grateful for...';
 const BULLET = PIXEL_BULLET; // Silkscreen has no block/diamond glyph -- bullet it is
 
+// --- Motion ------------------------------------------------------------------
+/** Entrance: the backdrop fades in (Modal) while the note rises this far and fades in. */
+const ENTER_RISE = 28;
+const ENTER_MS = 320;
+const ENTER_EASING = REasing.bezier(0.23, 1, 0.32, 1); // Same ease-out as the FAB fan
+/** Gliding between centred and docked-on-the-keyboard. */
+const DOCK_MS = 260;
+const DOCK_EASING = REasing.bezier(0.33, 1, 0.68, 1);
+/** A window shrink bigger than this is the keyboard, not a system-bar inset. */
+const KEYBOARD_MIN_HEIGHT = 120;
+
 interface GratitudeNoteProps {
     visible: boolean;
     onClose: () => void;
@@ -74,36 +94,92 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
         }
     }, []);
 
-    // How much of the screen the keyboard covers. While it is up, the note docks
-    // right on top of it (footer touching the keyboard) instead of staying centred:
-    // HINT and SAVE are what you reach for next, so they must never end up under it.
-    // This replaces a KeyboardAvoidingView whose `height` mode, on a view with no
-    // fixed height, squeezed the note so the clipped paper hid its own footer.
+    // --- Placement ----------------------------------------------------------
+    // While the keyboard is up the note docks right on top of it (footer touching
+    // the keyboard) instead of staying centred: HINT and SAVE are what you reach
+    // for next, so they must never end up under it.
+    //
+    // The note is pinned to the TOP of the overlay and placed only by an animated
+    // translateY. It used to be centred by flexbox, but on Android the modal window
+    // shrinks for the keyboard natively and instantly, and a flex-centred note
+    // jumps with it before any JS animation can run. Top-pinned, a resize can't
+    // move it; the note only ever glides to whatever target is computed here.
+    const insets = useSafeAreaInsets();
+    const reduceMotion = useReducedMotion();
     const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const [overlayHeight, setOverlayHeight] = useState(0);
+    const [fullOverlayHeight, setFullOverlayHeight] = useState(0); // Tallest seen = no keyboard
+    const [noteHeight, setNoteHeight] = useState(0);
+    const handleOverlayLayout = (e: LayoutChangeEvent) => {
+        const h = e.nativeEvent.layout.height;
+        setOverlayHeight(h);
+        setFullOverlayHeight(prev => Math.max(prev, h));
+    };
+    const handleNoteLayout = (e: LayoutChangeEvent) => setNoteHeight(e.nativeEvent.layout.height);
+
+    // Whether the window shrinks for the keyboard depends on platform and RN
+    // version (iOS never does; Android dialogs may). Whatever the overlay already
+    // lost is keyboard the window made room for; only the rest is still covered.
+    const windowShrink = fullOverlayHeight - overlayHeight;
+    const keyboardUp = keyboardHeight > 0 || windowShrink > KEYBOARD_MIN_HEIGHT;
+    const keyboardOverlap = Math.max(0, keyboardHeight - windowShrink);
+    const measured = overlayHeight > 0 && noteHeight > 0;
+    const minTop = insets.top + SPACE.md; // Never under the status bar, never off-screen
+    const targetTop = keyboardUp
+        ? overlayHeight - keyboardOverlap - SPACE.md - noteHeight
+        : (overlayHeight - noteHeight) / 2;
+
+    const noteTop = useSharedValue(0);
+    const appear = useSharedValue(0); // 0 → 1: the entrance
+    const placed = useRef(false);
+    useEffect(() => {
+        if (!visible || !measured) {
+            return;
+        }
+        const top = Math.max(minTop, targetTop);
+        if (!placed.current) {
+            // First placement after opening: drop straight onto the spot and let the
+            // entrance (rise + fade) carry it in.
+            placed.current = true;
+            noteTop.value = top;
+            appear.value = withTiming(1, { duration: reduceMotion ? 0 : ENTER_MS, easing: ENTER_EASING });
+            return;
+        }
+        // Retargeting mid-glide (Android: the keyboard event and the window resize
+        // land a few frames apart) bends the curve instead of bouncing.
+        noteTop.value = withTiming(top, { duration: reduceMotion ? 0 : DOCK_MS, easing: DOCK_EASING });
+    }, [visible, measured, targetTop, minTop, reduceMotion, noteTop, appear]);
+
+    const rise = reduceMotion ? 0 : ENTER_RISE;
+    const noteStyle = useAnimatedStyle(() => ({
+        opacity: appear.value,
+        transform: [{ translateY: noteTop.value + (1 - appear.value) * rise }],
+    }));
+
     useEffect(() => {
         if (!visible) {
             return;
         }
         // iOS announces the keyboard before it moves, so the note can travel with it;
-        // Android only reports once it is there.
+        // Android only reports once it is there (by then the resize has usually
+        // already started the glide).
         const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
         const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-        const onShow = (e: KeyboardEvent) => {
-            Keyboard.scheduleLayoutAnimation(e); // Same duration + curve as the keyboard
-            setKeyboardHeight(e.endCoordinates.height);
-        };
-        const onHide = (e: KeyboardEvent) => {
-            Keyboard.scheduleLayoutAnimation(e);
-            setKeyboardHeight(0);
-        };
-        const showSub = Keyboard.addListener(showEvent, onShow);
-        const hideSub = Keyboard.addListener(hideEvent, onHide);
+        const showSub = Keyboard.addListener(showEvent, (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height));
+        const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
         return () => {
             showSub.remove();
             hideSub.remove();
+            // Closed: forget the measurements so the next open measures afresh and
+            // plays the entrance again.
             setKeyboardHeight(0);
+            setOverlayHeight(0);
+            setFullOverlayHeight(0);
+            setNoteHeight(0);
+            placed.current = false;
+            appear.value = 0;
         };
-    }, [visible]);
+    }, [visible, appear]);
 
     const handleSuggestionPress = () => {
         // Haptic feedback
@@ -178,26 +254,20 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
         <Modal
             visible={visible}
             transparent
-            animationType="slide"
+            // Fade, not slide: sliding dragged the dim backdrop up with the note. The
+            // note's own rise is the entrance (see `noteStyle`).
+            animationType="fade"
             onRequestClose={onClose}
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View
-                    style={[
-                        styles.modalOverlay,
-                        keyboardHeight > 0 && {
-                            justifyContent: 'flex-end',
-                            paddingBottom: keyboardHeight + SPACE.md,
-                        },
-                    ]}
-                >
+                <View onLayout={handleOverlayLayout} style={styles.modalOverlay}>
                     {/* Backdrop -> Close on tap */}
                     <TouchableWithoutFeedback onPress={onClose}>
                         <View style={styles.backdrop} />
                     </TouchableWithoutFeedback>
 
-                    {/* The Paper Note */}
-                    <View style={styles.noteColumn}>
+                    {/* The Paper Note -- top-pinned, placed and animated by noteStyle */}
+                    <Reanimated.View style={[styles.noteColumn, noteStyle]} onLayout={handleNoteLayout}>
                         <View style={styles.paperWrapper}>
                             {/* Hard offset block = pixel-art drop shadow (no blur) */}
                             <View style={styles.pixelShadow} pointerEvents="none" />
@@ -305,7 +375,7 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
                                 )}
                             </View>
                         </View>
-                    </View>
+                    </Reanimated.View>
                 </View>
             </TouchableWithoutFeedback>
         </Modal>
@@ -328,16 +398,18 @@ const FOOTER_SLOP = { top: hitSlopFor(36), bottom: hitSlopFor(36) };
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
         backgroundColor: 'rgba(30,20,0,0.55)', // Warm dimmed backdrop
-        padding: SPACE.xl,
     },
     backdrop: {
         ...StyleSheet.absoluteFill,
     },
+    // Pinned to the overlay's top; the vertical position is all translateY (see
+    // `noteStyle`), so a window resize under it can't shift it.
     noteColumn: {
-        width: '100%',
+        position: 'absolute',
+        top: 0,
+        left: SPACE.xl,
+        right: SPACE.xl,
         alignItems: 'center',
     },
     paperWrapper: {

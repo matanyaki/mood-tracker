@@ -7,7 +7,6 @@ interface ScreenContainerProps {
   children: React.ReactNode;
   variant?: BackgroundVariant;
   statusBarStyle?: 'light-content' | 'dark-content';
-  statusBarBackgroundColor?: string;
   style?: ViewStyle;
   animated?: boolean;
 }
@@ -31,7 +30,6 @@ export default function ScreenContainer({
   children,
   variant = 'default',
   statusBarStyle = 'dark-content',
-  statusBarBackgroundColor = 'transparent',
   style,
   animated = true,
 }: ScreenContainerProps) {
@@ -43,11 +41,9 @@ export default function ScreenContainer({
       animated={animated}
       style={[{ flex: 1, paddingTop: insets.top }, style]}
     >
-      <StatusBar
-        barStyle={statusBarStyle}
-        backgroundColor={statusBarBackgroundColor}
-        translucent
-      />
+      {/* RN 0.88 is always edge-to-edge: the bar is transparent and drawn over the
+          background, so there is no backgroundColor/translucent to set any more. */}
+      <StatusBar barStyle={statusBarStyle} />
       {children}
     </AppBackground>
   );
