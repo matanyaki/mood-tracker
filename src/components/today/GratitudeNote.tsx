@@ -10,9 +10,9 @@ import {
     Modal,
     Animated,
     Easing,
-    KeyboardAvoidingView,
     TouchableWithoutFeedback,
-    Keyboard
+    Keyboard,
+    type KeyboardEvent,
 } from 'react-native';
 import { Lightbulb, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -73,6 +73,37 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
             clearTimeout(hintTimer.current);
         }
     }, []);
+
+    // How much of the screen the keyboard covers. While it is up, the note docks
+    // right on top of it (footer touching the keyboard) instead of staying centred:
+    // HINT and SAVE are what you reach for next, so they must never end up under it.
+    // This replaces a KeyboardAvoidingView whose `height` mode, on a view with no
+    // fixed height, squeezed the note so the clipped paper hid its own footer.
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+    useEffect(() => {
+        if (!visible) {
+            return;
+        }
+        // iOS announces the keyboard before it moves, so the note can travel with it;
+        // Android only reports once it is there.
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+        const onShow = (e: KeyboardEvent) => {
+            Keyboard.scheduleLayoutAnimation(e); // Same duration + curve as the keyboard
+            setKeyboardHeight(e.endCoordinates.height);
+        };
+        const onHide = (e: KeyboardEvent) => {
+            Keyboard.scheduleLayoutAnimation(e);
+            setKeyboardHeight(0);
+        };
+        const showSub = Keyboard.addListener(showEvent, onShow);
+        const hideSub = Keyboard.addListener(hideEvent, onHide);
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+            setKeyboardHeight(0);
+        };
+    }, [visible]);
 
     const handleSuggestionPress = () => {
         // Haptic feedback
@@ -151,17 +182,22 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
             onRequestClose={onClose}
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.modalOverlay}>
+                <View
+                    style={[
+                        styles.modalOverlay,
+                        keyboardHeight > 0 && {
+                            justifyContent: 'flex-end',
+                            paddingBottom: keyboardHeight + SPACE.md,
+                        },
+                    ]}
+                >
                     {/* Backdrop -> Close on tap */}
                     <TouchableWithoutFeedback onPress={onClose}>
                         <View style={styles.backdrop} />
                     </TouchableWithoutFeedback>
 
                     {/* The Paper Note */}
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === "ios" ? "padding" : "height"}
-                        style={styles.keyboardView}
-                    >
+                    <View style={styles.noteColumn}>
                         <View style={styles.paperWrapper}>
                             {/* Hard offset block = pixel-art drop shadow (no blur) */}
                             <View style={styles.pixelShadow} pointerEvents="none" />
@@ -269,7 +305,7 @@ export const GratitudeNote: React.FC<GratitudeNoteProps> = ({
                                 )}
                             </View>
                         </View>
-                    </KeyboardAvoidingView>
+                    </View>
                 </View>
             </TouchableWithoutFeedback>
         </Modal>
@@ -300,7 +336,7 @@ const styles = StyleSheet.create({
     backdrop: {
         ...StyleSheet.absoluteFill,
     },
-    keyboardView: {
+    noteColumn: {
         width: '100%',
         alignItems: 'center',
     },

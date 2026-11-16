@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TextInput, Image } from 'react-native';
 import PixelCard from '../ui/PixelCard';
 import { MOOD_IMAGES } from '../../constants/images';
 import { getEmotionImageKey, type EmotionId } from '../../../shared/types/emotions';
-import { getEmotionColor, getEmotionInk } from '../../constants/colors';
 import { TYPE } from '../../constants/typography';
 import { CARD_PADDING, SPACE } from '../../constants/layout';
 import { OUTLINE, INK, BORDER_W_INNER } from '../../constants/pixel';
@@ -22,8 +21,11 @@ interface ReflectionCardProps {
  * One emotion's note, drawn as a pixel-art card.
  *
  * It no longer wraps <Card>: that component's whole job is a blurred drop shadow
- * plus a 24px radius, and both are the opposite of what this style needs. It is a
- * PixelCard with the emotion's colour as the accent bar.
+ * plus a 24px radius, and both are the opposite of what this style needs.
+ *
+ * The card carries no emotion colour: the accent bar is the same OUTLINE as its
+ * other three sides and the title is plain ink, so every step of Reflection looks
+ * alike and the emoji alone says which feeling this is.
  */
 const ReflectionCard: React.FC<ReflectionCardProps> = React.memo(({
     label,
@@ -34,17 +36,15 @@ const ReflectionCard: React.FC<ReflectionCardProps> = React.memo(({
     onSave,
     loading = false,
 }) => {
-    const color = getEmotionColor(rootEmotionId);
-
     return (
-        <PixelCard padding={CARD_PADDING} accentColor={color}>
+        <PixelCard padding={CARD_PADDING} accentColor={OUTLINE}>
             <View style={styles.cardHeader}>
                 <Image
                     source={MOOD_IMAGES[getEmotionImageKey(rootEmotionId)]}
                     style={styles.emotionImage}
                     resizeMode="contain"
                 />
-                <Text style={[styles.emotionTitle, { color: getEmotionInk(rootEmotionId) }]}>{label.toUpperCase()}</Text>
+                <Text style={styles.emotionTitle}>{label.toUpperCase()}</Text>
                 <Text style={styles.helperText}>[ WHY DO YOU FEEL THIS WAY? ]</Text>
             </View>
 
@@ -82,6 +82,7 @@ const styles = StyleSheet.create({
     emotionTitle: {
         // The card's title, so h3 -- h1 belongs to the screen header alone.
         ...TYPE.h3,
+        color: INK,
         marginBottom: SPACE.xs,
     },
     helperText: {

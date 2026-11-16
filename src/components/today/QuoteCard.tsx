@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Quote } from 'lucide-react-native';
 import SkeletonBox from '../skeleton/SkeletonBox';
 import PixelCard from '../ui/PixelCard';
@@ -20,18 +20,32 @@ const FALLBACK_QUOTE: ZenQuote = {
     a: "Steve Jobs"
 };
 
-const fetchTodaysQuote = async (): Promise<ZenQuote> => {
+const TODAY_URL = 'https://zenquotes.io/api/today';
+const RANDOM_URL = 'https://zenquotes.io/api/random';
+
+/**
+ * The quote waiting for the next new day. It is fetched in the background as soon as
+ * today's quote is on screen and persisted with the rest of the cache, so the first
+ * open of a new day paints it at once instead of a skeleton.
+ */
+const NEXT_QUOTE_KEY = ['quote', 'next'] as const;
+
+const fetchQuote = async (url: string): Promise<ZenQuote> => {
     // A short timeout so a slow network fails over to the fallback instead of
     // holding the skeleton indefinitely.
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     try {
-        const response = await fetch('https://zenquotes.io/api/today', { signal: controller.signal });
+        const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) throw new Error(`ZenQuotes answered ${response.status}`);
 
         const data: ZenQuote[] = await response.json();
         if (!data || data.length === 0) throw new Error('ZenQuotes returned no quote');
+        // Over the free rate limit ZenQuotes still answers 200, with a "Too many
+        // requests" notice as the quote. Treat it as the failure it is, or it would be
+        // shown (and buffered) as a real quote.
+        if (data[0].a === 'zenquotes.io') throw new Error('ZenQuotes rate limit');
 
         return { q: data[0].q, a: data[0].a };
     } finally {
@@ -40,18 +54,45 @@ const fetchTodaysQuote = async (): Promise<ZenQuote> => {
 };
 
 export default function QuoteCard() {
-    // Keyed by the local day: the persisted cache paints today's quote instantly on
-    // every reopen, while yesterday's entry simply does not match -- so a new day shows
-    // a skeleton and then today's quote, never yesterday's quote swapped out in front
-    // of the reader. The quote cannot change within its day, so it is never refetched.
+    const queryClient = useQueryClient();
+    const bufferedQuote = () => queryClient.getQueryData<ZenQuote>(NEXT_QUOTE_KEY);
+
+    // Keyed by the local day, and never refetched: a quote cannot change within its day.
+    // A new day starts from the buffered quote, synchronously through `initialData`, so
+    // there is neither a skeleton nor yesterday's quote swapped out in front of the reader.
+    // The queryFn takes the buffer too, for a first render that ran before the persisted
+    // cache was restored. Only with no buffer at all (first launch, or the background
+    // fetch failed) does it go to the network, behind the skeleton.
     const today = dayKeyFromMillis(Date.now(), new Date().getTimezoneOffset());
     const { data, isPending } = useQuery<ZenQuote>({
         queryKey: ['quote', today],
-        queryFn: fetchTodaysQuote,
+        queryFn: async () => bufferedQuote() ?? fetchQuote(TODAY_URL),
+        initialData: bufferedQuote,
         staleTime: Infinity,
         gcTime: GC_TIME_MS,
         retry: 1,
     });
+
+    // Fill the buffer once today's quote is settled -- after it, so the two requests
+    // never race for ZenQuotes' small per-IP limit. Observed here so it stays in memory
+    // (and so in the persisted cache) for as long as the card exists.
+    const { data: nextQuote } = useQuery<ZenQuote>({
+        queryKey: NEXT_QUOTE_KEY,
+        queryFn: () => fetchQuote(RANDOM_URL),
+        staleTime: Infinity,
+        gcTime: GC_TIME_MS,
+        retry: 1,
+        enabled: data !== undefined,
+    });
+
+    // The buffer is spent once it is today's quote (or happens to repeat it): clear it
+    // and fetch a fresh one. A reset, not a refetch, so a failed fetch leaves the buffer
+    // empty rather than holding a quote that would be shown a second day.
+    useEffect(() => {
+        if (data && nextQuote && data.q === nextQuote.q) {
+            queryClient.resetQueries({ queryKey: NEXT_QUOTE_KEY, exact: true });
+        }
+    }, [data, nextQuote, queryClient]);
 
     const quote = data ?? FALLBACK_QUOTE;
 

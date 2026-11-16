@@ -1,0 +1,38 @@
+[
+    {
+        "name": "a retired id with its old label reads as the new emotion",
+        "storedId": "worry",
+        "storedLabel": "Worry",
+        "expect": { "id": "anxious", "label": "Anxious" }
+    },
+    {
+        "name": "a retired id in upper case still folds",
+        "storedId": "FEAR",
+        "storedLabel": "Fear",
+        "expect": { "id": "anxious", "label": "Anxious" }
+    },
+    {
+        "name": "a current id in mixed case is normalised",
+        "storedId": "Happy",
+        "storedLabel": "Happy",
+        "expect": { "id": "happy", "label": "Happy" }
+    },
+    {
+        "name": "a stale label is replaced by the taxonomy label",
+        "storedId": "calm",
+        "storedLabel": "Relaxed",
+        "expect": { "id": "calm", "label": "Calm" }
+    },
+    {
+        "name": "an unknown id is rejected",
+        "storedId": "joy",
+        "storedLabel": "Joy",
+        "expect": "rejected"
+    },
+    {
+        "name": "an empty id is rejected",
+        "storedId": "",
+        "storedLabel": "",
+        "expect": "rejected"
+    }
+]

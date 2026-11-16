@@ -21,8 +21,9 @@ Emotion journaling + wellness app (pixel-art UI). Monorepo: Expo/RN frontend (ro
 | Backend build | `npm run build` | server/ |
 | Lint | `npm run lint` (root: `expo lint`, server: `eslint src`) | either |
 | Streak test | `npm run test:streak` | server/ |
+| Unit tests (`tests/unit`) | `npm run test:unit` | server/ |
 
-- The only test is `server/src/utils/streak.test.ts` (node:test). No general test runner — never suggest `npm test`.
+- Tests: `server/src/utils/streak.test.ts` (`npm run test:streak`) and `tests/unit/**/*.test.ts` (`npm run test:unit`, both from server/, node:test + ts-node). Cases live in `tests/data/*.json`. See `tests/README.md`. There is no `npm test`.
 - A PostToolUse hook (`.claude/hooks/lint-fix.js`) runs `eslint --fix` on every `.ts/.tsx` you write/edit. Don't hand-format.
 - Type-check by hand: `npx tsc --noEmit` (root) / `npm run build` (server).
 
@@ -75,7 +76,7 @@ Firestore: everything under `users/{uid}/…` (`entries`, `greetings`, `goals/{i
 
 - **Guest mode**: no account → `GUEST_ID`, data in AsyncStorage (`GUEST_*` keys in `constants/variables.ts`). Every service method has a guest branch AND an API branch — change both. Guest logic that must match the server lives in `shared/` (streak, goalProgress, goal schedule validation) so the two can't drift.
 - **Cache keys** (no uid in key; `AuthContext` resets all queries on account change):
-  `['entries', 'YYYY-MM']` `['greetings']` `['streaks']` `['goals']` `['goalCompletions']` `['goalProgress']` `['profile']` `['quote', day]`
+  `['entries', 'YYYY-MM']` `['greetings']` `['streaks']` `['goals']` `['goalCompletions']` `['goalProgress']` `['profile']` `['quote', day]` `['quote', 'next']`
 - **Persisted cache**: change a query's data shape → bump `CACHE_BUSTER` in `src/hooks/queryConfig.ts` (restored data skips the service's zod parse).
 - **Dates**: all day logic uses `'YYYY-MM-DD'` keys. Timezone is resolved once via `dayKeyFromMillis(ms, getTimezoneOffset())`; client sends `tzOffsetMinutes` to streaks/progress. Never compare Date objects for "which day".
 - **Schemas**: zod schema in `shared/types` is the contract; services `.parse` API responses. Server controllers `.parse` bodies (omit `userId`).
@@ -135,7 +136,7 @@ Server: `goalRoutes → goalController → goalService → goalRepository` (comp
 **Break risks**: a new Firestore collection under `users/{uid}` must be added to `userRepository.deleteAllData/deleteUser`.
 
 ### Static/other screens
-`TipsScreen` (`constants/tips.ts`), `HelpScreen` (`constants/help.ts`), `BreatheScreen` (4-7-8; `useBreathingSession`, `useBreathCues`, `constants/breathing.ts`, `components/breathe/`), `QuoteCard` (ZenQuotes, `['quote', day]`). No backend.
+`TipsScreen` (`constants/tips.ts`), `HelpScreen` (`constants/help.ts`), `BreatheScreen` (4-7-8; `useBreathingSession`, `useBreathCues`, `constants/breathing.ts`, `components/breathe/`), `QuoteCard` (ZenQuotes, `['quote', day]`; `['quote', 'next']` = buffered quote for the next new day, prefetched). No backend.
 
 ## Change checklist
 
